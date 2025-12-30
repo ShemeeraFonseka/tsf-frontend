@@ -1,0 +1,323 @@
+/* Container */
+.pricelist-container {
+  padding: 10rem 4rem;
+  background: linear-gradient(to bottom right, #000000, #0d0d0d);
+  min-height: 100vh;
+  color: #fff;
+  text-align: center;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Heading */
+.pricelist-container h2 {
+  font-size: 25px;
+  margin-bottom: 2rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+}
+
+/* Table wrapper */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 1.5rem;
+}
+
+/* Table */
+.pricelist-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 12px;
+}
+
+.pricelist-table thead th {
+  padding: 20px;
+  background: #111;
+  color: #00d9ff;
+  font-weight: 600;
+  border-bottom: 1px solid #333;
+}
+
+.pricelist-table tbody tr {
+  background: #1a1a1a;
+  transition: 0.3s ease;
+}
+
+.actions-cell {
+  padding: 0 !important;
+  vertical-align: middle;
+  height: 100%;
+}
+
+.actions-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  height: 100%;
+  justify-content: center;
+  align-items: center;
+}
+
+.clickable-row:hover {
+  background-color: #2e2e2e;
+  transition: background-color 0.2s;
+}
+
+.btn-edit, .btn-delete {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s;
+  width: 100%;
+  max-width: 100px;
+  white-space: nowrap;
+}
+
+.btn-edit {
+  background:linear-gradient(90deg, #09d7fc, #109ac4);
+  color: white;
+}
+
+.btn-edit:hover {
+  background: #048399;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.btn-delete {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-delete:hover {
+  background: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+}
+.pricelist-table td {
+  padding: 16px;
+  color: #eaeaea;
+  border-bottom: 1px solid #222;
+}
+
+/* Image styling */
+.thumb-cell {
+  width: 120px;
+}
+
+.thumb {
+  width: 90px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 2px solid #00d9ff;
+  box-shadow: 0 4px 10px rgba(0, 217, 255, 0.3);
+}
+
+/* Scientific Name styling */
+.scientific {
+  font-style: italic;
+  color: #8aefff;
+}
+
+/* No items */
+.muted {
+  color: #777;
+  padding: 2rem;
+}
+
+/* Loading / Error */
+.info {
+  color: #00d9ff;
+  font-size: 1.2rem;
+}
+
+.error {
+  color: #ff4d4d;
+  font-size: 1.2rem;
+}
+
+.add-btn {
+  background:linear-gradient(90deg, #09d7fc, #109ac4);
+  color: white;
+  border: 1px solid #09d7fc;
+  padding: 1rem 1.5rem;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.add-btn:hover {
+  transform: scale(1.05);
+}
+
+.add-section{
+    text-align: right;
+}
+
+/* ==============================
+   RESPONSIVE DESIGN
+   ============================== */
+
+/* Tablets (≤ 1024px) */
+@media (max-width: 1024px) {
+  .pricelist-container {
+    padding: 8rem 2rem;
+  }
+
+  .pricelist-table thead th,
+  .pricelist-table td {
+    padding: 14px;
+    font-size: 14px;
+  }
+
+  .thumb {
+    width: 70px;
+    height: 70px;
+  }
+
+  .btn-edit,
+  .btn-delete {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+}
+
+/* Mobile (≤ 768px) */
+@media (max-width: 768px) {
+  .pricelist-container {
+    padding: 6rem 1rem;
+  }
+
+  .add-section {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  .add-btn {
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .pricelist-container h2 {
+    font-size: 20px;
+  }
+
+  /* Enable horizontal scroll cleanly */
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pricelist-table {
+    min-width: 900px;
+  }
+
+  .thumb {
+    width: 60px;
+    height: 60px;
+  }
+
+  .actions-wrapper {
+    gap: 6px;
+  }
+}
+
+/* Small Mobile (≤ 480px) */
+@media (max-width: 480px) {
+  .pricelist-container {
+    padding: 9rem 0.8rem;
+  }
+
+  .pricelist-container h2 {
+    font-size: 18px;
+  }
+
+  .pricelist-table thead th,
+  .pricelist-table td {
+    font-size: 12px;
+    padding: 10px;
+  }
+
+  .thumb {
+    width: 50px;
+    height: 50px;
+  }
+
+  .btn-edit,
+  .btn-delete {
+    font-size: 12px;
+    padding: 6px 10px;
+    max-width: 80px;
+  }
+}
+
+/* ==============================
+   MOBILE CARD TABLE
+   ============================== */
+
+@media (max-width: 768px) {
+  .pricelist-table,
+  .pricelist-table thead,
+  .pricelist-table tbody,
+  .pricelist-table th,
+  .pricelist-table td,
+  .pricelist-table tr {
+    display: block;
+  }
+
+  .pricelist-table thead {
+    display: none;
+  }
+
+  .pricelist-table tbody tr {
+    background: #1a1a1a;
+    margin-bottom: 1rem;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 4px 12px rgba(0, 217, 255, 0.15);
+  }
+
+  .pricelist-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border: none;
+    font-size: 14px;
+  }
+
+  .pricelist-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #00d9ff;
+    padding-right: 10px;
+    flex: 1;
+    text-align: center;
+  }
+
+  .pricelist-table td img.thumb {
+    width: 60px;
+    height: 60px;
+  }
+
+  .actions-wrapper {
+    flex-direction: row;
+    gap: 10px;
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .btn-edit,
+  .btn-delete {
+    width: auto;
+    max-width: none;
+  }
+}
