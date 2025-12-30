@@ -25,7 +25,7 @@
 
 /* Logo */
 .navbar-logo {
-  font-size: 35px;
+  font-size: 25px;
   font-weight: 700;
   background: linear-gradient(90deg, #09d7fc, #109ac4);
   -webkit-background-clip: text;
@@ -46,7 +46,7 @@
   list-style: none;
   display: flex;
   align-items: center;
-  gap: 3rem;
+  gap: 2rem;
   transition: all 0.3s ease;
 }
 
