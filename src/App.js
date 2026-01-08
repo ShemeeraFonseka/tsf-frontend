@@ -12,6 +12,8 @@ import ExportCustomers from './components/Customers/ExportCustomers';
 import ExportAddCustomerForm from './components/Customers/ExportAddCustomerForm';
 import ExportProductlist from './components/Products/ExportProductlist';
 import ExportCustomerDetail from './components/Customers/ExportCustomerDetail';
+import UsdRateForm from './components/pricelist/UsdRateForm';
+import FreightRatesForm from './components/Products/Freightratesform';
 
 
 function App() {
@@ -54,6 +56,10 @@ function App() {
         <Route path="/exportcustomer/:cus_id" element={<ExportCustomerDetail />} />
 
         <Route path="/exportproductlist" element={<ExportProductlist />} />
+
+        <Route path="/usdrate" element={<UsdRateForm />} />
+
+        <Route path="/freightrates" element={<FreightRatesForm />} />
 
       </Routes>
     </Router>

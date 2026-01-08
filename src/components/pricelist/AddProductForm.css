@@ -128,3 +128,24 @@
 .apf-calc-btn:hover {
     background: #666;
 }
+
+/* Chrome, Safari, Edge */
+.apf-input::-webkit-outer-spin-button,
+.apf-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+.apf-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.variant-form {
+    display: flex;
+    flex-direction: column;
+    background: #1a1a1a;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+}

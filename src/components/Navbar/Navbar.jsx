@@ -57,7 +57,11 @@ const Navbar = () => {
         </li>
 
         <li>
-          <Link to="/fobpricelist">FOB Price List</Link>
+          <Link to="/usdrate">USD Rate</Link>
+        </li>
+
+        <li>
+          <Link to="/freightrates">Freight Rate</Link>
         </li>
         
       </ul>

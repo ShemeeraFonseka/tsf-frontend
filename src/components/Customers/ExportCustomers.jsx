@@ -59,7 +59,7 @@ const ExportCustomers = () => {
 
   const navigateEdit = (e, cus_id) => {
     e.stopPropagation() // Prevent row click when editing
-    navigate(`/customerform/${cus_id}`)
+    navigate(`/exportcustomerform/${cus_id}`)
   }
 
   const navigateToDetail = (cus_id) => {

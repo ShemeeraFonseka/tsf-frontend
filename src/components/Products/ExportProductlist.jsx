@@ -99,6 +99,7 @@ const ExportProductlist = () => {
                                 <th>Size</th>
                                 <th>Unit</th>
                                 <th>Purchase Price</th>
+                                <th>Ex-Factory Price</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -137,7 +138,7 @@ const ExportProductlist = () => {
                                             <td className="price-cell">
                                                 Rs. {parseFloat(variant.purchasing_price).toFixed(2)}
                                             </td>
-                                            
+                                            <td>Rs. {parseFloat(variant.exfactoryprice).toFixed(2)}</td>
                                             {/* Actions only in first row */}
                                             {index === 0 && (
                                                 <td className="actions-cell" rowSpan={variants.length}>
