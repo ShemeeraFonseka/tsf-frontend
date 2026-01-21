@@ -176,8 +176,7 @@ const UsdRateForm = () => {
                     value={form.rate}
                     onChange={handleChange}
                     required
-                     onWheel={(e) => e.target.blur()}
-                    
+                    onWheel={(e) => e.target.blur()}
                 />
 
                 <label className="apf-label">Rate Date (from CBSL)</label>
@@ -188,7 +187,6 @@ const UsdRateForm = () => {
                     value={form.date}
                     onChange={handleChange}
                     required
-                    
                 />
 
                 <button 
@@ -231,7 +229,7 @@ const UsdRateForm = () => {
                         </thead>
                         <tbody>
                             {rateHistory.map((entry, index) => (
-                                <tr key={entry._id || index}>
+                                <tr key={entry.id || index}>
                                     <td style={{ padding: '10px', border: '1px solid #ddd', fontWeight: 'bold' }}>
                                         Rs. {parseFloat(entry.rate).toFixed(2)}
                                     </td>
@@ -255,7 +253,7 @@ const UsdRateForm = () => {
                                         {index !== 0 && ( // Don't allow deleting the current rate
                                             <button
                                                 type="button"
-                                                onClick={() => handleDelete(entry._id)}
+                                                onClick={() => handleDelete(entry.id)}
                                                 style={{
                                                     padding: '5px 12px',
                                                     cursor: 'pointer',
