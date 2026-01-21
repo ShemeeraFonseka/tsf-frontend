@@ -6,12 +6,14 @@ const FreightRatesForm = () => {
 
     const [form, setForm] = useState({
         country: '',
-        rate: '',
+        rate_45kg: '',
+        rate_100kg: '',
+        rate_300kg: '',
+        rate_500kg: '',
         date: new Date().toISOString().split('T')[0]
     })
 
     const [freightRates, setFreightRates] = useState([])
-    const [countries, setCountries] = useState([])
     const [success, setSuccess] = useState('')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
@@ -19,8 +21,8 @@ const FreightRatesForm = () => {
 
     // Common export destination countries
     const countryOptions = [
-        'United states',
-        'United kingdom',
+        'United States',
+        'United Kingdom',
         'Canada',
         'Australia',
         'Germany',
@@ -34,18 +36,19 @@ const FreightRatesForm = () => {
         'Norway',
         'Denmark',
         'Japan',
-        'South korea',
+        'South Korea',
         'Singapore',
         'Malaysia',
         'Thailand',
         'UAE',
-        'Saudi arabia',
+        'Saudi Arabia',
         'Qatar',
         'China',
-        'Hong kong',
-        'New zealand',
+        'Hong Kong',
+        'New Zealand',
         'Maldives',
-        'India'
+        'India',
+        'BKK' // Bangkok
     ].sort()
 
     // Fetch all freight rates
@@ -55,10 +58,6 @@ const FreightRatesForm = () => {
             if (response.ok) {
                 const data = await response.json()
                 setFreightRates(data)
-                
-                // Extract unique countries from existing rates
-                const uniqueCountries = [...new Set(data.map(rate => rate.country))]
-                setCountries(uniqueCountries)
             }
         } catch (err) {
             console.error('Failed to fetch freight rates:', err)
@@ -71,15 +70,7 @@ const FreightRatesForm = () => {
 
     const handleChange = (e) => {
         const { name, value } = e.target
-        
-        // Capitalize first letter for country input
-        if (name === 'country') {
-            const capitalizedValue = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
-            setForm(prev => ({ ...prev, [name]: capitalizedValue }))
-        } else {
-            setForm(prev => ({ ...prev, [name]: value }))
-        }
-        
+        setForm(prev => ({ ...prev, [name]: value }))
         setSuccess('')
         setError('')
     }
@@ -90,8 +81,17 @@ const FreightRatesForm = () => {
         setSuccess('')
         setLoading(true)
 
-        if (!form.country || !form.rate || parseFloat(form.rate) <= 0) {
+        if (!form.country || !form.rate_45kg || !form.rate_100kg || 
+            !form.rate_300kg || !form.rate_500kg) {
             setError('Please fill all fields with valid values')
+            setLoading(false)
+            return
+        }
+
+        // Validate all rates are positive
+        if (parseFloat(form.rate_45kg) <= 0 || parseFloat(form.rate_100kg) <= 0 || 
+            parseFloat(form.rate_300kg) <= 0 || parseFloat(form.rate_500kg) <= 0) {
+            setError('All rates must be greater than 0')
             setLoading(false)
             return
         }
@@ -110,7 +110,10 @@ const FreightRatesForm = () => {
                 },
                 body: JSON.stringify({
                     country: form.country,
-                    rate: parseFloat(form.rate),
+                    rate_45kg: parseFloat(form.rate_45kg),
+                    rate_100kg: parseFloat(form.rate_100kg),
+                    rate_300kg: parseFloat(form.rate_300kg),
+                    rate_500kg: parseFloat(form.rate_500kg),
                     date: form.date
                 })
             })
@@ -127,7 +130,10 @@ const FreightRatesForm = () => {
             // Reset form
             setForm({
                 country: '',
-                rate: '',
+                rate_45kg: '',
+                rate_100kg: '',
+                rate_300kg: '',
+                rate_500kg: '',
                 date: new Date().toISOString().split('T')[0]
             })
             setEditingId(null)
@@ -144,7 +150,10 @@ const FreightRatesForm = () => {
     const handleEdit = (rate) => {
         setForm({
             country: rate.country,
-            rate: rate.rate.toString(),
+            rate_45kg: rate.rate_45kg?.toString() || '',
+            rate_100kg: rate.rate_100kg?.toString() || '',
+            rate_300kg: rate.rate_300kg?.toString() || '',
+            rate_500kg: rate.rate_500kg?.toString() || '',
             date: rate.date ? new Date(rate.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
         })
         setEditingId(rate.id)
@@ -154,7 +163,10 @@ const FreightRatesForm = () => {
     const handleCancelEdit = () => {
         setForm({
             country: '',
-            rate: '',
+            rate_45kg: '',
+            rate_100kg: '',
+            rate_300kg: '',
+            rate_500kg: '',
             date: new Date().toISOString().split('T')[0]
         })
         setEditingId(null)
@@ -219,20 +231,74 @@ const FreightRatesForm = () => {
                     ))}
                 </datalist>
 
-                <label className="apf-label">Freight Rate (USD per kg)</label>
-                <input
-                    className="apf-input"
-                    type="number"
-                    name="rate"
-                    step="0.01"
-                    placeholder="e.g., 5.50"
-                    value={form.rate}
-                    onChange={handleChange}
-                    required
-                    onWheel={(e) => e.target.blur()}
-                />
+                <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(2, 1fr)', 
+                    gap: '15px',
+                    marginTop: '10px'
+                }}>
+                    <div>
+                        <label className="apf-label">Rate +45kg (USD/kg)</label>
+                        <input
+                            className="apf-input"
+                            type="number"
+                            name="rate_45kg"
+                            step="0.01"
+                            placeholder="e.g., 3.69"
+                            value={form.rate_45kg}
+                            onChange={handleChange}
+                            required
+                            onWheel={(e) => e.target.blur()}
+                        />
+                    </div>
 
-                <label className="apf-label">Effective Date</label>
+                    <div>
+                        <label className="apf-label">Rate +100kg (USD/kg)</label>
+                        <input
+                            className="apf-input"
+                            type="number"
+                            name="rate_100kg"
+                            step="0.01"
+                            placeholder="e.g., 2.61"
+                            value={form.rate_100kg}
+                            onChange={handleChange}
+                            required
+                            onWheel={(e) => e.target.blur()}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="apf-label">Rate +300kg (USD/kg)</label>
+                        <input
+                            className="apf-input"
+                            type="number"
+                            name="rate_300kg"
+                            step="0.01"
+                            placeholder="e.g., 1.83"
+                            value={form.rate_300kg}
+                            onChange={handleChange}
+                            required
+                            onWheel={(e) => e.target.blur()}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="apf-label">Rate +500kg (USD/kg)</label>
+                        <input
+                            className="apf-input"
+                            type="number"
+                            name="rate_500kg"
+                            step="0.01"
+                            placeholder="e.g., 1.62"
+                            value={form.rate_500kg}
+                            onChange={handleChange}
+                            required
+                            onWheel={(e) => e.target.blur()}
+                        />
+                    </div>
+                </div>
+
+                <label className="apf-label" style={{ marginTop: '10px' }}>Effective Date</label>
                 <input
                     className="apf-input"
                     type="date"
@@ -242,7 +308,7 @@ const FreightRatesForm = () => {
                     required
                 />
 
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
                     <button 
                         type="submit" 
                         className="apf-btn"
@@ -274,92 +340,101 @@ const FreightRatesForm = () => {
             {getLatestRatesByCountry().length > 0 && (
                 <div style={{ marginTop: '30px' }}>
                     <h3>Current Freight Rates by Country</h3>
-                    <table style={{ 
-                        width: '100%', 
-                        borderCollapse: 'collapse',
-                        marginTop: '15px'
-                    }}>
-                        <thead>
-                            <tr>
-                                <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
-                                    Country
-                                </th>
-                                <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
-                                    Rate (USD/kg)
-                                </th>
-                                <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
-                                    Effective Date
-                                </th>
-                                <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
-                                    Last Updated
-                                </th>
-                                <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', width: '150px' }}>
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {getLatestRatesByCountry().map((rate) => (
-                                <tr key={rate.id}>
-                                    <td style={{ padding: '10px', border: '1px solid #ddd', fontWeight: 'bold' }}>
-                                        {rate.country}
-                                    </td>
-                                    <td style={{ padding: '10px', border: '1px solid #ddd', fontWeight: 'bold', color: '#2196f3' }}>
-                                        ${parseFloat(rate.rate).toFixed(2)}
-                                    </td>
-                                    <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                                        {new Date(rate.date).toLocaleDateString('en-US', {
-                                            year: 'numeric',
-                                            month: 'short',
-                                            day: 'numeric'
-                                        })}
-                                    </td>
-                                    <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                                        {new Date(rate.updated_at).toLocaleString('en-US', {
-                                            year: 'numeric',
-                                            month: 'short',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })}
-                                    </td>
-                                    <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleEdit(rate)}
-                                            style={{
-                                                padding: '5px 12px',
-                                                cursor: 'pointer',
-                                                backgroundColor: '#2196f3',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                marginRight: '5px'
-                                            }}
-                                        >
-                                            Edit
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleDelete(rate.id)}
-                                            style={{
-                                                padding: '5px 12px',
-                                                cursor: 'pointer',
-                                                backgroundColor: '#dc3545',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '4px',
-                                                fontSize: '13px'
-                                            }}
-                                        >
-                                            Delete
-                                        </button>
-                                    </td>
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ 
+                            width: '100%', 
+                            borderCollapse: 'collapse',
+                            marginTop: '15px',
+                            minWidth: '800px'
+                        }}>
+                            <thead>
+                                <tr>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left', minWidth: '120px' }}>
+                                        Country
+                                    </th>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', minWidth: '90px' }}>
+                                        +45kg
+                                    </th>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', minWidth: '90px' }}>
+                                        +100kg
+                                    </th>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', minWidth: '90px' }}>
+                                        +300kg
+                                    </th>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', minWidth: '90px' }}>
+                                        +500kg
+                                    </th>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left', minWidth: '100px' }}>
+                                        Effective Date
+                                    </th>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', width: '150px' }}>
+                                        Actions
+                                    </th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {getLatestRatesByCountry().map((rate) => (
+                                    <tr key={rate.id}>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd', fontWeight: 'bold' }}>
+                                            {rate.country}
+                                        </td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 'bold', color: '#2196f3' }}>
+                                            ${parseFloat(rate.rate_45kg).toFixed(2)}
+                                        </td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 'bold', color: '#2196f3' }}>
+                                            ${parseFloat(rate.rate_100kg).toFixed(2)}
+                                        </td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 'bold', color: '#2196f3' }}>
+                                            ${parseFloat(rate.rate_300kg).toFixed(2)}
+                                        </td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 'bold', color: '#2196f3' }}>
+                                            ${parseFloat(rate.rate_500kg).toFixed(2)}
+                                        </td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                                            {new Date(rate.date).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric'
+                                            })}
+                                        </td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleEdit(rate)}
+                                                style={{
+                                                    padding: '5px 12px',
+                                                    cursor: 'pointer',
+                                                    backgroundColor: '#2196f3',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
+                                                    marginRight: '5px'
+                                                }}
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDelete(rate.id)}
+                                                style={{
+                                                    padding: '5px 12px',
+                                                    cursor: 'pointer',
+                                                    backgroundColor: '#dc3545',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px'
+                                                }}
+                                            >
+                                                Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 
@@ -367,92 +442,113 @@ const FreightRatesForm = () => {
             {freightRates.length > 0 && (
                 <div style={{ marginTop: '30px' }}>
                     <h3>Complete Rate History</h3>
-                    <table style={{ 
-                        width: '100%', 
-                        borderCollapse: 'collapse',
-                        marginTop: '15px'
-                    }}>
-                        <thead>
-                            <tr>
-                                <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
-                                    Country
-                                </th>
-                                <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
-                                    Rate (USD/kg)
-                                </th>
-                                <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
-                                    Effective Date
-                                </th>
-                                <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
-                                    Last Updated
-                                </th>
-                                <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', width: '150px' }}>
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {freightRates.map((rate) => (
-                                <tr key={rate.id}>
-                                    <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                                        {rate.country}
-                                    </td>
-                                    <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                                        ${parseFloat(rate.rate).toFixed(2)}
-                                    </td>
-                                    <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                                        {new Date(rate.date).toLocaleDateString('en-US', {
-                                            year: 'numeric',
-                                            month: 'short',
-                                            day: 'numeric'
-                                        })}
-                                    </td>
-                                    <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                                        {new Date(rate.updated_at).toLocaleString('en-US', {
-                                            year: 'numeric',
-                                            month: 'short',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })}
-                                    </td>
-                                    <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleEdit(rate)}
-                                            style={{
-                                                padding: '5px 12px',
-                                                cursor: 'pointer',
-                                                backgroundColor: '#2196f3',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                marginRight: '5px'
-                                            }}
-                                        >
-                                            Edit
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleDelete(rate.id)}
-                                            style={{
-                                                padding: '5px 12px',
-                                                cursor: 'pointer',
-                                                backgroundColor: '#dc3545',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '4px',
-                                                fontSize: '13px'
-                                            }}
-                                        >
-                                            Delete
-                                        </button>
-                                    </td>
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ 
+                            width: '100%', 
+                            borderCollapse: 'collapse',
+                            marginTop: '15px',
+                            minWidth: '900px'
+                        }}>
+                            <thead>
+                                <tr>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
+                                        Country
+                                    </th>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        +45kg
+                                    </th>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        +100kg
+                                    </th>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        +300kg
+                                    </th>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        +500kg
+                                    </th>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
+                                        Effective Date
+                                    </th>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
+                                        Last Updated
+                                    </th>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', width: '150px' }}>
+                                        Actions
+                                    </th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {freightRates.map((rate) => (
+                                    <tr key={rate.id}>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                                            {rate.country}
+                                        </td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                            ${parseFloat(rate.rate_45kg).toFixed(2)}
+                                        </td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                            ${parseFloat(rate.rate_100kg).toFixed(2)}
+                                        </td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                            ${parseFloat(rate.rate_300kg).toFixed(2)}
+                                        </td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                            ${parseFloat(rate.rate_500kg).toFixed(2)}
+                                        </td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                                            {new Date(rate.date).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric'
+                                            })}
+                                        </td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                                            {new Date(rate.updated_at).toLocaleString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleEdit(rate)}
+                                                style={{
+                                                    padding: '5px 12px',
+                                                    cursor: 'pointer',
+                                                    backgroundColor: '#2196f3',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
+                                                    marginRight: '5px'
+                                                }}
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDelete(rate.id)}
+                                                style={{
+                                                    padding: '5px 12px',
+                                                    cursor: 'pointer',
+                                                    backgroundColor: '#dc3545',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px'
+                                                }}
+                                            >
+                                                Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
         </div>
