@@ -306,7 +306,7 @@ const AddProductForm = () => {
                     onChange={handleChange}
                 />
 
-                <label className="apf-label">Category</label>
+                <label className="apf-label">Product Category</label>
                 <select
                     className="apf-input"
                     name="category"
