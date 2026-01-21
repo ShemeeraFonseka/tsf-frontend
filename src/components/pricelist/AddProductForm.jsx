@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import './AddProductForm.css'
 import { useParams, useNavigate } from 'react-router-dom'
 
@@ -30,13 +30,13 @@ const AddProductForm = () => {
     const [loading, setLoading] = useState(false)
 
     // Helper function to get the correct image URL
-    const getImageUrl = useCallback((imageUrl) => {
+    const getImageUrl = (imageUrl) => {
         if (!imageUrl) return null
         if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
             return imageUrl
         }
         return `${API_URL}${imageUrl}`
-    }, [API_URL])
+    }
 
     // Fetch product data if in edit mode
     useEffect(() => {
@@ -72,7 +72,7 @@ const AddProductForm = () => {
                     setLoading(false)
                 })
         }
-    }, [id, isEditMode, API_URL, getImageUrl])
+    }, [id, isEditMode, API_URL])
 
     const handleChange = e => {
         const { name, value, files } = e.target
