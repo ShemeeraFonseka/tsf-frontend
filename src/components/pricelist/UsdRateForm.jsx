@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import './AddProductForm.css' // Reusing existing styles
 
 const UsdRateForm = () => {
@@ -16,7 +16,7 @@ const UsdRateForm = () => {
     const [loading, setLoading] = useState(false)
 
     // Fetch current USD rate
-    const fetchCurrentRate = async () => {
+    const fetchCurrentRate = useCallback(async () => {
         try {
             const response = await fetch(`${API_URL}/api/usd-rate`)
             if (response.ok) {
@@ -26,10 +26,10 @@ const UsdRateForm = () => {
         } catch (err) {
             console.error('Failed to fetch current rate:', err)
         }
-    }
+    }, [API_URL])
 
     // Fetch rate history
-    const fetchRateHistory = async () => {
+    const fetchRateHistory = useCallback(async () => {
         try {
             const response = await fetch(`${API_URL}/api/usd-rate/history`)
             if (response.ok) {
@@ -39,12 +39,12 @@ const UsdRateForm = () => {
         } catch (err) {
             console.error('Failed to fetch rate history:', err)
         }
-    }
+    }, [API_URL])
 
     useEffect(() => {
         fetchCurrentRate()
         fetchRateHistory()
-    }, [])
+    }, [fetchCurrentRate, fetchRateHistory])
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -81,7 +81,7 @@ const UsdRateForm = () => {
                 throw new Error('Failed to update USD rate')
             }
 
-            const data = await response.json()
+            await response.json()
             setSuccess('USD rate updated successfully!')
             
             // Refresh current rate and history

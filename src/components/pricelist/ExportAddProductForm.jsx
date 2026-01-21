@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import './AddProductForm.css'
 import { useParams, useNavigate } from 'react-router-dom'
 
@@ -71,7 +71,7 @@ const ExportAddProductForm = () => {
     }
 
     // Fetch USD rate from database
-    const fetchUsdRateFromDB = async () => {
+    const fetchUsdRateFromDB = useCallback(async () => {
         setLoadingRate(true)
         try {
             const response = await fetch(`${API_URL}/api/usd-rate`)
@@ -103,21 +103,21 @@ const ExportAddProductForm = () => {
         } finally {
             setLoadingRate(false)
         }
-    }
+    }, [API_URL, editingVariant])
 
     // Fetch USD rate on component mount
     useEffect(() => {
         fetchUsdRateFromDB()
-    }, [])
+    }, [fetchUsdRateFromDB])
 
     // Helper function to get the correct image URL
-    const getImageUrl = (imageUrl) => {
+    const getImageUrl = useCallback((imageUrl) => {
         if (!imageUrl) return null
         if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
             return imageUrl
         }
         return `${API_URL}${imageUrl}`
-    }
+    }, [API_URL])
 
     // Fetch product data if in edit mode
     useEffect(() => {
@@ -152,7 +152,7 @@ const ExportAddProductForm = () => {
                     setLoading(false)
                 })
         }
-    }, [id, isEditMode, API_URL])
+    }, [id, isEditMode, API_URL, getImageUrl])
 
     const handleChange = e => {
         const { name, value, files } = e.target
