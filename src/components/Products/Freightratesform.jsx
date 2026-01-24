@@ -65,7 +65,7 @@ const FreightRatesForm = () => {
     }
 
     useEffect(() => {
-        fetchFreightRates()
+        fetchFreightRates();
     }, [])
 
     const handleChange = (e) => {

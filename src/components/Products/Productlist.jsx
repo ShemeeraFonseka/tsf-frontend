@@ -10,8 +10,8 @@ const Productlist = () => {
     const [error, setError] = useState(null)
 
     useEffect(() => {
-        fetchProducts()
-    }, [])
+  fetchProducts();
+}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const fetchProducts = () => {
         fetch(`${API_URL}/api/productlist`)
