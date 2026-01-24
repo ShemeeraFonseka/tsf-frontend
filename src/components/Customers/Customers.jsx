@@ -11,7 +11,7 @@ const Customers = () => {
 
   useEffect(() => {
     fetchCustomers()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchCustomers = () => {
     fetch(`${API_URL}/api/customerlist`)

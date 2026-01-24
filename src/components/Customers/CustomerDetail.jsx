@@ -34,7 +34,7 @@ const CustomerDetail = () => {
     fetchCustomer();
     fetchPrices();
     fetchProducts();
-  }, [cus_id]);
+  }, [cus_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchCustomer = async () => {
     try {
@@ -388,7 +388,7 @@ const CustomerDetail = () => {
     console.log('Editing Price:', editingPrice);
     console.log('Editing Price Variant ID:', editingPrice?.variant_id);
     console.log('==================');
-  }, [selectedProduct, formData, editingPrice]);
+  }, [selectedProduct, formData, editingPrice]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="pricelist-container">

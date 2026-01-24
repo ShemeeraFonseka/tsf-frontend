@@ -69,7 +69,7 @@ const ExportAddCustomerForm = () => {
           setLoading(false)
         })
     }
-  }, [id, isEditMode, API_URL])
+  }, [id, isEditMode, API_URL]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = e => {
     const { name, value, files } = e.target
