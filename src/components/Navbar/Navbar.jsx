@@ -28,7 +28,7 @@ const Navbar = () => {
 
   return (
     <nav className={`navbar ${isScrolled ? "scrolled" : ""}`}>
-      <div className="navbar-logo">Tropical Sellfish</div>
+      <div className="navbar-logo">Tropical Shellfish</div>
 
       <div className="menu-icon" onClick={() => setMenuOpen(!menuOpen)}>
         {menuOpen ? "✖" : "☰"}
