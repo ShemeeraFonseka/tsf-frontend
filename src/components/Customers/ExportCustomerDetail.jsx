@@ -47,7 +47,7 @@ const ExportCustomerDetail = () => {
     fetchProducts();
     fetchFreightRates();
     fetchUsdRate();
-  }, [cus_id]);
+  }, [cus_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchCustomer = async () => {
     try {

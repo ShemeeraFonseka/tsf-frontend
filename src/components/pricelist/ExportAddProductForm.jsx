@@ -108,7 +108,7 @@ const ExportAddProductForm = () => {
     // Fetch USD rate on component mount
     useEffect(() => {
         fetchUsdRateFromDB()
-    }, [])
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     // Helper function to get the correct image URL
     const getImageUrl = (imageUrl) => {

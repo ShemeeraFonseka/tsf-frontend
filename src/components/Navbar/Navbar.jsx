@@ -7,9 +7,6 @@ const Navbar = () => {
 
   const navigate = useNavigate();
 
-  const navigatePackages = () => {
-    navigate('/packages')
-  }
 
   const [menuOpen, setMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)

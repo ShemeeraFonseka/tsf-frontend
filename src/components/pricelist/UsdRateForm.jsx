@@ -82,8 +82,8 @@ const UsdRateForm = () => {
                 throw new Error('Failed to update USD rate')
             }
 
-            const data = await response.json()
-            setSuccess('USD rate updated successfully!')
+            await response.json()
+setSuccess('USD rate updated successfully!')
             
             // Refresh current rate and history
             await fetchCurrentRate()

@@ -65,8 +65,8 @@ const FreightRatesForm = () => {
     }
 
     useEffect(() => {
-        fetchFreightRates();
-    }, [])
+  fetchFreightRates();
+}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleChange = (e) => {
         const { name, value } = e.target
