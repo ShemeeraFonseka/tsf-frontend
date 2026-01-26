@@ -33,7 +33,7 @@ const ExportCustomerDetail = () => {
     loading_cost: '',
     airway_cost: '',
     forwardHandling_cost: '',
-    gross_weight_tier: '', // New field for tier selection
+    gross_weight_tier: '',
     multiplier: '',
     divisor: '',
     freight_cost: '',
@@ -96,27 +96,19 @@ const ExportCustomerDetail = () => {
     }
   };
 
-  // Get freight rate for customer's country
   const getFreightRateForCountry = (country) => {
     if (!country || freightRates.length === 0) return null;
-
-    // Find the latest rate for this country
     const countryRates = freightRates.filter(rate =>
       rate.country.toLowerCase() === country.toLowerCase()
     );
-
     if (countryRates.length === 0) return null;
-
-    // Sort by date and get the most recent
     return countryRates.sort((a, b) =>
       new Date(b.date) - new Date(a.date)
     )[0];
   };
 
-  // Get freight rate based on selected tier
   const getFreightRateByTier = (tier, rateData) => {
     if (!rateData || !tier) return 0;
-
     switch (tier) {
       case 'gross+45kg':
         return parseFloat(rateData.rate_45kg);
@@ -142,7 +134,6 @@ const ExportCustomerDetail = () => {
     }
   };
 
-  // Convert LKR to USD
   const convertToUSD = (lkrAmount) => {
     if (!currentUsdRate || !lkrAmount) return 0;
     return (parseFloat(lkrAmount) / parseFloat(currentUsdRate)).toFixed(2);
@@ -150,17 +141,14 @@ const ExportCustomerDetail = () => {
 
   const calculateCNF = (fobPriceLKR, freightCostUSD) => {
     if (!currentUsdRate || !fobPriceLKR) return '0.00';
-
     const fobInUSD = parseFloat(fobPriceLKR) / parseFloat(currentUsdRate);
     const freightUSD = parseFloat(freightCostUSD) || 0;
     const cnf = fobInUSD + freightUSD;
-
     return cnf.toFixed(2);
   };
 
   const handleProductSelect = (e) => {
     const productId = e.target.value;
-
     setFormData(prev => {
       if (!productId) {
         setSelectedProduct(null);
@@ -175,10 +163,8 @@ const ExportCustomerDetail = () => {
           exfactoryprice: '',
         };
       }
-
       const product = products.find(p => p.id === Number(productId));
       setSelectedProduct(product);
-
       return {
         ...prev,
         product_id: productId,
@@ -194,7 +180,6 @@ const ExportCustomerDetail = () => {
 
   const handleVariantSelect = (e) => {
     const variantId = e.target.value;
-
     if (!variantId || !selectedProduct) {
       setFormData(prev => ({
         ...prev,
@@ -205,17 +190,13 @@ const ExportCustomerDetail = () => {
       }));
       return;
     }
-
     const variant = selectedProduct.variants?.find(v => String(v.id) === String(variantId));
-
     if (variant) {
-      const sizeRange = `${variant.size} ${variant.unit}`;
+      const sizeRange = `${variant.size}`;
       const purchasingPrice = variant.purchasing_price;
       const exfactoryprice = variant.exfactoryprice;
-
       const currentMarginPercentage = formData.margin_percentage;
       const currentMargin = formData.margin;
-
       setFormData(prev => ({
         ...prev,
         variant_id: String(variantId),
@@ -223,7 +204,6 @@ const ExportCustomerDetail = () => {
         purchasing_price: purchasingPrice,
         exfactoryprice: exfactoryprice,
       }));
-
       if (currentMarginPercentage) {
         calculatePrices('purchasing_price', purchasingPrice);
       } else if (currentMargin) {
@@ -237,7 +217,6 @@ const ExportCustomerDetail = () => {
       ...formData,
       [field]: value
     };
-
     const purchasingPrice = parseFloat(data.purchasing_price) || 0;
     const exfactoryprice = parseFloat(data.exfactoryprice) || 0;
     let margin = parseFloat(data.margin) || 0;
@@ -252,26 +231,20 @@ const ExportCustomerDetail = () => {
     let freight_cost = parseFloat(data.freight_cost) || 0;
     let fobPrice = parseFloat(data.fob_price) || 0;
 
-    // Calculate freight cost when tier, multiplier or divisor changes
     if (field === 'gross_weight_tier' || field === 'multiplier' || field === 'divisor') {
       const freightRateData = getFreightRateForCountry(customer?.country);
       if (freightRateData && data.gross_weight_tier && multiplier > 0 && divisor > 0) {
         const applicableRate = getFreightRateByTier(data.gross_weight_tier, freightRateData);
         freight_cost = (multiplier * applicableRate) / divisor;
         data.freight_cost = freight_cost.toFixed(2);
-
-        // Recalculate FOB price with new freight cost
         fobPrice = purchasingPrice + exfactoryprice + margin + export_doc + transport_cost + loading_cost + airway_cost + forwardHandling_cost + freight_cost;
         marginPercentage = fobPrice > 0 ? (margin / fobPrice) * 100 : 0;
         data.fob_price = fobPrice.toFixed(2);
         data.margin_percentage = marginPercentage.toFixed(2);
-
-        // Calculate CNF
         data.cnf = calculateCNF(fobPrice, freight_cost);
       }
     }
 
-    // If purchasing price changes
     if (field === 'purchasing_price') {
       data.purchasing_price = value;
       data.exfactoryprice = exfactoryprice;
@@ -281,7 +254,6 @@ const ExportCustomerDetail = () => {
       data.forwardHandling_cost = forwardHandling_cost;
       data.loading_cost = loading_cost;
       data.freight_cost = freight_cost;
-
       if (data.margin_percentage && parseFloat(data.margin_percentage) !== 0) {
         margin = (purchasingPrice * marginPercentage) / 100;
         fobPrice = purchasingPrice + exfactoryprice + margin + export_doc + transport_cost + loading_cost + airway_cost + forwardHandling_cost + freight_cost;
@@ -303,12 +275,10 @@ const ExportCustomerDetail = () => {
         data.margin_percentage = marginPercentage.toFixed(2);
         data.cnf = calculateCNF(fobPrice, freight_cost);
       }
-
       setFormData(data);
       return;
     }
 
-    // If margin % changes
     else if (field === 'margin_percentage') {
       data.margin_percentage = value;
       margin = (purchasingPrice * marginPercentage) / (100 - marginPercentage);
@@ -318,7 +288,6 @@ const ExportCustomerDetail = () => {
       data.cnf = calculateCNF(fobPrice, freight_cost);
     }
 
-    // If margin changes
     else if (field === 'margin') {
       data.margin = value;
       fobPrice = purchasingPrice + exfactoryprice + margin + export_doc + transport_cost + loading_cost + airway_cost + forwardHandling_cost + freight_cost;
@@ -328,17 +297,14 @@ const ExportCustomerDetail = () => {
       data.cnf = calculateCNF(fobPrice, freight_cost);
     }
 
-    // If any cost field changes, recalculate FOB price and CNF
     else if (['export_doc', 'transport_cost', 'loading_cost', 'airway_cost', 'forwardHandling_cost', 'freight_cost'].includes(field)) {
       data[field] = value;
-
       export_doc = parseFloat(data.export_doc) || 0;
       transport_cost = parseFloat(data.transport_cost) || 0;
       loading_cost = parseFloat(data.loading_cost) || 0;
       airway_cost = parseFloat(data.airway_cost) || 0;
       forwardHandling_cost = parseFloat(data.forwardHandling_cost) || 0;
       freight_cost = parseFloat(data.freight_cost) || 0;
-
       fobPrice = purchasingPrice + exfactoryprice + margin + export_doc + transport_cost + loading_cost + airway_cost + forwardHandling_cost + freight_cost;
       marginPercentage = fobPrice > 0 ? (margin / fobPrice) * 100 : 0;
       data.fob_price = fobPrice.toFixed(2);
@@ -346,7 +312,6 @@ const ExportCustomerDetail = () => {
       data.cnf = calculateCNF(fobPrice, freight_cost);
     }
 
-    // If fob price changes
     else if (field === 'fob_price') {
       data.fob_price = value;
       fobPrice = parseFloat(value) || 0;
@@ -362,14 +327,11 @@ const ExportCustomerDetail = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
       const url = editingPrice
         ? `${API_URL}/api/exportcustomer-products/${editingPrice.id}`
         : `${API_URL}/api/exportcustomer-products`;
-
       const method = editingPrice ? 'PUT' : 'POST';
-
       const payload = {
         cus_id: parseInt(cus_id),
         product_id: formData.product_id ? parseInt(formData.product_id) : null,
@@ -393,18 +355,15 @@ const ExportCustomerDetail = () => {
         fob_price: parseFloat(formData.fob_price),
         cnf: parseFloat(formData.cnf) || 0
       };
-
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Failed to save');
       }
-
       await fetchPrices();
       resetForm();
       alert(editingPrice ? 'Price updated successfully!' : 'Price added successfully!');
@@ -416,30 +375,23 @@ const ExportCustomerDetail = () => {
 
   const handleEdit = async (price) => {
     console.log('Editing Price Object:', price);
-
     if (products.length === 0) {
       await fetchProducts();
     }
-
     const product = products.find(p => p.id === price.product_id);
-
     if (product) {
       setSelectedProduct(product);
-
       let variantId = '';
       if (product.variants && product.variants.length > 0 && price.size_range) {
         const matchingVariant = product.variants.find(variant =>
-          `${variant.size} ${variant.unit}` === price.size_range
+          `${variant.size}` === price.size_range
         );
-
         if (matchingVariant) {
           variantId = String(matchingVariant.id);
         }
       }
-
       setEditingPrice(price);
       setShowForm(true);
-
       setFormData({
         product_id: String(price.product_id),
         variant_id: variantId,
@@ -465,7 +417,6 @@ const ExportCustomerDetail = () => {
     } else {
       setEditingPrice(price);
       setShowForm(true);
-
       setFormData({
         product_id: String(price.product_id),
         variant_id: price.variant_id ? String(price.variant_id) : '',
@@ -493,17 +444,14 @@ const ExportCustomerDetail = () => {
 
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Delete custom price for "${name}"?`)) return;
-
     try {
       const res = await fetch(`${API_URL}/api/exportcustomer-products/${id}`, {
         method: 'DELETE'
       });
-
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Failed to delete');
       }
-
       await fetchPrices();
       alert('Price deleted successfully!');
     } catch (err) {
@@ -548,7 +496,6 @@ const ExportCustomerDetail = () => {
   const getProductDisplayName = (product) => {
     const name = product.common_name || 'Unnamed Product';
     const category = product.category || 'No Category';
-
     return `${name} - ${formatCategory(category)}`;
   };
 
@@ -556,8 +503,6 @@ const ExportCustomerDetail = () => {
     if (!customer?.country) return null;
     const rateData = getFreightRateForCountry(customer.country);
     if (!rateData) return null;
-
-
     return (
       <div style={{
         backgroundColor: '#000000',
@@ -569,18 +514,10 @@ const ExportCustomerDetail = () => {
         <h4 style={{ marginTop: 0, color: '#2196f3' }}>Current Freight Rates for {customer.country}</h4>
         <br />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-          <div>
-            <strong>+45kg:</strong> ${parseFloat(rateData.rate_45kg).toFixed(2)}/kg
-          </div>
-          <div>
-            <strong>+100kg:</strong> ${parseFloat(rateData.rate_100kg).toFixed(2)}/kg
-          </div>
-          <div>
-            <strong>+300kg:</strong> ${parseFloat(rateData.rate_300kg).toFixed(2)}/kg
-          </div>
-          <div>
-            <strong>+500kg:</strong> ${parseFloat(rateData.rate_500kg).toFixed(2)}/kg
-          </div>
+          <div><strong>+45kg:</strong> ${parseFloat(rateData.rate_45kg).toFixed(2)}/kg</div>
+          <div><strong>+100kg:</strong> ${parseFloat(rateData.rate_100kg).toFixed(2)}/kg</div>
+          <div><strong>+300kg:</strong> ${parseFloat(rateData.rate_300kg).toFixed(2)}/kg</div>
+          <div><strong>+500kg:</strong> ${parseFloat(rateData.rate_500kg).toFixed(2)}/kg</div>
         </div>
         <br />
         <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: 0, marginTop: '10px' }}>
@@ -596,7 +533,6 @@ const ExportCustomerDetail = () => {
 
   const getUsdRateInfo = () => {
     if (!currentUsdRate) return null;
-
     return (
       <div style={{
         backgroundColor: '#e8f5e9',
@@ -610,6 +546,119 @@ const ExportCustomerDetail = () => {
         </h4>
       </div>
     );
+  };
+
+  // PDF Download Function
+  const handleDownloadPDF = async () => {
+    if (prices.length === 0) {
+      alert('No products to download');
+      return;
+    }
+
+    try {
+      // Import jsPDF
+      const jsPDFModule = await import('jspdf');
+      const jsPDF = jsPDFModule.default || jsPDFModule.jsPDF;
+
+      // Import autoTable
+      const autoTableModule = await import('jspdf-autotable');
+      const autoTable = autoTableModule.default;
+
+      const doc = new jsPDF('l', 'mm', 'a4'); // Landscape orientation
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // Add title
+      doc.setFontSize(20);
+      doc.setFont(undefined, 'bold');
+      doc.text('Customer Product Price List', pageWidth / 2, 15, { align: 'center' });
+
+      // Add customer info
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Customer: ${customer?.cus_name || 'N/A'}`, 14, 25);
+      doc.text(`Country: ${customer?.country || 'N/A'}`, 14, 31);
+
+      // Add USD rate info
+      if (currentUsdRate) {
+        doc.text(`USD Rate: Rs. ${parseFloat(currentUsdRate).toFixed(2)}`, 14, 37);
+      }
+
+      // Add date
+      const currentDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      doc.text(`Generated: ${currentDate}`, 14, 43);
+
+      // Prepare table data
+      const tableData = prices.map(price => {
+        const cnfValue = price.cnf || calculateCNF(price.fob_price, price.freight_cost);
+        const exFactoryUSD = convertToUSD(price.exfactoryprice);
+        const fobUSD = convertToUSD(price.fob_price);
+
+        return [
+          price.common_name,
+          formatCategory(price.category),
+          price.size_range || '-',
+          `Rs.${parseFloat(price.purchasing_price).toFixed(2)}`,
+          `Rs.${parseFloat(price.exfactoryprice).toFixed(2)}\n$${exFactoryUSD}`,
+          price.freight_cost && parseFloat(price.freight_cost) > 0
+            ? `$${parseFloat(price.freight_cost).toFixed(2)}\n${price.gross_weight_tier ? price.gross_weight_tier.replace('gross+', '+') : ''}`
+            : '-',
+          `Rs.${parseFloat(price.fob_price).toFixed(2)}\n$${fobUSD}`,
+          `$${cnfValue}`
+        ];
+      });
+
+      // Add table using autoTable
+      autoTable(doc, {
+        startY: 50,
+        head: [['Product Name', 'Category', 'Size Range', 'Purchasing\nPrice (LKR)', 'Ex-Factory\nPrice', 'Freight\nCost (USD)', 'FOB\nPrice', 'CNF\n(USD)']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [33, 150, 243],
+          textColor: 255,
+          fontStyle: 'bold',
+          halign: 'center',
+          fontSize: 10
+        },
+        bodyStyles: {
+          fontSize: 9,
+          cellPadding: 3
+        },
+        columnStyles: {
+          0: { cellWidth: 45 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 30 },
+          3: { cellWidth: 30 },
+          4: { cellWidth: 35 },
+          5: { cellWidth: 30 },
+          6: { cellWidth: 35 },
+          7: { cellWidth: 25 }
+        },
+        styles: {
+          overflow: 'linebreak',
+          cellPadding: 3,
+          fontSize: 9,
+          valign: 'middle',
+          halign: 'left'
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245]
+        },
+        margin: { top: 50 }
+      });
+
+      // Save the PDF
+      const fileName = `${customer?.cus_name || 'Customer'}_Product_List_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please install jsPDF and jspdf-autotable: npm install jspdf jspdf-autotable');
+    }
   };
 
   useEffect(() => {
@@ -638,12 +687,20 @@ const ExportCustomerDetail = () => {
       {getCurrentFreightInfo()}
       {getUsdRateInfo()}
 
-      <div className="add-section">
+      <div className="add-section" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
         <button
           className="apf-btn"
           onClick={() => setShowForm(!showForm)}
         >
           {showForm ? '✕ Cancel' : '+ Add Custom Price'}
+        </button>
+        <button
+          className="apf-btn"
+          onClick={handleDownloadPDF}
+          style={{ backgroundColor: '#4caf50' }}
+          disabled={prices.length === 0}
+        >
+          📄 Download PDF
         </button>
       </div>
 
@@ -705,7 +762,7 @@ const ExportCustomerDetail = () => {
                 <option value="">-- Select Size --</option>
                 {selectedProduct.variants.map(variant => (
                   <option key={variant.id} value={String(variant.id)}>
-                    {variant.size} {variant.unit}
+                    {variant.size}
                   </option>
                 ))}
               </select>
@@ -787,7 +844,6 @@ const ExportCustomerDetail = () => {
                 cursor: 'not-allowed'
               }}
             />
-
 
             {editingPrice && (
               <div className="info-text" style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
@@ -908,7 +964,6 @@ const ExportCustomerDetail = () => {
               }}
             />
 
-            {/* NEW FREIGHT SECTION */}
             <div style={{
               gridColumn: '1 / -1',
               backgroundColor: 'transparent',
@@ -934,7 +989,6 @@ const ExportCustomerDetail = () => {
                     <option value="gross+300kg">Gross +300kg</option>
                     <option value="gross+500kg">Gross +500kg</option>
                   </select>
-
                 </div>
 
                 <div>
@@ -948,7 +1002,6 @@ const ExportCustomerDetail = () => {
                     placeholder="e.g., 150"
                     onWheel={(e) => e.target.blur()}
                   />
-
                 </div>
 
                 <div>
@@ -962,7 +1015,6 @@ const ExportCustomerDetail = () => {
                     placeholder="e.g., 1"
                     onWheel={(e) => e.target.blur()}
                   />
-
                 </div>
 
                 <div>
@@ -976,7 +1028,8 @@ const ExportCustomerDetail = () => {
                     placeholder="0.00"
                     onWheel={(e) => e.target.blur()}
                   />
-
+                </div>
+                <div>
                   <label className="apf-label">
                     CNF (Cost and Freight) - USD
                     <span style={{ fontSize: '11px', color: '#9c27b0', marginLeft: '5px', fontWeight: 'normal' }}>
@@ -1001,12 +1054,7 @@ const ExportCustomerDetail = () => {
                   />
                 </div>
               </div>
-
-
             </div>
-
-
-
 
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
               <button type="submit" className="apf-btn">
