@@ -17,7 +17,8 @@ const ExportCustomerDetail = () => {
   const [editingPrice, setEditingPrice] = useState(null);
   const [freightRates, setFreightRates] = useState([]);
   const [currentUsdRate, setCurrentUsdRate] = useState(null);
-  // Form state
+  
+  // Form state - costs are now in USD
   const [formData, setFormData] = useState({
     product_id: '',
     variant_id: '',
@@ -26,13 +27,11 @@ const ExportCustomerDetail = () => {
     size_range: '',
     purchasing_price: '',
     exfactoryprice: '',
-    margin: '',
-    margin_percentage: '',
-    export_doc: '',
-    transport_cost: '',
-    loading_cost: '',
-    airway_cost: '',
-    forwardHandling_cost: '',
+    export_doc: '', // USD
+    transport_cost: '', // USD
+    loading_cost: '', // USD
+    airway_cost: '', // USD
+    forwardHandling_cost: '', // USD
     gross_weight_tier: '',
     multiplier: '',
     divisor: '',
@@ -139,6 +138,11 @@ const ExportCustomerDetail = () => {
     return (parseFloat(lkrAmount) / parseFloat(currentUsdRate)).toFixed(2);
   };
 
+  const convertToLKR = (usdAmount) => {
+    if (!currentUsdRate || !usdAmount) return 0;
+    return (parseFloat(usdAmount) * parseFloat(currentUsdRate)).toFixed(2);
+  };
+
   const calculateCNF = (fobPriceLKR, freightCostUSD) => {
     if (!currentUsdRate || !fobPriceLKR) return '0.00';
     const fobInUSD = parseFloat(fobPriceLKR) / parseFloat(currentUsdRate);
@@ -195,8 +199,7 @@ const ExportCustomerDetail = () => {
       const sizeRange = `${variant.size}`;
       const purchasingPrice = variant.purchasing_price;
       const exfactoryprice = variant.exfactoryprice;
-      const currentMarginPercentage = formData.margin_percentage;
-      const currentMargin = formData.margin;
+
       setFormData(prev => ({
         ...prev,
         variant_id: String(variantId),
@@ -204,11 +207,7 @@ const ExportCustomerDetail = () => {
         purchasing_price: purchasingPrice,
         exfactoryprice: exfactoryprice,
       }));
-      if (currentMarginPercentage) {
-        calculatePrices('purchasing_price', purchasingPrice);
-      } else if (currentMargin) {
-        calculatePrices('purchasing_price', purchasingPrice);
-      }
+      
     }
   };
 
@@ -217,110 +216,42 @@ const ExportCustomerDetail = () => {
       ...formData,
       [field]: value
     };
-    const purchasingPrice = parseFloat(data.purchasing_price) || 0;
+
     const exfactoryprice = parseFloat(data.exfactoryprice) || 0;
-    let margin = parseFloat(data.margin) || 0;
-    let marginPercentage = parseFloat(data.margin_percentage) || 0;
-    let export_doc = parseFloat(data.export_doc) || 0;
-    let transport_cost = parseFloat(data.transport_cost) || 0;
-    let loading_cost = parseFloat(data.loading_cost) || 0;
-    let airway_cost = parseFloat(data.airway_cost) || 0;
-    let forwardHandling_cost = parseFloat(data.forwardHandling_cost) || 0;
+    
+    // All these costs are now in USD
+    let export_doc_usd = parseFloat(data.export_doc) || 0;
+    let transport_cost_usd = parseFloat(data.transport_cost) || 0;
+    let loading_cost_usd = parseFloat(data.loading_cost) || 0;
+    let airway_cost_usd = parseFloat(data.airway_cost) || 0;
+    let forwardHandling_cost_usd = parseFloat(data.forwardHandling_cost) || 0;
+    
     let multiplier = parseFloat(data.multiplier) || 0;
     let divisor = parseFloat(data.divisor) || 1;
     let freight_cost = parseFloat(data.freight_cost) || 0;
-    let fobPrice = parseFloat(data.fob_price) || 0;
 
+    // Calculate freight cost if weight tier is selected
     if (field === 'gross_weight_tier' || field === 'multiplier' || field === 'divisor') {
       const freightRateData = getFreightRateForCountry(customer?.country);
       if (freightRateData && data.gross_weight_tier && multiplier > 0 && divisor > 0) {
         const applicableRate = getFreightRateByTier(data.gross_weight_tier, freightRateData);
         freight_cost = (multiplier * applicableRate) / divisor;
         data.freight_cost = freight_cost.toFixed(2);
-        fobPrice = purchasingPrice + exfactoryprice + margin + export_doc + transport_cost + loading_cost + airway_cost + forwardHandling_cost + freight_cost;
-        marginPercentage = fobPrice > 0 ? (margin / fobPrice) * 100 : 0;
-        data.fob_price = fobPrice.toFixed(2);
-        data.margin_percentage = marginPercentage.toFixed(2);
-        data.cnf = calculateCNF(fobPrice, freight_cost);
       }
     }
 
-    if (field === 'purchasing_price') {
-      data.purchasing_price = value;
-      data.exfactoryprice = exfactoryprice;
-      data.export_doc = export_doc;
-      data.transport_cost = transport_cost;
-      data.airway_cost = airway_cost;
-      data.forwardHandling_cost = forwardHandling_cost;
-      data.loading_cost = loading_cost;
-      data.freight_cost = freight_cost;
-      if (data.margin_percentage && parseFloat(data.margin_percentage) !== 0) {
-        margin = (purchasingPrice * marginPercentage) / 100;
-        fobPrice = purchasingPrice + exfactoryprice + margin + export_doc + transport_cost + loading_cost + airway_cost + forwardHandling_cost + freight_cost;
-        data.margin = margin.toFixed(2);
-        data.fob_price = fobPrice.toFixed(2);
-        data.cnf = calculateCNF(fobPrice, freight_cost);
-      }
-      else if (data.margin && parseFloat(data.margin) !== 0) {
-        fobPrice = purchasingPrice + exfactoryprice + margin + export_doc + transport_cost + loading_cost + airway_cost + forwardHandling_cost + freight_cost;
-        marginPercentage = fobPrice > 0 ? (margin / fobPrice) * 100 : 0;
-        data.margin_percentage = marginPercentage.toFixed(2);
-        data.fob_price = fobPrice.toFixed(2);
-        data.cnf = calculateCNF(fobPrice, freight_cost);
-      }
-      else if (data.fob_price && parseFloat(data.fob_price) !== 0) {
-        margin = fobPrice - purchasingPrice - exfactoryprice - export_doc - transport_cost - loading_cost - airway_cost - forwardHandling_cost - freight_cost;
-        marginPercentage = fobPrice > 0 ? (margin / fobPrice) * 100 : 0;
-        data.margin = margin.toFixed(2);
-        data.margin_percentage = marginPercentage.toFixed(2);
-        data.cnf = calculateCNF(fobPrice, freight_cost);
-      }
-      setFormData(data);
-      return;
-    }
-
-    else if (field === 'margin_percentage') {
-      data.margin_percentage = value;
-      margin = (purchasingPrice * marginPercentage) / (100 - marginPercentage);
-      fobPrice = purchasingPrice + exfactoryprice + margin + export_doc + transport_cost + loading_cost + airway_cost + forwardHandling_cost + freight_cost;
-      data.margin = margin.toFixed(2);
-      data.fob_price = fobPrice.toFixed(2);
-      data.cnf = calculateCNF(fobPrice, freight_cost);
-    }
-
-    else if (field === 'margin') {
-      data.margin = value;
-      fobPrice = purchasingPrice + exfactoryprice + margin + export_doc + transport_cost + loading_cost + airway_cost + forwardHandling_cost + freight_cost;
-      marginPercentage = fobPrice > 0 ? (margin / fobPrice) * 100 : 0;
-      data.margin_percentage = marginPercentage.toFixed(2);
-      data.fob_price = fobPrice.toFixed(2);
-      data.cnf = calculateCNF(fobPrice, freight_cost);
-    }
-
-    else if (['export_doc', 'transport_cost', 'loading_cost', 'airway_cost', 'forwardHandling_cost', 'freight_cost'].includes(field)) {
-      data[field] = value;
-      export_doc = parseFloat(data.export_doc) || 0;
-      transport_cost = parseFloat(data.transport_cost) || 0;
-      loading_cost = parseFloat(data.loading_cost) || 0;
-      airway_cost = parseFloat(data.airway_cost) || 0;
-      forwardHandling_cost = parseFloat(data.forwardHandling_cost) || 0;
-      freight_cost = parseFloat(data.freight_cost) || 0;
-      fobPrice = purchasingPrice + exfactoryprice + margin + export_doc + transport_cost + loading_cost + airway_cost + forwardHandling_cost + freight_cost;
-      marginPercentage = fobPrice > 0 ? (margin / fobPrice) * 100 : 0;
-      data.fob_price = fobPrice.toFixed(2);
-      data.margin_percentage = marginPercentage.toFixed(2);
-      data.cnf = calculateCNF(fobPrice, freight_cost);
-    }
-
-    else if (field === 'fob_price') {
-      data.fob_price = value;
-      fobPrice = parseFloat(value) || 0;
-      margin = fobPrice - purchasingPrice - exfactoryprice - export_doc - transport_cost - loading_cost - airway_cost - forwardHandling_cost - freight_cost;
-      marginPercentage = fobPrice > 0 ? (margin / fobPrice) * 100 : 0;
-      data.margin = margin.toFixed(2);
-      data.margin_percentage = marginPercentage.toFixed(2);
-      data.cnf = calculateCNF(fobPrice, freight_cost);
-    }
+    // Calculate total costs in USD
+    const totalCostsUSD = export_doc_usd + transport_cost_usd + loading_cost_usd + airway_cost_usd + forwardHandling_cost_usd;
+    
+    // Convert total costs to LKR
+    const totalCostsLKR = currentUsdRate ? totalCostsUSD * parseFloat(currentUsdRate) : 0;
+    
+    // Calculate FOB in LKR (Ex-Factory + all costs in LKR)
+    const fobPriceLKR = exfactoryprice + totalCostsLKR;
+    data.fob_price = fobPriceLKR.toFixed(2);
+    
+    // Calculate CNF (FOB in USD + Freight)
+    data.cnf = calculateCNF(fobPriceLKR, freight_cost);
 
     setFormData(data);
   };
@@ -341,13 +272,11 @@ const ExportCustomerDetail = () => {
         size_range: formData.size_range,
         purchasing_price: parseFloat(formData.purchasing_price),
         exfactoryprice: parseFloat(formData.exfactoryprice),
-        margin: parseFloat(formData.margin) || 0,
-        margin_percentage: parseFloat(formData.margin_percentage) || 0,
-        export_doc: parseFloat(formData.export_doc) || 0,
-        transport_cost: parseFloat(formData.transport_cost) || 0,
-        loading_cost: parseFloat(formData.loading_cost) || 0,
-        airway_cost: parseFloat(formData.airway_cost) || 0,
-        forwardHandling_cost: parseFloat(formData.forwardHandling_cost) || 0,
+        export_doc: parseFloat(formData.export_doc) || 0, // USD
+        transport_cost: parseFloat(formData.transport_cost) || 0, // USD
+        loading_cost: parseFloat(formData.loading_cost) || 0, // USD
+        airway_cost: parseFloat(formData.airway_cost) || 0, // USD
+        forwardHandling_cost: parseFloat(formData.forwardHandling_cost) || 0, // USD
         gross_weight_tier: formData.gross_weight_tier || null,
         multiplier: parseFloat(formData.multiplier) || 0,
         divisor: parseFloat(formData.divisor) || 1,
@@ -400,13 +329,11 @@ const ExportCustomerDetail = () => {
         size_range: price.size_range,
         purchasing_price: price.purchasing_price,
         exfactoryprice: price.exfactoryprice,
-        margin: price.margin,
-        margin_percentage: price.margin_percentage,
-        export_doc: price.export_doc,
-        transport_cost: price.transport_cost,
-        loading_cost: price.loading_cost,
-        airway_cost: price.airway_cost,
-        forwardHandling_cost: price.forwardHandling_cost,
+        export_doc: price.export_doc, // Already in USD
+        transport_cost: price.transport_cost, // Already in USD
+        loading_cost: price.loading_cost, // Already in USD
+        airway_cost: price.airway_cost, // Already in USD
+        forwardHandling_cost: price.forwardHandling_cost, // Already in USD
         gross_weight_tier: price.gross_weight_tier || '',
         multiplier: price.multiplier || '',
         divisor: price.divisor || '',
@@ -425,8 +352,6 @@ const ExportCustomerDetail = () => {
         size_range: price.size_range,
         purchasing_price: price.purchasing_price,
         exfactoryprice: price.exfactoryprice,
-        margin: price.margin,
-        margin_percentage: price.margin_percentage,
         export_doc: price.export_doc,
         transport_cost: price.transport_cost,
         loading_cost: price.loading_cost,
@@ -469,8 +394,6 @@ const ExportCustomerDetail = () => {
       size_range: '',
       purchasing_price: '',
       exfactoryprice: '',
-      margin: '',
-      margin_percentage: '',
       export_doc: '',
       transport_cost: '',
       loading_cost: '',
@@ -556,34 +479,27 @@ const ExportCustomerDetail = () => {
     }
 
     try {
-      // Import jsPDF
       const jsPDFModule = await import('jspdf');
       const jsPDF = jsPDFModule.default || jsPDFModule.jsPDF;
-
-      // Import autoTable
       const autoTableModule = await import('jspdf-autotable');
       const autoTable = autoTableModule.default;
 
-      const doc = new jsPDF('l', 'mm', 'a4'); // Landscape orientation
+      const doc = new jsPDF('l', 'mm', 'a4');
       const pageWidth = doc.internal.pageSize.getWidth();
 
-      // Add title
       doc.setFontSize(20);
       doc.setFont(undefined, 'bold');
       doc.text('Customer Product Price List', pageWidth / 2, 15, { align: 'center' });
 
-      // Add customer info
       doc.setFontSize(11);
       doc.setFont(undefined, 'normal');
       doc.text(`Customer: ${customer?.cus_name || 'N/A'}`, 14, 25);
       doc.text(`Country: ${customer?.country || 'N/A'}`, 14, 31);
 
-      // Add USD rate info
       if (currentUsdRate) {
         doc.text(`USD Rate: Rs. ${parseFloat(currentUsdRate).toFixed(2)}`, 14, 37);
       }
 
-      // Add date
       const currentDate = new Date().toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -591,7 +507,6 @@ const ExportCustomerDetail = () => {
       });
       doc.text(`Generated: ${currentDate}`, 14, 43);
 
-      // Prepare table data
       const tableData = prices.map(price => {
         const cnfValue = price.cnf || calculateCNF(price.fob_price, price.freight_cost);
         const exFactoryUSD = convertToUSD(price.exfactoryprice);
@@ -611,7 +526,6 @@ const ExportCustomerDetail = () => {
         ];
       });
 
-      // Add table using autoTable
       autoTable(doc, {
         startY: 50,
         head: [['Product Name', 'Category', 'Size Range', 'Purchasing\nPrice (LKR)', 'Ex-Factory\nPrice', 'Freight\nCost (USD)', 'FOB\nPrice', 'CNF\n(USD)']],
@@ -651,7 +565,6 @@ const ExportCustomerDetail = () => {
         margin: { top: 50 }
       });
 
-      // Save the PDF
       const fileName = `${customer?.cus_name || 'Customer'}_Product_List_${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(fileName);
 
@@ -785,7 +698,7 @@ const ExportCustomerDetail = () => {
               </div>
             )}
 
-            <label className="apf-label">Purchasing Price:</label>
+            <label className="apf-label">Purchasing Price (LKR):</label>
             <input
               type="number"
               className="apf-input"
@@ -851,29 +764,14 @@ const ExportCustomerDetail = () => {
               </div>
             )}
 
-            <label className="apf-label">Margin:</label>
-            <input
-              type="number"
-              className="apf-input"
-              step="0.01"
-              value={formData.margin}
-              onChange={(e) => calculatePrices('margin', e.target.value)}
-              placeholder="0.00"
-              onWheel={(e) => e.target.blur()}
-            />
-
-            <label className="apf-label">Margin %:</label>
-            <input
-              type="number"
-              className="apf-input"
-              step="0.01"
-              value={formData.margin_percentage}
-              onChange={(e) => calculatePrices('margin_percentage', e.target.value)}
-              placeholder="0.00"
-              onWheel={(e) => e.target.blur()}
-            />
-
-            <label className="apf-label">Export Documentation Cost:</label>
+            <label className="apf-label">
+              Export Documentation Cost (USD)
+              {currentUsdRate && (
+                <span style={{ fontSize: '11px', color: '#ff9800', marginLeft: '5px', fontWeight: 'normal' }}>
+                  → Rs.{formData.export_doc ? convertToLKR(formData.export_doc) : '0.00'}
+                </span>
+              )}
+            </label>
             <input
               type="number"
               className="apf-input"
@@ -884,7 +782,14 @@ const ExportCustomerDetail = () => {
               onWheel={(e) => e.target.blur()}
             />
 
-            <label className="apf-label">Transport Cost:</label>
+            <label className="apf-label">
+              Transport Cost (USD)
+              {currentUsdRate && (
+                <span style={{ fontSize: '11px', color: '#ff9800', marginLeft: '5px', fontWeight: 'normal' }}>
+                  → Rs.{formData.transport_cost ? convertToLKR(formData.transport_cost) : '0.00'}
+                </span>
+              )}
+            </label>
             <input
               type="number"
               className="apf-input"
@@ -895,7 +800,14 @@ const ExportCustomerDetail = () => {
               onWheel={(e) => e.target.blur()}
             />
 
-            <label className="apf-label">Loading Cost:</label>
+            <label className="apf-label">
+              Loading Cost (USD)
+              {currentUsdRate && (
+                <span style={{ fontSize: '11px', color: '#ff9800', marginLeft: '5px', fontWeight: 'normal' }}>
+                  → Rs.{formData.loading_cost ? convertToLKR(formData.loading_cost) : '0.00'}
+                </span>
+              )}
+            </label>
             <input
               type="number"
               className="apf-input"
@@ -906,7 +818,14 @@ const ExportCustomerDetail = () => {
               onWheel={(e) => e.target.blur()}
             />
 
-            <label className="apf-label">Airway Bill Cost:</label>
+            <label className="apf-label">
+              Airway Bill Cost (USD)
+              {currentUsdRate && (
+                <span style={{ fontSize: '11px', color: '#ff9800', marginLeft: '5px', fontWeight: 'normal' }}>
+                  → Rs.{formData.airway_cost ? convertToLKR(formData.airway_cost) : '0.00'}
+                </span>
+              )}
+            </label>
             <input
               type="number"
               className="apf-input"
@@ -917,7 +836,14 @@ const ExportCustomerDetail = () => {
               onWheel={(e) => e.target.blur()}
             />
 
-            <label className="apf-label">Forward Handling Cost:</label>
+            <label className="apf-label">
+              Forward Handling Cost (USD)
+              {currentUsdRate && (
+                <span style={{ fontSize: '11px', color: '#ff9800', marginLeft: '5px', fontWeight: 'normal' }}>
+                  → Rs.{formData.forwardHandling_cost ? convertToLKR(formData.forwardHandling_cost) : '0.00'}
+                </span>
+              )}
+            </label>
             <input
               type="number"
               className="apf-input"
@@ -934,10 +860,15 @@ const ExportCustomerDetail = () => {
               className="apf-input"
               step="0.01"
               value={formData.fob_price}
-              onChange={(e) => calculatePrices('fob_price', e.target.value)}
-              required
+              disabled
               placeholder="0.00"
               onWheel={(e) => e.target.blur()}
+              style={{
+                backgroundColor: '#fff3e0',
+                color: '#e65100',
+                fontWeight: 'bold',
+                cursor: 'not-allowed'
+              }}
             />
 
             <label className="apf-label">
@@ -1018,7 +949,7 @@ const ExportCustomerDetail = () => {
                 </div>
 
                 <div>
-                  <label className="apf-label">Freight Cost (Calculated):</label>
+                  <label className="apf-label">Freight Cost (USD - Calculated):</label>
                   <input
                     type="number"
                     className="apf-input"
