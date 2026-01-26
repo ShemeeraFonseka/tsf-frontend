@@ -640,7 +640,8 @@ const ExportCustomerDetail = () => {
     console.log('Freight Rates:', freightRates);
     console.log('Matched Rate:', customer ? getFreightRateForCustomer(customer) : null);
     console.log('==================');
-  }, [customer, freightRates]);
+  }, [customer, freightRates]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   return (
     <div className="pricelist-container">
