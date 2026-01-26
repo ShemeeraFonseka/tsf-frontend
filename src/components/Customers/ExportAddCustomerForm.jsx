@@ -15,7 +15,8 @@ const ExportAddCustomerForm = () => {
     address: '',
     email: '',
     country: '',
-    airport: '',
+    airport_code: '',
+    airport_name: '',
     image: null,
     existing_image_url: null
   })
@@ -24,6 +25,95 @@ const ExportAddCustomerForm = () => {
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Common export destination countries with major airports
+  const countryAirportOptions = {
+    'United States': [
+      { code: 'JFK', name: 'John F. Kennedy International Airport - New York' },
+      { code: 'LAX', name: 'Los Angeles International Airport' },
+      { code: 'ORD', name: "O'Hare International Airport - Chicago" },
+      { code: 'MIA', name: 'Miami International Airport' },
+      { code: 'SFO', name: 'San Francisco International Airport' },
+      { code: 'ATL', name: 'Hartsfield-Jackson Atlanta International Airport' }
+    ],
+    'United Kingdom': [
+      { code: 'LHR', name: 'London Heathrow Airport' },
+      { code: 'LGW', name: 'London Gatwick Airport' },
+      { code: 'MAN', name: 'Manchester Airport' }
+    ],
+    'Canada': [
+      { code: 'YYZ', name: 'Toronto Pearson International Airport' },
+      { code: 'YVR', name: 'Vancouver International Airport' },
+      { code: 'YUL', name: 'Montreal-Pierre Elliott Trudeau International Airport' }
+    ],
+    'Australia': [
+      { code: 'SYD', name: 'Sydney Kingsford Smith Airport' },
+      { code: 'MEL', name: 'Melbourne Airport' },
+      { code: 'BNE', name: 'Brisbane Airport' },
+      { code: 'PER', name: 'Perth Airport' }
+    ],
+    'Germany': [
+      { code: 'FRA', name: 'Frankfurt Airport' },
+      { code: 'MUC', name: 'Munich Airport' },
+      { code: 'BER', name: 'Berlin Brandenburg Airport' }
+    ],
+    'France': [
+      { code: 'CDG', name: 'Charles de Gaulle Airport - Paris' },
+      { code: 'ORY', name: 'Orly Airport - Paris' },
+      { code: 'LYS', name: 'Lyon-Saint Exupéry Airport' }
+    ],
+    'Italy': [
+      { code: 'FCO', name: 'Leonardo da Vinci-Fiumicino Airport - Rome' },
+      { code: 'MXP', name: 'Milan Malpensa Airport' }
+    ],
+    'Spain': [
+      { code: 'MAD', name: 'Adolfo Suárez Madrid-Barajas Airport' },
+      { code: 'BCN', name: 'Barcelona-El Prat Airport' }
+    ],
+    'Netherlands': [
+      { code: 'AMS', name: 'Amsterdam Airport Schiphol' }
+    ],
+    'Belgium': [
+      { code: 'BRU', name: 'Brussels Airport' }
+    ],
+    'Switzerland': [
+      { code: 'ZRH', name: 'Zurich Airport' },
+      { code: 'GVA', name: 'Geneva Airport' }
+    ],
+    'Japan': [
+      { code: 'NRT', name: 'Narita International Airport - Tokyo' },
+      { code: 'HND', name: 'Tokyo Haneda Airport' },
+      { code: 'KIX', name: 'Kansai International Airport - Osaka' }
+    ],
+    'South Korea': [
+      { code: 'ICN', name: 'Incheon International Airport - Seoul' }
+    ],
+    'Singapore': [
+      { code: 'SIN', name: 'Singapore Changi Airport' }
+    ],
+    'UAE': [
+      { code: 'DXB', name: 'Dubai International Airport' },
+      { code: 'AUH', name: 'Abu Dhabi International Airport' }
+    ],
+    'China': [
+      { code: 'PEK', name: 'Beijing Capital International Airport' },
+      { code: 'PVG', name: 'Shanghai Pudong International Airport' },
+      { code: 'CAN', name: 'Guangzhou Baiyun International Airport' }
+    ],
+    'Hong Kong': [
+      { code: 'HKG', name: 'Hong Kong International Airport' }
+    ],
+    'India': [
+      { code: 'DEL', name: 'Indira Gandhi International Airport - Delhi' },
+      { code: 'BOM', name: 'Chhatrapati Shivaji Maharaj International Airport - Mumbai' },
+      { code: 'BLR', name: 'Kempegowda International Airport - Bangalore' }
+    ],
+    'Maldives': [
+      { code: 'MLE', name: 'Velana International Airport - Male' }
+    ]
+  }
+
+  const countryOptions = Object.keys(countryAirportOptions).sort()
 
   // Helper function to get the correct image URL
   const getImageUrl = (imageUrl) => {
@@ -53,7 +143,8 @@ const ExportAddCustomerForm = () => {
             address: customer.address || '',
             email: customer.email || '',
             country: customer.country || '',
-            airport: customer.airport || '',
+            airport_code: customer.airport_code || '',
+            airport_name: customer.airport_name || '',
             image: null,
             existing_image_url: customer.image_url
           })
@@ -78,6 +169,45 @@ const ExportAddCustomerForm = () => {
       const file = files[0]
       setForm(prev => ({ ...prev, image: file }))
       setPreview(file ? URL.createObjectURL(file) : null)
+    } else if (name === 'country') {
+      // Reset airport fields when country changes
+      setForm(prev => ({ 
+        ...prev, 
+        [name]: value,
+        airport_code: '',
+        airport_name: ''
+      }))
+    } else if (name === 'airport_code') {
+      // Smart airport code handling
+      const selectedCountry = form.country
+      const airports = countryAirportOptions[selectedCountry]
+      
+      if (airports) {
+        const matchedAirport = airports.find(
+          airport => airport.code.toUpperCase() === value.toUpperCase()
+        )
+        
+        if (matchedAirport) {
+          // Auto-fill airport name if code matches a predefined airport
+          setForm(prev => ({
+            ...prev,
+            airport_code: matchedAirport.code,
+            airport_name: matchedAirport.name
+          }))
+        } else {
+          // Manual entry
+          setForm(prev => ({
+            ...prev,
+            airport_code: value.toUpperCase()
+          }))
+        }
+      } else {
+        // No predefined airports for this country
+        setForm(prev => ({
+          ...prev,
+          airport_code: value.toUpperCase()
+        }))
+      }
     } else {
       setForm(prev => ({ ...prev, [name]: value }))
     }
@@ -99,7 +229,8 @@ const ExportAddCustomerForm = () => {
       data.append('email', form.email)
       data.append('address', form.address)
       data.append('country', form.country)
-      data.append('airport', form.airport)
+      data.append('airport_code', form.airport_code)
+      data.append('airport_name', form.airport_name)
 
       if (form.image) {
         data.append('image', form.image)
@@ -141,7 +272,7 @@ const ExportAddCustomerForm = () => {
     <div className='form-container'>
       <h2>{isEditMode ? 'Edit Export Customer' : 'Add Export Customer'}</h2>
       <form onSubmit={handleSubmit} className="apf-container">
-        <label className="apf-label">Customer Name</label>
+        <label className="apf-label">Customer Name *</label>
         <input
           className="apf-input"
           name="cus_name"
@@ -155,7 +286,7 @@ const ExportAddCustomerForm = () => {
         <textarea
           className="apf-input"
           name="company_name"
-          placeholder="company_name"
+          placeholder="Company Name"
           value={form.company_name}
           onChange={handleChange}
           rows="3"
@@ -170,16 +301,6 @@ const ExportAddCustomerForm = () => {
           onChange={handleChange}
         />
 
-        <label className="apf-label">Address</label>
-        <input
-          className="apf-input"
-          name="address"
-          placeholder="Address"
-          value={form.address}
-          onChange={handleChange}
-
-        />
-
         <label className="apf-label">Email</label>
         <input
           className="apf-input"
@@ -187,27 +308,66 @@ const ExportAddCustomerForm = () => {
           placeholder="Email"
           value={form.email}
           onChange={handleChange}
-
         />
 
-        <label className="apf-label">Country</label>
+        <label className="apf-label">Country *</label>
         <input
           className="apf-input"
           name="country"
-          placeholder="Country"
+          placeholder="Type or select country"
           value={form.country}
           onChange={handleChange}
+          list="country-suggestions"
           required
         />
+        <datalist id="country-suggestions">
+          {countryOptions.map(country => (
+            <option key={country} value={country} />
+          ))}
+        </datalist>
 
-        <label className="apf-label">Airport</label>
+        {/* Airport Code and Name - only show when country is selected */}
+        {form.country && (
+          <>
+            <label className="apf-label">Airport Code</label>
+            <input
+              className="apf-input"
+              name="airport_code"
+              placeholder="Type airport code (e.g., JFK, LHR)"
+              value={form.airport_code}
+              onChange={handleChange}
+              list="airport-suggestions"
+              maxLength={5}
+              style={{ textTransform: 'uppercase' }}
+            />
+            {countryAirportOptions[form.country] && (
+              <datalist id="airport-suggestions">
+                {countryAirportOptions[form.country].map(airport => (
+                  <option key={airport.code} value={airport.code}>
+                    {airport.name}
+                  </option>
+                ))}
+              </datalist>
+            )}
+
+            <label className="apf-label">Airport Name</label>
+            <input
+              className="apf-input"
+              name="airport_name"
+              placeholder="Enter full airport name"
+              value={form.airport_name}
+              onChange={handleChange}
+            />
+          </>
+        )}
+
+        <label className="apf-label">Address</label>
         <input
           className="apf-input"
-          name="airport"
-          placeholder="Airport"
-          value={form.airport}
+          name="address"
+          placeholder="Address"
+          value={form.address}
           onChange={handleChange}
-          required
         />
 
         <label className="apf-label">Profile Picture</label>

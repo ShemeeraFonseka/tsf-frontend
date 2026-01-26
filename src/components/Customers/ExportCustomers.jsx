@@ -103,7 +103,7 @@ const ExportCustomers = () => {
                 <th>Phone</th>
                 <th>Email</th>
                 <th>Country</th>
-                <th>Airport</th>
+                <th>Airport Code</th>
                 <th>Address</th>
                 <th>Actions</th>
               </tr>
@@ -133,7 +133,7 @@ const ExportCustomers = () => {
                     <td data-label="Phone">{customer.phone || '-'}</td>
                     <td data-label="Email">{customer.email || '-'}</td>
                     <td data-label="Country">{customer.country || '-'}</td>
-                    <td data-label="Airport">{customer.airport || '-'}</td>
+                    <td data-label="Airport">{customer.airport_code || '-'}</td>
                     <td data-label="Address">{customer.address || '-'}</td>
                     <td data-label="Actions">
                       <div className="actions-wrapper">

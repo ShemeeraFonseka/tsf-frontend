@@ -6,6 +6,8 @@ const FreightRatesForm = () => {
 
     const [form, setForm] = useState({
         country: '',
+        airport_code: '',
+        airport_name: '',
         rate_45kg: '',
         rate_100kg: '',
         rate_300kg: '',
@@ -19,37 +21,121 @@ const FreightRatesForm = () => {
     const [loading, setLoading] = useState(false)
     const [editingId, setEditingId] = useState(null)
 
-    // Common export destination countries
-    const countryOptions = [
-        'United States',
-        'United Kingdom',
-        'Canada',
-        'Australia',
-        'Germany',
-        'France',
-        'Italy',
-        'Spain',
-        'Netherlands',
-        'Belgium',
-        'Switzerland',
-        'Sweden',
-        'Norway',
-        'Denmark',
-        'Japan',
-        'South Korea',
-        'Singapore',
-        'Malaysia',
-        'Thailand',
-        'UAE',
-        'Saudi Arabia',
-        'Qatar',
-        'China',
-        'Hong Kong',
-        'New Zealand',
-        'Maldives',
-        'India',
-        'BKK' // Bangkok
-    ].sort()
+    // Common export destination countries with major airports
+    const countryAirportOptions = {
+        'United States': [
+            { code: 'JFK', name: 'John F. Kennedy International Airport - New York' },
+            { code: 'LAX', name: 'Los Angeles International Airport' },
+            { code: 'ORD', name: "O'Hare International Airport - Chicago" },
+            { code: 'MIA', name: 'Miami International Airport' },
+            { code: 'SFO', name: 'San Francisco International Airport' },
+            { code: 'ATL', name: 'Hartsfield-Jackson Atlanta International Airport' }
+        ],
+        'United Kingdom': [
+            { code: 'LHR', name: 'London Heathrow Airport' },
+            { code: 'LGW', name: 'London Gatwick Airport' },
+            { code: 'MAN', name: 'Manchester Airport' }
+        ],
+        'Canada': [
+            { code: 'YYZ', name: 'Toronto Pearson International Airport' },
+            { code: 'YVR', name: 'Vancouver International Airport' },
+            { code: 'YUL', name: 'Montreal-Pierre Elliott Trudeau International Airport' }
+        ],
+        'Australia': [
+            { code: 'SYD', name: 'Sydney Kingsford Smith Airport' },
+            { code: 'MEL', name: 'Melbourne Airport' },
+            { code: 'BNE', name: 'Brisbane Airport' },
+            { code: 'PER', name: 'Perth Airport' }
+        ],
+        'Germany': [
+            { code: 'FRA', name: 'Frankfurt Airport' },
+            { code: 'MUC', name: 'Munich Airport' },
+            { code: 'BER', name: 'Berlin Brandenburg Airport' }
+        ],
+        'France': [
+            { code: 'CDG', name: 'Charles de Gaulle Airport - Paris' },
+            { code: 'ORY', name: 'Orly Airport - Paris' },
+            { code: 'LYS', name: 'Lyon-Saint Exupéry Airport' }
+        ],
+        'Italy': [
+            { code: 'FCO', name: 'Leonardo da Vinci-Fiumicino Airport - Rome' },
+            { code: 'MXP', name: 'Milan Malpensa Airport' }
+        ],
+        'Spain': [
+            { code: 'MAD', name: 'Adolfo Suárez Madrid-Barajas Airport' },
+            { code: 'BCN', name: 'Barcelona-El Prat Airport' }
+        ],
+        'Netherlands': [
+            { code: 'AMS', name: 'Amsterdam Airport Schiphol' }
+        ],
+        'Belgium': [
+            { code: 'BRU', name: 'Brussels Airport' }
+        ],
+        'Switzerland': [
+            { code: 'ZRH', name: 'Zurich Airport' },
+            { code: 'GVA', name: 'Geneva Airport' }
+        ],
+        'Sweden': [
+            { code: 'ARN', name: 'Stockholm Arlanda Airport' }
+        ],
+        'Norway': [
+            { code: 'OSL', name: 'Oslo Airport' }
+        ],
+        'Denmark': [
+            { code: 'CPH', name: 'Copenhagen Airport' }
+        ],
+        'Japan': [
+            { code: 'NRT', name: 'Narita International Airport - Tokyo' },
+            { code: 'HND', name: 'Tokyo Haneda Airport' },
+            { code: 'KIX', name: 'Kansai International Airport - Osaka' }
+        ],
+        'South Korea': [
+            { code: 'ICN', name: 'Incheon International Airport - Seoul' }
+        ],
+        'Singapore': [
+            { code: 'SIN', name: 'Singapore Changi Airport' }
+        ],
+        'Malaysia': [
+            { code: 'KUL', name: 'Kuala Lumpur International Airport' }
+        ],
+        'Thailand': [
+            { code: 'BKK', name: 'Suvarnabhumi Airport - Bangkok' },
+            { code: 'DMK', name: 'Don Mueang International Airport - Bangkok' }
+        ],
+        'UAE': [
+            { code: 'DXB', name: 'Dubai International Airport' },
+            { code: 'AUH', name: 'Abu Dhabi International Airport' }
+        ],
+        'Saudi Arabia': [
+            { code: 'RUH', name: 'King Khalid International Airport - Riyadh' },
+            { code: 'JED', name: 'King Abdulaziz International Airport - Jeddah' }
+        ],
+        'Qatar': [
+            { code: 'DOH', name: 'Hamad International Airport - Doha' }
+        ],
+        'China': [
+            { code: 'PEK', name: 'Beijing Capital International Airport' },
+            { code: 'PVG', name: 'Shanghai Pudong International Airport' },
+            { code: 'CAN', name: 'Guangzhou Baiyun International Airport' }
+        ],
+        'Hong Kong': [
+            { code: 'HKG', name: 'Hong Kong International Airport' }
+        ],
+        'New Zealand': [
+            { code: 'AKL', name: 'Auckland Airport' },
+            { code: 'CHC', name: 'Christchurch International Airport' }
+        ],
+        'Maldives': [
+            { code: 'MLE', name: 'Velana International Airport - Male' }
+        ],
+        'India': [
+            { code: 'DEL', name: 'Indira Gandhi International Airport - Delhi' },
+            { code: 'BOM', name: 'Chhatrapati Shivaji Maharaj International Airport - Mumbai' },
+            { code: 'BLR', name: 'Kempegowda International Airport - Bangalore' }
+        ]
+    }
+
+    const countryOptions = Object.keys(countryAirportOptions).sort()
 
     // Fetch all freight rates
     const fetchFreightRates = async () => {
@@ -65,12 +151,55 @@ const FreightRatesForm = () => {
     }
 
     useEffect(() => {
-  fetchFreightRates();
-}, []); // eslint-disable-line react-hooks/exhaustive-deps
+        fetchFreightRates();
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleChange = (e) => {
         const { name, value } = e.target
-        setForm(prev => ({ ...prev, [name]: value }))
+        
+        // If country changes, reset airport fields
+        if (name === 'country') {
+            setForm(prev => ({ 
+                ...prev, 
+                [name]: value,
+                airport_code: '',
+                airport_name: ''
+            }))
+        } else if (name === 'airport_code') {
+            // When airport code is typed or selected
+            const selectedCountry = form.country
+            const airports = countryAirportOptions[selectedCountry]
+            
+            if (airports) {
+                const matchedAirport = airports.find(
+                    airport => airport.code.toUpperCase() === value.toUpperCase()
+                )
+                
+                if (matchedAirport) {
+                    // Auto-fill airport name if code matches a predefined airport
+                    setForm(prev => ({
+                        ...prev,
+                        airport_code: matchedAirport.code,
+                        airport_name: matchedAirport.name
+                    }))
+                } else {
+                    // Manual entry
+                    setForm(prev => ({
+                        ...prev,
+                        airport_code: value.toUpperCase()
+                    }))
+                }
+            } else {
+                // No predefined airports for this country
+                setForm(prev => ({
+                    ...prev,
+                    airport_code: value.toUpperCase()
+                }))
+            }
+        } else {
+            setForm(prev => ({ ...prev, [name]: value }))
+        }
+        
         setSuccess('')
         setError('')
     }
@@ -81,7 +210,8 @@ const FreightRatesForm = () => {
         setSuccess('')
         setLoading(true)
 
-        if (!form.country || !form.rate_45kg || !form.rate_100kg || 
+        if (!form.country || !form.airport_code || !form.airport_name ||
+            !form.rate_45kg || !form.rate_100kg || 
             !form.rate_300kg || !form.rate_500kg) {
             setError('Please fill all fields with valid values')
             setLoading(false)
@@ -110,6 +240,8 @@ const FreightRatesForm = () => {
                 },
                 body: JSON.stringify({
                     country: form.country,
+                    airport_code: form.airport_code,
+                    airport_name: form.airport_name,
                     rate_45kg: parseFloat(form.rate_45kg),
                     rate_100kg: parseFloat(form.rate_100kg),
                     rate_300kg: parseFloat(form.rate_300kg),
@@ -130,6 +262,8 @@ const FreightRatesForm = () => {
             // Reset form
             setForm({
                 country: '',
+                airport_code: '',
+                airport_name: '',
                 rate_45kg: '',
                 rate_100kg: '',
                 rate_300kg: '',
@@ -150,6 +284,8 @@ const FreightRatesForm = () => {
     const handleEdit = (rate) => {
         setForm({
             country: rate.country,
+            airport_code: rate.airport_code || '',
+            airport_name: rate.airport_name || '',
             rate_45kg: rate.rate_45kg?.toString() || '',
             rate_100kg: rate.rate_100kg?.toString() || '',
             rate_300kg: rate.rate_300kg?.toString() || '',
@@ -163,6 +299,8 @@ const FreightRatesForm = () => {
     const handleCancelEdit = () => {
         setForm({
             country: '',
+            airport_code: '',
+            airport_name: '',
             rate_45kg: '',
             rate_100kg: '',
             rate_300kg: '',
@@ -195,16 +333,21 @@ const FreightRatesForm = () => {
         }
     }
 
-    // Group rates by country to show latest rate per country
-    const getLatestRatesByCountry = () => {
-        const ratesByCountry = {}
+    // Group rates by country and airport
+    const getLatestRatesByCountryAirport = () => {
+        const ratesByCountryAirport = {}
         freightRates.forEach(rate => {
-            if (!ratesByCountry[rate.country] || 
-                new Date(rate.updated_at) > new Date(ratesByCountry[rate.country].updated_at)) {
-                ratesByCountry[rate.country] = rate
+            const key = `${rate.country}_${rate.airport_code}`
+            if (!ratesByCountryAirport[key] || 
+                new Date(rate.updated_at) > new Date(ratesByCountryAirport[key].updated_at)) {
+                ratesByCountryAirport[key] = rate
             }
         })
-        return Object.values(ratesByCountry).sort((a, b) => a.country.localeCompare(b.country))
+        return Object.values(ratesByCountryAirport).sort((a, b) => {
+            const countryCompare = a.country.localeCompare(b.country)
+            if (countryCompare !== 0) return countryCompare
+            return (a.airport_code || '').localeCompare(b.airport_code || '')
+        })
     }
 
     return (
@@ -218,18 +361,59 @@ const FreightRatesForm = () => {
                     className="apf-input"
                     type="text"
                     name="country"
-                    placeholder="Type country name (e.g., United States)"
+                    placeholder="Type country name or select from suggestions"
                     value={form.country}
                     onChange={handleChange}
                     list="country-suggestions"
                     required
-                    autoComplete="off"
                 />
                 <datalist id="country-suggestions">
                     {countryOptions.map(country => (
                         <option key={country} value={country} />
                     ))}
                 </datalist>
+
+                {form.country && (
+                    <>
+                        <label className="apf-label" style={{ marginTop: '10px' }}>
+                            Airport Code (e.g., JFK, LHR)
+                        </label>
+                        <input
+                            className="apf-input"
+                            type="text"
+                            name="airport_code"
+                            placeholder="Type airport code or select from suggestions"
+                            value={form.airport_code}
+                            onChange={handleChange}
+                            list="airport-suggestions"
+                            required
+                            maxLength={5}
+                            style={{ textTransform: 'uppercase' }}
+                        />
+                        {countryAirportOptions[form.country] && (
+                            <datalist id="airport-suggestions">
+                                {countryAirportOptions[form.country].map(airport => (
+                                    <option key={airport.code} value={airport.code}>
+                                        {airport.name}
+                                    </option>
+                                ))}
+                            </datalist>
+                        )}
+
+                        <label className="apf-label" style={{ marginTop: '10px' }}>
+                            Airport Name
+                        </label>
+                        <input
+                            className="apf-input"
+                            type="text"
+                            name="airport_name"
+                            placeholder="Enter full airport name"
+                            value={form.airport_name}
+                            onChange={handleChange}
+                            required
+                        />
+                    </>
+                )}
 
                 <div style={{ 
                     display: 'grid', 
@@ -336,21 +520,24 @@ const FreightRatesForm = () => {
             {success && <div className="apf-success">{success}</div>}
             {error && <div className="apf-error">{error}</div>}
 
-            {/* Current Rates by Country */}
-            {getLatestRatesByCountry().length > 0 && (
+            {/* Current Rates by Country and Airport */}
+            {getLatestRatesByCountryAirport().length > 0 && (
                 <div style={{ marginTop: '30px' }}>
-                    <h3>Current Freight Rates by Country</h3>
+                    <h3>Current Freight Rates by Country & Airport</h3>
                     <div style={{ overflowX: 'auto' }}>
                         <table style={{ 
                             width: '100%', 
                             borderCollapse: 'collapse',
                             marginTop: '15px',
-                            minWidth: '800px'
+                            minWidth: '900px'
                         }}>
                             <thead>
                                 <tr>
                                     <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left', minWidth: '120px' }}>
                                         Country
+                                    </th>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left', minWidth: '200px' }}>
+                                        Airport
                                     </th>
                                     <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', minWidth: '90px' }}>
                                         +45kg
@@ -373,10 +560,18 @@ const FreightRatesForm = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {getLatestRatesByCountry().map((rate) => (
+                                {getLatestRatesByCountryAirport().map((rate) => (
                                     <tr key={rate.id}>
                                         <td style={{ padding: '10px', border: '1px solid #ddd', fontWeight: 'bold' }}>
                                             {rate.country}
+                                        </td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                                            <strong style={{ color: '#2196f3' }}>{rate.airport_code}</strong>
+                                            {rate.airport_name && (
+                                                <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '2px' }}>
+                                                    {rate.airport_name}
+                                                </div>
+                                            )}
                                         </td>
                                         <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 'bold', color: '#2196f3' }}>
                                             ${parseFloat(rate.rate_45kg).toFixed(2)}
@@ -447,12 +642,15 @@ const FreightRatesForm = () => {
                             width: '100%', 
                             borderCollapse: 'collapse',
                             marginTop: '15px',
-                            minWidth: '900px'
+                            minWidth: '1000px'
                         }}>
                             <thead>
                                 <tr>
                                     <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
                                         Country
+                                    </th>
+                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
+                                        Airport
                                     </th>
                                     <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
                                         +45kg
@@ -482,6 +680,14 @@ const FreightRatesForm = () => {
                                     <tr key={rate.id}>
                                         <td style={{ padding: '10px', border: '1px solid #ddd' }}>
                                             {rate.country}
+                                        </td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                                            <strong>{rate.airport_code}</strong>
+                                            {rate.airport_name && (
+                                                <div style={{ fontSize: '0.85rem', color: '#666' }}>
+                                                    {rate.airport_name}
+                                                </div>
+                                            )}
                                         </td>
                                         <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
                                             ${parseFloat(rate.rate_45kg).toFixed(2)}

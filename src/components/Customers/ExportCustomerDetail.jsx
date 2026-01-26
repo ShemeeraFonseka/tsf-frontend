@@ -95,15 +95,32 @@ const ExportCustomerDetail = () => {
     }
   };
 
-  const getFreightRateForCountry = (country) => {
-    if (!country || freightRates.length === 0) return null;
+  // Get freight rate for customer's specific country AND airport code
+  const getFreightRateForCustomer = (customer) => {
+    if (!customer || freightRates.length === 0) return null;
+    
+    // First, try to find rate for specific country AND airport code
+    if (customer.airport_code) {
+      const exactMatch = freightRates.filter(rate =>
+        rate.country.toLowerCase() === customer.country.toLowerCase() &&
+        rate.airport_code && rate.airport_code.toUpperCase() === customer.airport_code.toUpperCase()
+      );
+      
+      if (exactMatch.length > 0) {
+        // Return the most recent rate for this country + airport combination
+        return exactMatch.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+      }
+    }
+    
+    // Fallback: If no specific airport match, get any rate for the country
     const countryRates = freightRates.filter(rate =>
-      rate.country.toLowerCase() === country.toLowerCase()
+      rate.country.toLowerCase() === customer.country.toLowerCase()
     );
+    
     if (countryRates.length === 0) return null;
-    return countryRates.sort((a, b) =>
-      new Date(b.date) - new Date(a.date)
-    )[0];
+    
+    // Return the most recent rate for this country
+    return countryRates.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
   };
 
   const getFreightRateByTier = (tier, rateData) => {
@@ -230,9 +247,9 @@ const ExportCustomerDetail = () => {
     let divisor = parseFloat(data.divisor) || 1;
     let freight_cost = parseFloat(data.freight_cost) || 0;
 
-    // Calculate freight cost if weight tier is selected
+    // Calculate freight cost if weight tier is selected - using customer-specific rates
     if (field === 'gross_weight_tier' || field === 'multiplier' || field === 'divisor') {
-      const freightRateData = getFreightRateForCountry(customer?.country);
+      const freightRateData = getFreightRateForCustomer(customer);
       if (freightRateData && data.gross_weight_tier && multiplier > 0 && divisor > 0) {
         const applicableRate = getFreightRateByTier(data.gross_weight_tier, freightRateData);
         freight_cost = (multiplier * applicableRate) / divisor;
@@ -423,18 +440,55 @@ const ExportCustomerDetail = () => {
   };
 
   const getCurrentFreightInfo = () => {
-    if (!customer?.country) return null;
-    const rateData = getFreightRateForCountry(customer.country);
-    if (!rateData) return null;
+    if (!customer) return null;
+    const rateData = getFreightRateForCustomer(customer);
+    if (!rateData) {
+      return (
+        <div style={{
+          backgroundColor: '#ff5722',
+          padding: '15px',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          border: '1px solid #d84315',
+          color: 'white'
+        }}>
+          <h4 style={{ marginTop: 0 }}>⚠️ No Freight Rates Available</h4>
+          <p style={{ marginBottom: 0 }}>
+            No freight rates found for {customer.country}
+            {customer.airport_code && ` - ${customer.airport_code}`}.
+            Please add freight rates in the Freight Rates section.
+          </p>
+        </div>
+      );
+    }
+    
+    const isExactMatch = rateData.airport_code && 
+      customer.airport_code && 
+      rateData.airport_code.toUpperCase() === customer.airport_code.toUpperCase();
+    
     return (
       <div style={{
-        backgroundColor: '#000000',
+        backgroundColor: isExactMatch ? '#1b5e20' : '#000000',
         padding: '15px',
         borderRadius: '8px',
         marginBottom: '20px',
-        border: '1px solid #2196f3'
+        border: `1px solid ${isExactMatch ? '#4caf50' : '#2196f3'}`
       }}>
-        <h4 style={{ marginTop: 0, color: '#2196f3' }}>Current Freight Rates for {customer.country}</h4>
+        <h4 style={{ marginTop: 0, color: isExactMatch ? '#81c784' : '#2196f3' }}>
+          {isExactMatch ? '✓ ' : ''}Current Freight Rates - {customer.country}
+          {rateData.airport_code && ` (${rateData.airport_code})`}
+        </h4>
+        {isExactMatch && customer.airport_name && (
+          <p style={{ fontSize: '0.9rem', color: '#a5d6a7', marginTop: '5px', marginBottom: '10px' }}>
+            {customer.airport_name}
+          </p>
+        )}
+        {!isExactMatch && customer.airport_code && (
+          <p style={{ fontSize: '0.9rem', color: '#ff9800', marginTop: '5px', marginBottom: '10px' }}>
+            ⚠️ Using general country rates. No specific rate found for airport: {customer.airport_code}
+            {customer.airport_name && ` (${customer.airport_name})`}
+          </p>
+        )}
         <br />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
           <div><strong>+45kg:</strong> ${parseFloat(rateData.rate_45kg).toFixed(2)}/kg</div>
@@ -495,9 +549,13 @@ const ExportCustomerDetail = () => {
       doc.setFont(undefined, 'normal');
       doc.text(`Customer: ${customer?.cus_name || 'N/A'}`, 14, 25);
       doc.text(`Country: ${customer?.country || 'N/A'}`, 14, 31);
+      
+      if (customer?.airport_code) {
+        doc.text(`Airport: ${customer.airport_code}${customer.airport_name ? ' - ' + customer.airport_name : ''}`, 14, 37);
+      }
 
       if (currentUsdRate) {
-        doc.text(`USD Rate: Rs. ${parseFloat(currentUsdRate).toFixed(2)}`, 14, 37);
+        doc.text(`USD Rate: Rs. ${parseFloat(currentUsdRate).toFixed(2)}`, 14, customer?.airport_code ? 43 : 37);
       }
 
       const currentDate = new Date().toLocaleDateString('en-US', {
@@ -505,7 +563,7 @@ const ExportCustomerDetail = () => {
         month: 'long',
         day: 'numeric'
       });
-      doc.text(`Generated: ${currentDate}`, 14, 43);
+      doc.text(`Generated: ${currentDate}`, 14, customer?.airport_code ? 49 : 43);
 
       const tableData = prices.map(price => {
         const cnfValue = price.cnf || calculateCNF(price.fob_price, price.freight_cost);
@@ -527,7 +585,7 @@ const ExportCustomerDetail = () => {
       });
 
       autoTable(doc, {
-        startY: 50,
+        startY: customer?.airport_code ? 55 : 50,
         head: [['Product Name', 'Category', 'Size Range', 'Purchasing\nPrice (LKR)', 'Ex-Factory\nPrice', 'Freight\nCost (USD)', 'FOB\nPrice', 'CNF\n(USD)']],
         body: tableData,
         theme: 'grid',
@@ -562,7 +620,7 @@ const ExportCustomerDetail = () => {
         alternateRowStyles: {
           fillColor: [245, 245, 245]
         },
-        margin: { top: 50 }
+        margin: { top: customer?.airport_code ? 55 : 50 }
       });
 
       const fileName = `${customer?.cus_name || 'Customer'}_Product_List_${new Date().toISOString().split('T')[0]}.pdf`;
@@ -576,16 +634,13 @@ const ExportCustomerDetail = () => {
 
   useEffect(() => {
     console.log('=== DEBUG INFO ===');
-    console.log('Selected Product:', selectedProduct);
-    console.log('Selected Product Variants:', selectedProduct?.variants);
-    console.log('Form Data:', formData);
-    console.log('Form Data Variant ID:', formData.variant_id);
-    console.log('Editing Price:', editingPrice);
-    console.log('Editing Price Variant ID:', editingPrice?.variant_id);
+    console.log('Customer:', customer);
+    console.log('Customer Airport Code:', customer?.airport_code);
+    console.log('Customer Airport Name:', customer?.airport_name);
     console.log('Freight Rates:', freightRates);
-    console.log('Customer Country:', customer?.country);
+    console.log('Matched Rate:', customer ? getFreightRateForCustomer(customer) : null);
     console.log('==================');
-  }, [selectedProduct, formData, editingPrice, freightRates, customer]);
+  }, [customer, freightRates]);
 
   return (
     <div className="pricelist-container">
@@ -595,7 +650,14 @@ const ExportCustomerDetail = () => {
         </button>
       </div>
       <h2>Custom Prices - {customer?.cus_name}</h2>
-      <h2>{customer?.country}</h2>
+      <h2>{customer?.country}
+        {customer?.airport_code && ` - ${customer.airport_code}`}
+        {customer?.airport_name && (
+          <span style={{ fontSize: '0.8em', color: '#2196f3', marginLeft: '10px' }}>
+            ({customer.airport_name})
+          </span>
+        )}
+      </h2>
 
       {getCurrentFreightInfo()}
       {getUsdRateInfo()}
