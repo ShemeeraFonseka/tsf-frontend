@@ -513,7 +513,6 @@ const ExportCustomerDetail = () => {
       customer.airport_code && 
       rateData.airport_code.toUpperCase() === customer.airport_code.toUpperCase();
     
-    const hasSeaFreight = rateData.rate_40ft_rf || rateData.rate_20ft_rf;
     
     return (
       <div style={{
