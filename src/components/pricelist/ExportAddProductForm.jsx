@@ -55,19 +55,28 @@ const ExportAddProductForm = () => {
         return (costPrice + profitAmount).toFixed(2)
     }
 
-    // Calculate Profit from Margin percentage
-    const calculateProfitFromMargin = (purchasePrice, packingCost, labourOverhead, profitMargin) => {
-        const costPrice = calculateCostPrice(purchasePrice, packingCost, labourOverhead)
-        const margin = parseFloat(profitMargin) || 0
-        return ((costPrice * margin) / 100).toFixed(2)
+    // Calculate Profit Margin from Profit amount using: profit_margin = profit / (purchasing_price + profit)
+    const calculateMarginFromProfit = (purchasePrice, profit) => {
+        const purchase = parseFloat(purchasePrice) || 0
+        const profitAmount = parseFloat(profit) || 0
+        const total = purchase + profitAmount
+        if (total === 0) return '0.00'
+        return ((profitAmount / total) * 100).toFixed(2)
     }
 
-    // Calculate Profit Margin from Profit amount
-    const calculateMarginFromProfit = (purchasePrice, packingCost, labourOverhead, profit) => {
-        const costPrice = calculateCostPrice(purchasePrice, packingCost, labourOverhead)
-        const profitAmount = parseFloat(profit) || 0
-        if (costPrice === 0) return '0.00'
-        return ((profitAmount / costPrice) * 100).toFixed(2)
+    // Calculate Profit from Margin percentage using: profit = (margin * purchasing_price) / (100 - margin)
+    const calculateProfitFromMargin = (purchasePrice, profitMargin) => {
+        const purchase = parseFloat(purchasePrice) || 0
+        const margin = parseFloat(profitMargin) || 0
+        
+        if (margin >= 100) {
+            // If margin is 100% or more, profit would be infinite
+            return '0.00'
+        }
+        
+        if (margin === 0) return '0.00'
+        
+        return ((margin * purchase) / (100 - margin)).toFixed(2)
     }
 
     // Fetch USD rate from database
@@ -177,13 +186,12 @@ const ExportAddProductForm = () => {
             
             // Handle profit and profit_margin calculations
             if (name === 'profit') {
-                // When profit changes, calculate margin and ex-factory price
+                // When profit changes, calculate margin
                 updated.profit_margin = calculateMarginFromProfit(
                     updated.purchasing_price,
-                    updated.packing_cost,
-                    updated.labour_overhead,
                     value
                 )
+                // Then calculate ex-factory price with all costs
                 updated.exfactoryprice = calculateExFactoryPrice(
                     updated.purchasing_price,
                     updated.packing_cost,
@@ -191,13 +199,12 @@ const ExportAddProductForm = () => {
                     value
                 )
             } else if (name === 'profit_margin') {
-                // When margin changes, calculate profit and ex-factory price
+                // When margin changes, calculate profit
                 updated.profit = calculateProfitFromMargin(
                     updated.purchasing_price,
-                    updated.packing_cost,
-                    updated.labour_overhead,
                     value
                 )
+                // Then calculate ex-factory price with all costs
                 updated.exfactoryprice = calculateExFactoryPrice(
                     updated.purchasing_price,
                     updated.packing_cost,
@@ -208,30 +215,18 @@ const ExportAddProductForm = () => {
 
             // Recalculate when cost components change
             if (name === 'purchasing_price' || name === 'packing_cost' || name === 'labour_overhead') {
-                if (updated.profit) {
-                    // If profit is set, recalculate margin
-                    updated.profit_margin = calculateMarginFromProfit(
-                        name === 'purchasing_price' ? value : updated.purchasing_price,
-                        name === 'packing_cost' ? value : updated.packing_cost,
-                        name === 'labour_overhead' ? value : updated.labour_overhead,
-                        updated.profit
-                    )
-                } else if (updated.profit_margin) {
-                    // If margin is set, recalculate profit
-                    updated.profit = calculateProfitFromMargin(
-                        name === 'purchasing_price' ? value : updated.purchasing_price,
-                        name === 'packing_cost' ? value : updated.packing_cost,
-                        name === 'labour_overhead' ? value : updated.labour_overhead,
-                        updated.profit_margin
-                    )
-                }
-                // Always recalculate ex-factory price
+                // First, calculate ex-factory price based on current profit
                 updated.exfactoryprice = calculateExFactoryPrice(
                     name === 'purchasing_price' ? value : updated.purchasing_price,
                     name === 'packing_cost' ? value : updated.packing_cost,
                     name === 'labour_overhead' ? value : updated.labour_overhead,
                     updated.profit
                 )
+                
+                // If purchasing_price changes, recalculate margin based on new purchasing price
+                if (name === 'purchasing_price' && updated.profit) {
+                    updated.profit_margin = calculateMarginFromProfit(value, updated.profit)
+                }
             }
             
             setEditingVariant(updated)
@@ -240,13 +235,12 @@ const ExportAddProductForm = () => {
             
             // Handle profit and profit_margin calculations
             if (name === 'profit') {
-                // When profit changes, calculate margin and ex-factory price
+                // When profit changes, calculate margin
                 updated.profit_margin = calculateMarginFromProfit(
                     updated.purchasing_price,
-                    updated.packing_cost,
-                    updated.labour_overhead,
                     value
                 )
+                // Then calculate ex-factory price with all costs
                 updated.exfactoryprice = calculateExFactoryPrice(
                     updated.purchasing_price,
                     updated.packing_cost,
@@ -254,13 +248,12 @@ const ExportAddProductForm = () => {
                     value
                 )
             } else if (name === 'profit_margin') {
-                // When margin changes, calculate profit and ex-factory price
+                // When margin changes, calculate profit
                 updated.profit = calculateProfitFromMargin(
                     updated.purchasing_price,
-                    updated.packing_cost,
-                    updated.labour_overhead,
                     value
                 )
+                // Then calculate ex-factory price with all costs
                 updated.exfactoryprice = calculateExFactoryPrice(
                     updated.purchasing_price,
                     updated.packing_cost,
@@ -271,30 +264,18 @@ const ExportAddProductForm = () => {
 
             // Recalculate when cost components change
             if (name === 'purchasing_price' || name === 'packing_cost' || name === 'labour_overhead') {
-                if (updated.profit) {
-                    // If profit is set, recalculate margin
-                    updated.profit_margin = calculateMarginFromProfit(
-                        name === 'purchasing_price' ? value : updated.purchasing_price,
-                        name === 'packing_cost' ? value : updated.packing_cost,
-                        name === 'labour_overhead' ? value : updated.labour_overhead,
-                        updated.profit
-                    )
-                } else if (updated.profit_margin) {
-                    // If margin is set, recalculate profit
-                    updated.profit = calculateProfitFromMargin(
-                        name === 'purchasing_price' ? value : updated.purchasing_price,
-                        name === 'packing_cost' ? value : updated.packing_cost,
-                        name === 'labour_overhead' ? value : updated.labour_overhead,
-                        updated.profit_margin
-                    )
-                }
-                // Always recalculate ex-factory price
+                // First, calculate ex-factory price based on current profit
                 updated.exfactoryprice = calculateExFactoryPrice(
                     name === 'purchasing_price' ? value : updated.purchasing_price,
                     name === 'packing_cost' ? value : updated.packing_cost,
                     name === 'labour_overhead' ? value : updated.labour_overhead,
                     updated.profit
                 )
+                
+                // If purchasing_price changes, recalculate margin based on new purchasing price
+                if (name === 'purchasing_price' && updated.profit) {
+                    updated.profit_margin = calculateMarginFromProfit(value, updated.profit)
+                }
             }
             
             setNewVariant(updated)

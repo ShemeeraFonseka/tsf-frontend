@@ -110,6 +110,8 @@ const ExportProductlist = () => {
                                 </tr>
                             )}
 
+                            
+
                             {items.map(product => {
                                 const imgSrc = getImageUrl(product.image_url)
                                 const variants = product.variants || []

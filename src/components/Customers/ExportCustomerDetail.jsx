@@ -18,7 +18,7 @@ const ExportCustomerDetail = () => {
   const [freightRates, setFreightRates] = useState([]);
   const [currentUsdRate, setCurrentUsdRate] = useState(null);
   
-  // Form state - costs are now in USD
+  // Form state - costs stored in USD, but user can input in either currency
   const [formData, setFormData] = useState({
     product_id: '',
     variant_id: '',
@@ -27,11 +27,16 @@ const ExportCustomerDetail = () => {
     size_range: '',
     purchasing_price: '',
     exfactoryprice: '',
-    export_doc: '', // USD
-    transport_cost: '', // USD
-    loading_cost: '', // USD
-    airway_cost: '', // USD
-    forwardHandling_cost: '', // USD
+    export_doc_usd: '',
+    export_doc_lkr: '',
+    transport_cost_usd: '',
+    transport_cost_lkr: '',
+    loading_cost_usd: '',
+    loading_cost_lkr: '',
+    airway_cost_usd: '',
+    airway_cost_lkr: '',
+    forwardHandling_cost_usd: '',
+    forwardHandling_cost_lkr: '',
     gross_weight_tier: '',
     multiplier: '',
     divisor: '',
@@ -234,14 +239,37 @@ const ExportCustomerDetail = () => {
       [field]: value
     };
 
+    // Handle USD/LKR pair updates
+    if (field === 'export_doc_usd') {
+      data.export_doc_lkr = convertToLKR(value);
+    } else if (field === 'export_doc_lkr') {
+      data.export_doc_usd = convertToUSD(value);
+    } else if (field === 'transport_cost_usd') {
+      data.transport_cost_lkr = convertToLKR(value);
+    } else if (field === 'transport_cost_lkr') {
+      data.transport_cost_usd = convertToUSD(value);
+    } else if (field === 'loading_cost_usd') {
+      data.loading_cost_lkr = convertToLKR(value);
+    } else if (field === 'loading_cost_lkr') {
+      data.loading_cost_usd = convertToUSD(value);
+    } else if (field === 'airway_cost_usd') {
+      data.airway_cost_lkr = convertToLKR(value);
+    } else if (field === 'airway_cost_lkr') {
+      data.airway_cost_usd = convertToUSD(value);
+    } else if (field === 'forwardHandling_cost_usd') {
+      data.forwardHandling_cost_lkr = convertToLKR(value);
+    } else if (field === 'forwardHandling_cost_lkr') {
+      data.forwardHandling_cost_usd = convertToUSD(value);
+    }
+
     const exfactoryprice = parseFloat(data.exfactoryprice) || 0;
     
-    // All these costs are now in USD
-    let export_doc_usd = parseFloat(data.export_doc) || 0;
-    let transport_cost_usd = parseFloat(data.transport_cost) || 0;
-    let loading_cost_usd = parseFloat(data.loading_cost) || 0;
-    let airway_cost_usd = parseFloat(data.airway_cost) || 0;
-    let forwardHandling_cost_usd = parseFloat(data.forwardHandling_cost) || 0;
+    // Use USD values for calculation
+    let export_doc_usd = parseFloat(data.export_doc_usd) || 0;
+    let transport_cost_usd = parseFloat(data.transport_cost_usd) || 0;
+    let loading_cost_usd = parseFloat(data.loading_cost_usd) || 0;
+    let airway_cost_usd = parseFloat(data.airway_cost_usd) || 0;
+    let forwardHandling_cost_usd = parseFloat(data.forwardHandling_cost_usd) || 0;
     
     let multiplier = parseFloat(data.multiplier) || 0;
     let divisor = parseFloat(data.divisor) || 1;
@@ -280,6 +308,8 @@ const ExportCustomerDetail = () => {
         ? `${API_URL}/api/exportcustomer-products/${editingPrice.id}`
         : `${API_URL}/api/exportcustomer-products`;
       const method = editingPrice ? 'PUT' : 'POST';
+      
+      // Save USD values to database
       const payload = {
         cus_id: parseInt(cus_id),
         product_id: formData.product_id ? parseInt(formData.product_id) : null,
@@ -289,11 +319,11 @@ const ExportCustomerDetail = () => {
         size_range: formData.size_range,
         purchasing_price: parseFloat(formData.purchasing_price),
         exfactoryprice: parseFloat(formData.exfactoryprice),
-        export_doc: parseFloat(formData.export_doc) || 0, // USD
-        transport_cost: parseFloat(formData.transport_cost) || 0, // USD
-        loading_cost: parseFloat(formData.loading_cost) || 0, // USD
-        airway_cost: parseFloat(formData.airway_cost) || 0, // USD
-        forwardHandling_cost: parseFloat(formData.forwardHandling_cost) || 0, // USD
+        export_doc: parseFloat(formData.export_doc_usd) || 0,
+        transport_cost: parseFloat(formData.transport_cost_usd) || 0,
+        loading_cost: parseFloat(formData.loading_cost_usd) || 0,
+        airway_cost: parseFloat(formData.airway_cost_usd) || 0,
+        forwardHandling_cost: parseFloat(formData.forwardHandling_cost_usd) || 0,
         gross_weight_tier: formData.gross_weight_tier || null,
         multiplier: parseFloat(formData.multiplier) || 0,
         divisor: parseFloat(formData.divisor) || 1,
@@ -338,6 +368,8 @@ const ExportCustomerDetail = () => {
       }
       setEditingPrice(price);
       setShowForm(true);
+      
+      // Costs are stored in USD, populate both USD and LKR fields
       setFormData({
         product_id: String(price.product_id),
         variant_id: variantId,
@@ -346,11 +378,16 @@ const ExportCustomerDetail = () => {
         size_range: price.size_range,
         purchasing_price: price.purchasing_price,
         exfactoryprice: price.exfactoryprice,
-        export_doc: price.export_doc, // Already in USD
-        transport_cost: price.transport_cost, // Already in USD
-        loading_cost: price.loading_cost, // Already in USD
-        airway_cost: price.airway_cost, // Already in USD
-        forwardHandling_cost: price.forwardHandling_cost, // Already in USD
+        export_doc_usd: price.export_doc || '',
+        export_doc_lkr: convertToLKR(price.export_doc),
+        transport_cost_usd: price.transport_cost || '',
+        transport_cost_lkr: convertToLKR(price.transport_cost),
+        loading_cost_usd: price.loading_cost || '',
+        loading_cost_lkr: convertToLKR(price.loading_cost),
+        airway_cost_usd: price.airway_cost || '',
+        airway_cost_lkr: convertToLKR(price.airway_cost),
+        forwardHandling_cost_usd: price.forwardHandling_cost || '',
+        forwardHandling_cost_lkr: convertToLKR(price.forwardHandling_cost),
         gross_weight_tier: price.gross_weight_tier || '',
         multiplier: price.multiplier || '',
         divisor: price.divisor || '',
@@ -369,11 +406,16 @@ const ExportCustomerDetail = () => {
         size_range: price.size_range,
         purchasing_price: price.purchasing_price,
         exfactoryprice: price.exfactoryprice,
-        export_doc: price.export_doc,
-        transport_cost: price.transport_cost,
-        loading_cost: price.loading_cost,
-        airway_cost: price.airway_cost,
-        forwardHandling_cost: price.forwardHandling_cost,
+        export_doc_usd: price.export_doc || '',
+        export_doc_lkr: convertToLKR(price.export_doc),
+        transport_cost_usd: price.transport_cost || '',
+        transport_cost_lkr: convertToLKR(price.transport_cost),
+        loading_cost_usd: price.loading_cost || '',
+        loading_cost_lkr: convertToLKR(price.loading_cost),
+        airway_cost_usd: price.airway_cost || '',
+        airway_cost_lkr: convertToLKR(price.airway_cost),
+        forwardHandling_cost_usd: price.forwardHandling_cost || '',
+        forwardHandling_cost_lkr: convertToLKR(price.forwardHandling_cost),
         gross_weight_tier: price.gross_weight_tier || '',
         multiplier: price.multiplier || '',
         divisor: price.divisor || '',
@@ -411,11 +453,16 @@ const ExportCustomerDetail = () => {
       size_range: '',
       purchasing_price: '',
       exfactoryprice: '',
-      export_doc: '',
-      transport_cost: '',
-      loading_cost: '',
-      airway_cost: '',
-      forwardHandling_cost: '',
+      export_doc_usd: '',
+      export_doc_lkr: '',
+      transport_cost_usd: '',
+      transport_cost_lkr: '',
+      loading_cost_usd: '',
+      loading_cost_lkr: '',
+      airway_cost_usd: '',
+      airway_cost_lkr: '',
+      forwardHandling_cost_usd: '',
+      forwardHandling_cost_lkr: '',
       gross_weight_tier: '',
       multiplier: '',
       divisor: '',
@@ -466,6 +513,8 @@ const ExportCustomerDetail = () => {
       customer.airport_code && 
       rateData.airport_code.toUpperCase() === customer.airport_code.toUpperCase();
     
+    const hasSeaFreight = rateData.rate_40ft_rf || rateData.rate_20ft_rf;
+    
     return (
       <div style={{
         backgroundColor: isExactMatch ? '#1b5e20' : '#000000',
@@ -489,15 +538,23 @@ const ExportCustomerDetail = () => {
             {customer.airport_name && ` (${customer.airport_name})`}
           </p>
         )}
-        <br />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-          <div><strong>+45kg:</strong> ${parseFloat(rateData.rate_45kg).toFixed(2)}/kg</div>
-          <div><strong>+100kg:</strong> ${parseFloat(rateData.rate_100kg).toFixed(2)}/kg</div>
-          <div><strong>+300kg:</strong> ${parseFloat(rateData.rate_300kg).toFixed(2)}/kg</div>
-          <div><strong>+500kg:</strong> ${parseFloat(rateData.rate_500kg).toFixed(2)}/kg</div>
+        
+        {/* Air Freight Rates */}
+        <div style={{ marginTop: '10px' }}>
+          <p style={{ fontSize: '0.95rem', fontWeight: 'bold', color: '#81c784', marginBottom: '8px' }}>
+            ✈️ Air Freight (USD/kg)
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+            <div><strong>+45kg:</strong> ${parseFloat(rateData.rate_45kg).toFixed(2)}/kg</div>
+            <div><strong>+100kg:</strong> ${parseFloat(rateData.rate_100kg).toFixed(2)}/kg</div>
+            <div><strong>+300kg:</strong> ${parseFloat(rateData.rate_300kg).toFixed(2)}/kg</div>
+            <div><strong>+500kg:</strong> ${parseFloat(rateData.rate_500kg).toFixed(2)}/kg</div>
+          </div>
         </div>
-        <br />
-        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: 0, marginTop: '10px' }}>
+
+        
+        
+        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: 0, marginTop: '15px' }}>
           Effective Date: {new Date(rateData.date).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
@@ -827,95 +884,308 @@ const ExportCustomerDetail = () => {
               </div>
             )}
 
-            <label className="apf-label">
-              Export Documentation Cost (USD)
+            <div style={{
+              gridColumn: '1 / -1',
+              backgroundColor: 'transparent',
+              padding: '20px',
+              borderRadius: '8px',
+              marginTop: '20px',
+              marginBottom: '10px'
+            }}>
+              <h3 style={{ margin: '0 0 10px 0', color: '#ffffff', fontSize: '18px' }}>
+                Additional Costs
+              </h3>
               {currentUsdRate && (
-                <span style={{ fontSize: '11px', color: '#ff9800', marginLeft: '5px', fontWeight: 'normal' }}>
-                  → Rs.{formData.export_doc ? convertToLKR(formData.export_doc) : '0.00'}
-                </span>
+                <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#ffffff', fontStyle: 'italic' }}>
+                  Exchange Rate: 1 USD = Rs.{parseFloat(currentUsdRate).toFixed(2)} | Enter values in either currency
+                </p>
               )}
-            </label>
-            <input
-              type="number"
-              className="apf-input"
-              step="0.01"
-              value={formData.export_doc}
-              onChange={(e) => calculatePrices('export_doc', e.target.value)}
-              placeholder="0.00"
-              onWheel={(e) => e.target.blur()}
-            />
 
-            <label className="apf-label">
-              Transport Cost (USD)
-              {currentUsdRate && (
-                <span style={{ fontSize: '11px', color: '#ff9800', marginLeft: '5px', fontWeight: 'normal' }}>
-                  → Rs.{formData.transport_cost ? convertToLKR(formData.transport_cost) : '0.00'}
-                </span>
-              )}
-            </label>
-            <input
-              type="number"
-              className="apf-input"
-              step="0.01"
-              value={formData.transport_cost}
-              onChange={(e) => calculatePrices('transport_cost', e.target.value)}
-              placeholder="0.00"
-              onWheel={(e) => e.target.blur()}
-            />
+              {/* Export Documentation Cost */}
+              <div style={{ 
+                marginBottom: '20px',
+                backgroundColor: 'transparent',
+                padding: '15px',
+                borderRadius: '6px',
+                border: '1px solid #ddd'
+              }}>
+                <h4 style={{ margin: '0 0 12px 0', color: '#ffffff', fontSize: '14px', fontWeight: '600' }}>
+                  Export Documentation Cost
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '6px', 
+                      fontSize: '13px', 
+                      color: '#ffffff',
+                      fontWeight: '500'
+                    }}>
+                      USD ($)
+                    </label>
+                    <input
+                      type="number"
+                      className="apf-input"
+                      step="0.01"
+                      value={formData.export_doc_usd}
+                      onChange={(e) => calculatePrices('export_doc_usd', e.target.value)}
+                      placeholder="0.00"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '6px', 
+                      fontSize: '13px', 
+                      color: '#ffffff',
+                      fontWeight: '500'
+                    }}>
+                      LKR (Rs.)
+                    </label>
+                    <input
+                      type="number"
+                      className="apf-input"
+                      step="0.01"
+                      value={formData.export_doc_lkr}
+                      onChange={(e) => calculatePrices('export_doc_lkr', e.target.value)}
+                      placeholder="0.00"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                </div>
+              </div>
 
-            <label className="apf-label">
-              Loading Cost (USD)
-              {currentUsdRate && (
-                <span style={{ fontSize: '11px', color: '#ff9800', marginLeft: '5px', fontWeight: 'normal' }}>
-                  → Rs.{formData.loading_cost ? convertToLKR(formData.loading_cost) : '0.00'}
-                </span>
-              )}
-            </label>
-            <input
-              type="number"
-              className="apf-input"
-              step="0.01"
-              value={formData.loading_cost}
-              onChange={(e) => calculatePrices('loading_cost', e.target.value)}
-              placeholder="0.00"
-              onWheel={(e) => e.target.blur()}
-            />
+              {/* Transport Cost */}
+              <div style={{ 
+                marginBottom: '20px',
+                backgroundColor: 'transparent',
+                padding: '15px',
+                borderRadius: '6px',
+                border: '1px solid #ddd'
+              }}>
+                <h4 style={{ margin: '0 0 12px 0', color: '#ffffff', fontSize: '14px', fontWeight: '600' }}>
+                  Transport Cost
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '6px', 
+                      fontSize: '13px', 
+                      color: '#ffffff',
+                      fontWeight: '500'
+                    }}>
+                      USD ($)
+                    </label>
+                    <input
+                      type="number"
+                      className="apf-input"
+                      step="0.01"
+                      value={formData.transport_cost_usd}
+                      onChange={(e) => calculatePrices('transport_cost_usd', e.target.value)}
+                      placeholder="0.00"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '6px', 
+                      fontSize: '13px', 
+                      color: '#ffffff',
+                      fontWeight: '500'
+                    }}>
+                      LKR (Rs.)
+                    </label>
+                    <input
+                      type="number"
+                      className="apf-input"
+                      step="0.01"
+                      value={formData.transport_cost_lkr}
+                      onChange={(e) => calculatePrices('transport_cost_lkr', e.target.value)}
+                      placeholder="0.00"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                </div>
+              </div>
 
-            <label className="apf-label">
-              Airway Bill Cost (USD)
-              {currentUsdRate && (
-                <span style={{ fontSize: '11px', color: '#ff9800', marginLeft: '5px', fontWeight: 'normal' }}>
-                  → Rs.{formData.airway_cost ? convertToLKR(formData.airway_cost) : '0.00'}
-                </span>
-              )}
-            </label>
-            <input
-              type="number"
-              className="apf-input"
-              step="0.01"
-              value={formData.airway_cost}
-              onChange={(e) => calculatePrices('airway_cost', e.target.value)}
-              placeholder="0.00"
-              onWheel={(e) => e.target.blur()}
-            />
+              {/* Loading Cost */}
+              <div style={{ 
+                marginBottom: '20px',
+                backgroundColor: 'transparent',
+                padding: '15px',
+                borderRadius: '6px',
+                border: '1px solid #ddd'
+              }}>
+                <h4 style={{ margin: '0 0 12px 0', color: '#ffffff', fontSize: '14px', fontWeight: '600' }}>
+                  Loading Cost
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '6px', 
+                      fontSize: '13px', 
+                      color: '#ffffff',
+                      fontWeight: '500'
+                    }}>
+                      USD ($)
+                    </label>
+                    <input
+                      type="number"
+                      className="apf-input"
+                      step="0.01"
+                      value={formData.loading_cost_usd}
+                      onChange={(e) => calculatePrices('loading_cost_usd', e.target.value)}
+                      placeholder="0.00"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '6px', 
+                      fontSize: '13px', 
+                      color: '#ffffff',
+                      fontWeight: '500'
+                    }}>
+                      LKR (Rs.)
+                    </label>
+                    <input
+                      type="number"
+                      className="apf-input"
+                      step="0.01"
+                      value={formData.loading_cost_lkr}
+                      onChange={(e) => calculatePrices('loading_cost_lkr', e.target.value)}
+                      placeholder="0.00"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                </div>
+              </div>
 
-            <label className="apf-label">
-              Forward Handling Cost (USD)
-              {currentUsdRate && (
-                <span style={{ fontSize: '11px', color: '#ff9800', marginLeft: '5px', fontWeight: 'normal' }}>
-                  → Rs.{formData.forwardHandling_cost ? convertToLKR(formData.forwardHandling_cost) : '0.00'}
-                </span>
-              )}
-            </label>
-            <input
-              type="number"
-              className="apf-input"
-              step="0.01"
-              value={formData.forwardHandling_cost}
-              onChange={(e) => calculatePrices('forwardHandling_cost', e.target.value)}
-              placeholder="0.00"
-              onWheel={(e) => e.target.blur()}
-            />
+              {/* Airway Bill Cost */}
+              <div style={{ 
+                marginBottom: '20px',
+                backgroundColor: 'transparent',
+                padding: '15px',
+                borderRadius: '6px',
+                border: '1px solid #ddd'
+              }}>
+                <h4 style={{ margin: '0 0 12px 0', color: '#ffffff', fontSize: '14px', fontWeight: '600' }}>
+                  Airway Bill Cost
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '6px', 
+                      fontSize: '13px', 
+                      color: '#ffffff',
+                      fontWeight: '500'
+                    }}>
+                      USD ($)
+                    </label>
+                    <input
+                      type="number"
+                      className="apf-input"
+                      step="0.01"
+                      value={formData.airway_cost_usd}
+                      onChange={(e) => calculatePrices('airway_cost_usd', e.target.value)}
+                      placeholder="0.00"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '6px', 
+                      fontSize: '13px', 
+                      color: '#ffffff',
+                      fontWeight: '500'
+                    }}>
+                      LKR (Rs.)
+                    </label>
+                    <input
+                      type="number"
+                      className="apf-input"
+                      step="0.01"
+                      value={formData.airway_cost_lkr}
+                      onChange={(e) => calculatePrices('airway_cost_lkr', e.target.value)}
+                      placeholder="0.00"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Forward Handling Cost */}
+              <div style={{ 
+                marginBottom: '0',
+                backgroundColor: 'transparent',
+                padding: '15px',
+                borderRadius: '6px',
+                border: '1px solid #ddd'
+              }}>
+                <h4 style={{ margin: '0 0 12px 0', color: '#ffffff', fontSize: '14px', fontWeight: '600' }}>
+                  Forward Handling Cost
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '6px', 
+                      fontSize: '13px', 
+                      color: '#ffffff',
+                      fontWeight: '500'
+                    }}>
+                      USD ($)
+                    </label>
+                    <input
+                      type="number"
+                      className="apf-input"
+                      step="0.01"
+                      value={formData.forwardHandling_cost_usd}
+                      onChange={(e) => calculatePrices('forwardHandling_cost_usd', e.target.value)}
+                      placeholder="0.00"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '6px', 
+                      fontSize: '13px', 
+                      color: '#ffffff',
+                      fontWeight: '500'
+                    }}>
+                      LKR (Rs.)
+                    </label>
+                    <input
+                      type="number"
+                      className="apf-input"
+                      step="0.01"
+                      value={formData.forwardHandling_cost_lkr}
+                      onChange={(e) => calculatePrices('forwardHandling_cost_lkr', e.target.value)}
+                      placeholder="0.00"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <label className="apf-label">FOB Price (LKR):</label>
             <input
@@ -961,21 +1231,39 @@ const ExportCustomerDetail = () => {
             <div style={{
               gridColumn: '1 / -1',
               backgroundColor: 'transparent',
-              padding: '15px',
+              padding: '20px',
               borderRadius: '8px',
               marginTop: '15px',
             }}>
-              <h2 style={{ marginTop: 0, marginBottom: '15px', color: '#ffffff' }}>
+              <h3 style={{ marginTop: 0, marginBottom: '10px', color: '#ffffff', fontSize: '18px' }}>
                 Freight Calculation
-              </h2>
+              </h3>
+              <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#c9c9c9', fontStyle: 'italic' }}>
+                Configure freight rates based on weight tiers
+              </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <div>
-                  <label className="apf-label">Gross Weight Tier:</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+                {/* Gross Weight Tier */}
+                <div style={{
+                  backgroundColor: 'transparent',
+                  padding: '15px',
+                  borderRadius: '6px',
+                  border: '1px solid #a5d6a7'
+                }}>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '8px', 
+                    fontSize: '14px', 
+                    color: '#ffffff',
+                    fontWeight: '600'
+                  }}>
+                    Gross Weight Tier
+                  </label>
                   <select
                     className="apf-input"
                     value={formData.gross_weight_tier}
                     onChange={(e) => calculatePrices('gross_weight_tier', e.target.value)}
+                    style={{ width: '100%' }}
                   >
                     <option value="">-- Select Weight Tier --</option>
                     <option value="gross+45kg">Gross +45kg</option>
@@ -985,8 +1273,22 @@ const ExportCustomerDetail = () => {
                   </select>
                 </div>
 
-                <div>
-                  <label className="apf-label">Gross Weight (kg) - Multiplier:</label>
+                {/* Multiplier */}
+                <div style={{
+                  backgroundColor: 'transparent',
+                  padding: '15px',
+                  borderRadius: '6px',
+                  border: '1px solid #ddd'
+                }}>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '8px', 
+                    fontSize: '14px', 
+                    color: '#ffffff',
+                    fontWeight: '600'
+                  }}>
+                    Gross Weight (kg) - Multiplier
+                  </label>
                   <input
                     type="number"
                     className="apf-input"
@@ -995,11 +1297,26 @@ const ExportCustomerDetail = () => {
                     onChange={(e) => calculatePrices('multiplier', e.target.value)}
                     placeholder="e.g., 150"
                     onWheel={(e) => e.target.blur()}
+                    style={{ width: '100%' }}
                   />
                 </div>
 
-                <div>
-                  <label className="apf-label">Divisor:</label>
+                {/* Divisor */}
+                <div style={{
+                  backgroundColor: 'transparent',
+                  padding: '15px',
+                  borderRadius: '6px',
+                  border: '1px solid #ddd'
+                }}>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '8px', 
+                    fontSize: '14px', 
+                    color: '#ffffff',
+                    fontWeight: '600'
+                  }}>
+                    Divisor
+                  </label>
                   <input
                     type="number"
                     className="apf-input"
@@ -1008,11 +1325,29 @@ const ExportCustomerDetail = () => {
                     onChange={(e) => calculatePrices('divisor', e.target.value)}
                     placeholder="e.g., 1"
                     onWheel={(e) => e.target.blur()}
+                    style={{ width: '100%' }}
                   />
                 </div>
 
-                <div>
-                  <label className="apf-label">Freight Cost (USD - Calculated):</label>
+                {/* Freight Cost */}
+                <div style={{
+                  backgroundColor: 'transparent',
+                  padding: '15px',
+                  borderRadius: '6px',
+                  border: '1px solid #ddd'
+                }}>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '8px', 
+                    fontSize: '14px', 
+                    color: '#ffffff',
+                    fontWeight: '600'
+                  }}>
+                    Freight Cost (USD)
+                    <span style={{ fontSize: '11px', color: '#ffffff', marginLeft: '5px', fontWeight: 'normal' }}>
+                      - Calculated
+                    </span>
+                  </label>
                   <input
                     type="number"
                     className="apf-input"
@@ -1021,32 +1356,49 @@ const ExportCustomerDetail = () => {
                     onChange={(e) => calculatePrices('freight_cost', e.target.value)}
                     placeholder="0.00"
                     onWheel={(e) => e.target.blur()}
+                    style={{ width: '100%' }}
                   />
                 </div>
-                <div>
-                  <label className="apf-label">
-                    CNF (Cost and Freight) - USD
-                    <span style={{ fontSize: '11px', color: '#9c27b0', marginLeft: '5px', fontWeight: 'normal' }}>
-                      (FOB + Freight Cost)
-                    </span>
-                  </label>
-                  <input
-                    type="number"
-                    className="apf-input"
-                    step="0.01"
-                    value={formData.cnf}
-                    disabled
-                    placeholder="0.00"
-                    onWheel={(e) => e.target.blur()}
-                    style={{
-                      backgroundColor: '#f3e5f5',
-                      color: '#7b1fa2',
-                      fontWeight: 'bold',
-                      cursor: 'not-allowed',
-                      fontSize: '16px'
-                    }}
-                  />
-                </div>
+              </div>
+
+              {/* CNF - Full Width */}
+              <div style={{
+                backgroundColor: 'transparent',
+                padding: '15px',
+                borderRadius: '6px',
+                border: '2px solid #ffffff',
+                marginTop: '15px'
+              }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontSize: '15px', 
+                  color: '#ffffff',
+                  fontWeight: '700'
+                }}>
+                  CNF (Cost and Freight) - USD
+                  <span style={{ fontSize: '12px', color: '#d6d6d6', marginLeft: '8px', fontWeight: 'normal' }}>
+                    (FOB + Freight Cost)
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  className="apf-input"
+                  step="0.01"
+                  value={formData.cnf}
+                  disabled
+                  placeholder="0.00"
+                  onWheel={(e) => e.target.blur()}
+                  style={{
+                    width: '100%',
+                    backgroundColor: '#ffffff',
+                    color: '#6a1b9a',
+                    fontWeight: 'bold',
+                    cursor: 'not-allowed',
+                    fontSize: '16px',
+                    border: '2px solid #ba68c8'
+                  }}
+                />
               </div>
             </div>
 

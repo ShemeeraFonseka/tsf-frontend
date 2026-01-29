@@ -57,7 +57,11 @@ const Navbar = () => {
         </li>
 
         <li>
-          <Link to="/freightrates">Freight Rate</Link>
+          <Link to="/freightrates">Air Freight Rates</Link>
+        </li>
+
+        <li>
+          <Link to="/seafreightrates">Sea Freight Rates</Link>
         </li>
         
       </ul>

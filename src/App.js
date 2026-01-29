@@ -14,6 +14,7 @@ import ExportProductlist from './components/Products/ExportProductlist';
 import ExportCustomerDetail from './components/Customers/ExportCustomerDetail';
 import UsdRateForm from './components/pricelist/UsdRateForm';
 import FreightRatesForm from './components/Products/Freightratesform';
+import SeaFreightRatesForm from './components/Products/SeaFreightratesform';
 
 
 function App() {
@@ -60,6 +61,7 @@ function App() {
         <Route path="/usdrate" element={<UsdRateForm />} />
 
         <Route path="/freightrates" element={<FreightRatesForm />} />
+        <Route path="/seafreightrates" element={<SeaFreightRatesForm />} />
 
       </Routes>
     </Router>
