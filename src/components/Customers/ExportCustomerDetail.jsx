@@ -16,6 +16,7 @@ const ExportCustomerDetail = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingPrice, setEditingPrice] = useState(null);
   const [freightRates, setFreightRates] = useState([]);
+  const [seaFreightRates, setSeaFreightRates] = useState([]);
   const [currentUsdRate, setCurrentUsdRate] = useState(null);
   
   // Form state - costs stored in USD, but user can input in either currency
@@ -37,7 +38,9 @@ const ExportCustomerDetail = () => {
     airway_cost_lkr: '',
     forwardHandling_cost_usd: '',
     forwardHandling_cost_lkr: '',
+    freight_type: 'air', // 'air' or 'sea'
     gross_weight_tier: '',
+    container_type: '', // '20ft' or '40ft'
     multiplier: '',
     divisor: '',
     freight_cost: '',
@@ -50,6 +53,7 @@ const ExportCustomerDetail = () => {
     fetchPrices();
     fetchProducts();
     fetchFreightRates();
+    fetchSeaFreightRates();
     fetchUsdRate();
   }, [cus_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -100,8 +104,19 @@ const ExportCustomerDetail = () => {
     }
   };
 
-  // Get freight rate for customer's specific country AND airport code
-  const getFreightRateForCustomer = (customer) => {
+  const fetchSeaFreightRates = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/sea-freight-rates`);
+      if (!res.ok) throw new Error('Failed to fetch sea freight rates');
+      const data = await res.json();
+      setSeaFreightRates(data);
+    } catch (err) {
+      console.error('Error fetching sea freight rates:', err);
+    }
+  };
+
+  // Get air freight rate for customer's specific country AND airport code
+  const getAirFreightRateForCustomer = (customer) => {
     if (!customer || freightRates.length === 0) return null;
     
     // First, try to find rate for specific country AND airport code
@@ -128,7 +143,35 @@ const ExportCustomerDetail = () => {
     return countryRates.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
   };
 
-  const getFreightRateByTier = (tier, rateData) => {
+  // Get sea freight rate for customer's specific country AND port code
+  const getSeaFreightRateForCustomer = (customer) => {
+    if (!customer || seaFreightRates.length === 0) return null;
+    
+    // First, try to find rate for specific country AND port code
+    if (customer.port_code) {
+      const exactMatch = seaFreightRates.filter(rate =>
+        rate.country.toLowerCase() === customer.country.toLowerCase() &&
+        rate.port_code && rate.port_code.toUpperCase() === customer.port_code.toUpperCase()
+      );
+      
+      if (exactMatch.length > 0) {
+        // Return the most recent rate for this country + port combination
+        return exactMatch.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+      }
+    }
+    
+    // Fallback: If no specific port match, get any rate for the country
+    const countryRates = seaFreightRates.filter(rate =>
+      rate.country.toLowerCase() === customer.country.toLowerCase()
+    );
+    
+    if (countryRates.length === 0) return null;
+    
+    // Return the most recent rate for this country
+    return countryRates.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+  };
+
+  const getAirFreightRateByTier = (tier, rateData) => {
     if (!rateData || !tier) return 0;
     switch (tier) {
       case 'gross+45kg':
@@ -142,6 +185,26 @@ const ExportCustomerDetail = () => {
       default:
         return 0;
     }
+  };
+
+  const getSeaFreightRateByContainer = (containerType, rateData) => {
+    if (!rateData || !containerType) return { rate: 0, kilos: 0 };
+    
+    if (containerType === '20ft') {
+      return {
+        rate: parseFloat(rateData.rate_20ft) || 0,
+        kilos: parseFloat(rateData.kilos_20ft) || 0,
+        perKilo: parseFloat(rateData.freight_per_kilo_20ft) || 0
+      };
+    } else if (containerType === '40ft') {
+      return {
+        rate: parseFloat(rateData.rate_40ft) || 0,
+        kilos: parseFloat(rateData.kilos_40ft) || 0,
+        perKilo: parseFloat(rateData.freight_per_kilo_40ft) || 0
+      };
+    }
+    
+    return { rate: 0, kilos: 0, perKilo: 0 };
   };
 
   const fetchUsdRate = async () => {
@@ -262,6 +325,18 @@ const ExportCustomerDetail = () => {
       data.forwardHandling_cost_usd = convertToUSD(value);
     }
 
+    // Reset freight-specific fields when freight type changes
+    if (field === 'freight_type') {
+      data.gross_weight_tier = '';
+      data.container_type = '';
+      data.freight_cost = '';
+      // Clear multiplier and divisor only when switching to sea freight
+      if (value === 'sea') {
+        data.multiplier = '';
+        data.divisor = '';
+      }
+    }
+
     const exfactoryprice = parseFloat(data.exfactoryprice) || 0;
     
     // Use USD values for calculation
@@ -275,13 +350,27 @@ const ExportCustomerDetail = () => {
     let divisor = parseFloat(data.divisor) || 1;
     let freight_cost = parseFloat(data.freight_cost) || 0;
 
-    // Calculate freight cost if weight tier is selected - using customer-specific rates
-    if (field === 'gross_weight_tier' || field === 'multiplier' || field === 'divisor') {
-      const freightRateData = getFreightRateForCustomer(customer);
-      if (freightRateData && data.gross_weight_tier && multiplier > 0 && divisor > 0) {
-        const applicableRate = getFreightRateByTier(data.gross_weight_tier, freightRateData);
-        freight_cost = (multiplier * applicableRate) / divisor;
-        data.freight_cost = freight_cost.toFixed(2);
+    // Calculate freight cost based on type
+    if (data.freight_type === 'air') {
+      // Air freight calculation
+      if (field === 'gross_weight_tier' || field === 'multiplier' || field === 'divisor') {
+        const airRateData = getAirFreightRateForCustomer(customer);
+        if (airRateData && data.gross_weight_tier && multiplier > 0 && divisor > 0) {
+          const applicableRate = getAirFreightRateByTier(data.gross_weight_tier, airRateData);
+          freight_cost = (multiplier * applicableRate) / divisor;
+          data.freight_cost = freight_cost.toFixed(2);
+        }
+      }
+    } else if (data.freight_type === 'sea') {
+      // Sea freight calculation - use full container rate
+      if (field === 'container_type') {
+        const seaRateData = getSeaFreightRateForCustomer(customer);
+        if (seaRateData && data.container_type) {
+          const containerData = getSeaFreightRateByContainer(data.container_type, seaRateData);
+          // Use the full container rate directly
+          freight_cost = containerData.perKilo;
+          data.freight_cost = freight_cost.toFixed(4);
+        }
       }
     }
 
@@ -324,9 +413,11 @@ const ExportCustomerDetail = () => {
         loading_cost: parseFloat(formData.loading_cost_usd) || 0,
         airway_cost: parseFloat(formData.airway_cost_usd) || 0,
         forwardHandling_cost: parseFloat(formData.forwardHandling_cost_usd) || 0,
-        gross_weight_tier: formData.gross_weight_tier || null,
-        multiplier: parseFloat(formData.multiplier) || 0,
-        divisor: parseFloat(formData.divisor) || 1,
+        freight_type: formData.freight_type,
+        gross_weight_tier: formData.freight_type === 'air' ? formData.gross_weight_tier : null,
+        container_type: formData.freight_type === 'sea' ? formData.container_type : null,
+        multiplier: formData.freight_type === 'air' ? parseFloat(formData.multiplier) || 0 : 0,
+        divisor: formData.freight_type === 'air' ? parseFloat(formData.divisor) || 1 : 1,
         freight_cost: parseFloat(formData.freight_cost) || 0,
         fob_price: parseFloat(formData.fob_price),
         cnf: parseFloat(formData.cnf) || 0
@@ -388,7 +479,9 @@ const ExportCustomerDetail = () => {
         airway_cost_lkr: convertToLKR(price.airway_cost),
         forwardHandling_cost_usd: price.forwardHandling_cost || '',
         forwardHandling_cost_lkr: convertToLKR(price.forwardHandling_cost),
+        freight_type: price.freight_type || 'air',
         gross_weight_tier: price.gross_weight_tier || '',
+        container_type: price.container_type || '',
         multiplier: price.multiplier || '',
         divisor: price.divisor || '',
         freight_cost: price.freight_cost || '',
@@ -416,7 +509,9 @@ const ExportCustomerDetail = () => {
         airway_cost_lkr: convertToLKR(price.airway_cost),
         forwardHandling_cost_usd: price.forwardHandling_cost || '',
         forwardHandling_cost_lkr: convertToLKR(price.forwardHandling_cost),
+        freight_type: price.freight_type || 'air',
         gross_weight_tier: price.gross_weight_tier || '',
+        container_type: price.container_type || '',
         multiplier: price.multiplier || '',
         divisor: price.divisor || '',
         freight_cost: price.freight_cost || '',
@@ -463,7 +558,9 @@ const ExportCustomerDetail = () => {
       airway_cost_lkr: '',
       forwardHandling_cost_usd: '',
       forwardHandling_cost_lkr: '',
+      freight_type: 'air',
       gross_weight_tier: '',
+      container_type: '',
       multiplier: '',
       divisor: '',
       freight_cost: '',
@@ -488,8 +585,11 @@ const ExportCustomerDetail = () => {
 
   const getCurrentFreightInfo = () => {
     if (!customer) return null;
-    const rateData = getFreightRateForCustomer(customer);
-    if (!rateData) {
+    
+    const airRateData = getAirFreightRateForCustomer(customer);
+    const seaRateData = getSeaFreightRateForCustomer(customer);
+    
+    if (!airRateData && !seaRateData) {
       return (
         <div style={{
           backgroundColor: '#ff5722',
@@ -501,66 +601,105 @@ const ExportCustomerDetail = () => {
         }}>
           <h4 style={{ marginTop: 0 }}>⚠️ No Freight Rates Available</h4>
           <p style={{ marginBottom: 0 }}>
-            No freight rates found for {customer.country}
-            {customer.airport_code && ` - ${customer.airport_code}`}.
+            No freight rates found for {customer.country}.
             Please add freight rates in the Freight Rates section.
           </p>
         </div>
       );
     }
     
-    const isExactMatch = rateData.airport_code && 
-      customer.airport_code && 
-      rateData.airport_code.toUpperCase() === customer.airport_code.toUpperCase();
-    
-    
     return (
-      <div style={{
-        backgroundColor: isExactMatch ? '#1b5e20' : '#000000',
-        padding: '15px',
-        borderRadius: '8px',
-        marginBottom: '20px',
-        border: `1px solid ${isExactMatch ? '#4caf50' : '#2196f3'}`
-      }}>
-        <h4 style={{ marginTop: 0, color: isExactMatch ? '#81c784' : '#2196f3' }}>
-          {isExactMatch ? '✓ ' : ''}Current Freight Rates - {customer.country}
-          {rateData.airport_code && ` (${rateData.airport_code})`}
-        </h4>
-        {isExactMatch && customer.airport_name && (
-          <p style={{ fontSize: '0.9rem', color: '#a5d6a7', marginTop: '5px', marginBottom: '10px' }}>
-            {customer.airport_name}
-          </p>
-        )}
-        {!isExactMatch && customer.airport_code && (
-          <p style={{ fontSize: '0.9rem', color: '#ff9800', marginTop: '5px', marginBottom: '10px' }}>
-            ⚠️ Using general country rates. No specific rate found for airport: {customer.airport_code}
-            {customer.airport_name && ` (${customer.airport_name})`}
-          </p>
-        )}
-        
+      <>
         {/* Air Freight Rates */}
-        <div style={{ marginTop: '10px' }}>
-          <p style={{ fontSize: '0.95rem', fontWeight: 'bold', color: '#81c784', marginBottom: '8px' }}>
-            ✈️ Air Freight (USD/kg)
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-            <div><strong>+45kg:</strong> ${parseFloat(rateData.rate_45kg).toFixed(2)}/kg</div>
-            <div><strong>+100kg:</strong> ${parseFloat(rateData.rate_100kg).toFixed(2)}/kg</div>
-            <div><strong>+300kg:</strong> ${parseFloat(rateData.rate_300kg).toFixed(2)}/kg</div>
-            <div><strong>+500kg:</strong> ${parseFloat(rateData.rate_500kg).toFixed(2)}/kg</div>
+        {airRateData && (
+          <div style={{
+            backgroundColor: '#1b5e20',
+            padding: '15px',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            border: '1px solid #4caf50'
+          }}>
+            <h4 style={{ marginTop: 0, color: '#81c784' }}>
+              ✈️ Air Freight Rates - {customer.country}
+              {airRateData.airport_code && ` (${airRateData.airport_code})`}
+            </h4>
+            {customer.airport_name && (
+              <p style={{ fontSize: '0.9rem', color: '#a5d6a7', marginTop: '5px', marginBottom: '10px' }}>
+                {customer.airport_name}
+              </p>
+            )}
+            
+            <div style={{ marginTop: '10px' }}>
+              <p style={{ fontSize: '0.95rem', fontWeight: 'bold', color: '#81c784', marginBottom: '8px' }}>
+                Rates (USD/kg)
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                <div><strong>+45kg:</strong> ${parseFloat(airRateData.rate_45kg).toFixed(2)}/kg</div>
+                <div><strong>+100kg:</strong> ${parseFloat(airRateData.rate_100kg).toFixed(2)}/kg</div>
+                <div><strong>+300kg:</strong> ${parseFloat(airRateData.rate_300kg).toFixed(2)}/kg</div>
+                <div><strong>+500kg:</strong> ${parseFloat(airRateData.rate_500kg).toFixed(2)}/kg</div>
+              </div>
+            </div>
+            
+            <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: 0, marginTop: '15px' }}>
+              Effective Date: {new Date(airRateData.date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
           </div>
-        </div>
+        )}
 
-        
-        
-        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: 0, marginTop: '15px' }}>
-          Effective Date: {new Date(rateData.date).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          })}
-        </p>
-      </div>
+        {/* Sea Freight Rates */}
+        {seaRateData && (
+          <div style={{
+            backgroundColor: '#0d47a1',
+            padding: '15px',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            border: '1px solid #2196f3'
+          }}>
+            <h4 style={{ marginTop: 0, color: '#64b5f6' }}>
+              🚢 Sea Freight Rates - {customer.country}
+              {seaRateData.port_code && ` (${seaRateData.port_code})`}
+            </h4>
+            {customer.port_name && (
+              <p style={{ fontSize: '0.9rem', color: '#90caf9', marginTop: '5px', marginBottom: '10px' }}>
+                {customer.port_name}
+              </p>
+            )}
+            
+            <div style={{ marginTop: '10px' }}>
+              <p style={{ fontSize: '0.95rem', fontWeight: 'bold', color: '#64b5f6', marginBottom: '8px' }}>
+                Container Rates
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+                <div>
+                  <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>20ft Container</div>
+                  <div>Rate: ${parseFloat(seaRateData.rate_20ft).toFixed(2)}</div>
+                  <div>Capacity: {parseFloat(seaRateData.kilos_20ft).toLocaleString()} kg</div>
+                  <div>Per Kilo: ${parseFloat(seaRateData.freight_per_kilo_20ft || 0).toFixed(4)}/kg</div>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>40ft Container</div>
+                  <div>Rate: ${parseFloat(seaRateData.rate_40ft).toFixed(2)}</div>
+                  <div>Capacity: {parseFloat(seaRateData.kilos_40ft).toLocaleString()} kg</div>
+                  <div>Per Kilo: ${parseFloat(seaRateData.freight_per_kilo_40ft || 0).toFixed(4)}/kg</div>
+                </div>
+              </div>
+            </div>
+            
+            <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: 0, marginTop: '15px' }}>
+              Effective Date: {new Date(seaRateData.date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
+          </div>
+        )}
+      </>
     );
   };
 
@@ -606,12 +745,19 @@ const ExportCustomerDetail = () => {
       doc.text(`Customer: ${customer?.cus_name || 'N/A'}`, 14, 25);
       doc.text(`Country: ${customer?.country || 'N/A'}`, 14, 31);
       
+      let yPos = 37;
       if (customer?.airport_code) {
-        doc.text(`Airport: ${customer.airport_code}${customer.airport_name ? ' - ' + customer.airport_name : ''}`, 14, 37);
+        doc.text(`Airport: ${customer.airport_code}${customer.airport_name ? ' - ' + customer.airport_name : ''}`, 14, yPos);
+        yPos += 6;
+      }
+      if (customer?.port_code) {
+        doc.text(`Port: ${customer.port_code}${customer.port_name ? ' - ' + customer.port_name : ''}`, 14, yPos);
+        yPos += 6;
       }
 
       if (currentUsdRate) {
-        doc.text(`USD Rate: Rs. ${parseFloat(currentUsdRate).toFixed(2)}`, 14, customer?.airport_code ? 43 : 37);
+        doc.text(`USD Rate: Rs. ${parseFloat(currentUsdRate).toFixed(2)}`, 14, yPos);
+        yPos += 6;
       }
 
       const currentDate = new Date().toLocaleDateString('en-US', {
@@ -619,12 +765,25 @@ const ExportCustomerDetail = () => {
         month: 'long',
         day: 'numeric'
       });
-      doc.text(`Generated: ${currentDate}`, 14, customer?.airport_code ? 49 : 43);
+      doc.text(`Generated: ${currentDate}`, 14, yPos);
+      yPos += 6;
 
       const tableData = prices.map(price => {
         const cnfValue = price.cnf || calculateCNF(price.fob_price, price.freight_cost);
         const exFactoryUSD = convertToUSD(price.exfactoryprice);
         const fobUSD = convertToUSD(price.fob_price);
+
+        let freightInfo = '-';
+        if (price.freight_cost && parseFloat(price.freight_cost) > 0) {
+          const freightType = price.freight_type === 'sea' ? '(SEA)' : '(AIR)';
+          if (price.freight_type === 'air' && price.gross_weight_tier) {
+            freightInfo = `${freightType} $${parseFloat(price.freight_cost).toFixed(2)}\n${price.gross_weight_tier.replace('gross+', '+')}`;
+          } else if (price.freight_type === 'sea' && price.container_type) {
+            freightInfo = `${freightType} $${parseFloat(price.freight_cost).toFixed(2)}\n${price.container_type} Container`;
+          } else {
+            freightInfo = `$${parseFloat(price.freight_cost).toFixed(2)}`;
+          }
+        }
 
         return [
           price.common_name,
@@ -632,17 +791,15 @@ const ExportCustomerDetail = () => {
           price.size_range || '-',
           `Rs.${parseFloat(price.purchasing_price).toFixed(2)}`,
           `Rs.${parseFloat(price.exfactoryprice).toFixed(2)}\n$${exFactoryUSD}`,
-          price.freight_cost && parseFloat(price.freight_cost) > 0
-            ? `$${parseFloat(price.freight_cost).toFixed(2)}\n${price.gross_weight_tier ? price.gross_weight_tier.replace('gross+', '+') : ''}`
-            : '-',
+          freightInfo,
           `Rs.${parseFloat(price.fob_price).toFixed(2)}\n$${fobUSD}`,
           `$${cnfValue}`
         ];
       });
 
       autoTable(doc, {
-        startY: customer?.airport_code ? 55 : 50,
-        head: [['Product Name', 'Category', 'Size Range', 'Purchasing\nPrice (LKR)', 'Ex-Factory\nPrice', 'Freight\nCost (USD)', 'FOB\nPrice', 'CNF\n(USD)']],
+        startY: yPos,
+        head: [['Product Name', 'Category', 'Size Range', 'Purchasing\nPrice (LKR)', 'Ex-Factory\nPrice', 'Freight\nCost', 'FOB\nPrice', 'CNF\n(USD)']],
         body: tableData,
         theme: 'grid',
         headStyles: {
@@ -676,7 +833,7 @@ const ExportCustomerDetail = () => {
         alternateRowStyles: {
           fillColor: [245, 245, 245]
         },
-        margin: { top: customer?.airport_code ? 55 : 50 }
+        margin: { top: yPos }
       });
 
       const fileName = `${customer?.cus_name || 'Customer'}_Product_List_${new Date().toISOString().split('T')[0]}.pdf`;
@@ -691,12 +848,12 @@ const ExportCustomerDetail = () => {
   useEffect(() => {
     console.log('=== DEBUG INFO ===');
     console.log('Customer:', customer);
-    console.log('Customer Airport Code:', customer?.airport_code);
-    console.log('Customer Airport Name:', customer?.airport_name);
-    console.log('Freight Rates:', freightRates);
-    console.log('Matched Rate:', customer ? getFreightRateForCustomer(customer) : null);
+    console.log('Air Freight Rates:', freightRates);
+    console.log('Sea Freight Rates:', seaFreightRates);
+    console.log('Matched Air Rate:', customer ? getAirFreightRateForCustomer(customer) : null);
+    console.log('Matched Sea Rate:', customer ? getSeaFreightRateForCustomer(customer) : null);
     console.log('==================');
-  }, [customer, freightRates]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [customer, freightRates, seaFreightRates]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   return (
@@ -1238,127 +1395,247 @@ const ExportCustomerDetail = () => {
                 Freight Calculation
               </h3>
               <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#c9c9c9', fontStyle: 'italic' }}>
-                Configure freight rates based on weight tiers
+                Configure freight rates based on type and weight
               </p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
-                {/* Gross Weight Tier */}
-                <div style={{
-                  backgroundColor: 'transparent',
-                  padding: '15px',
-                  borderRadius: '6px',
-                  border: '1px solid #a5d6a7'
+              {/* Freight Type Selection */}
+              <div style={{
+                backgroundColor: 'transparent',
+                padding: '15px',
+                borderRadius: '6px',
+                border: '2px solid #2196f3',
+                marginBottom: '20px'
+              }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontSize: '15px', 
+                  color: '#ffffff',
+                  fontWeight: '700'
                 }}>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
-                    fontSize: '14px', 
-                    color: '#ffffff',
-                    fontWeight: '600'
-                  }}>
-                    Gross Weight Tier
-                  </label>
-                  <select
-                    className="apf-input"
-                    value={formData.gross_weight_tier}
-                    onChange={(e) => calculatePrices('gross_weight_tier', e.target.value)}
-                    style={{ width: '100%' }}
-                  >
-                    <option value="">-- Select Weight Tier --</option>
-                    <option value="gross+45kg">Gross +45kg</option>
-                    <option value="gross+100kg">Gross +100kg</option>
-                    <option value="gross+300kg">Gross +300kg</option>
-                    <option value="gross+500kg">Gross +500kg</option>
-                  </select>
-                </div>
-
-                {/* Multiplier */}
-                <div style={{
-                  backgroundColor: 'transparent',
-                  padding: '15px',
-                  borderRadius: '6px',
-                  border: '1px solid #ddd'
-                }}>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
-                    fontSize: '14px', 
-                    color: '#ffffff',
-                    fontWeight: '600'
-                  }}>
-                    Gross Weight (kg) - Multiplier
-                  </label>
-                  <input
-                    type="number"
-                    className="apf-input"
-                    step="0.01"
-                    value={formData.multiplier}
-                    onChange={(e) => calculatePrices('multiplier', e.target.value)}
-                    placeholder="e.g., 150"
-                    onWheel={(e) => e.target.blur()}
-                    style={{ width: '100%' }}
-                  />
-                </div>
-
-                {/* Divisor */}
-                <div style={{
-                  backgroundColor: 'transparent',
-                  padding: '15px',
-                  borderRadius: '6px',
-                  border: '1px solid #ddd'
-                }}>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
-                    fontSize: '14px', 
-                    color: '#ffffff',
-                    fontWeight: '600'
-                  }}>
-                    Divisor
-                  </label>
-                  <input
-                    type="number"
-                    className="apf-input"
-                    step="0.01"
-                    value={formData.divisor}
-                    onChange={(e) => calculatePrices('divisor', e.target.value)}
-                    placeholder="e.g., 1"
-                    onWheel={(e) => e.target.blur()}
-                    style={{ width: '100%' }}
-                  />
-                </div>
-
-                {/* Freight Cost */}
-                <div style={{
-                  backgroundColor: 'transparent',
-                  padding: '15px',
-                  borderRadius: '6px',
-                  border: '1px solid #ddd'
-                }}>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
-                    fontSize: '14px', 
-                    color: '#ffffff',
-                    fontWeight: '600'
-                  }}>
-                    Freight Cost (USD)
-                    <span style={{ fontSize: '11px', color: '#ffffff', marginLeft: '5px', fontWeight: 'normal' }}>
-                      - Calculated
+                  Freight Type
+                </label>
+                <div style={{ display: 'flex', gap: '20px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="freight_type"
+                      value="air"
+                      checked={formData.freight_type === 'air'}
+                      onChange={(e) => calculatePrices('freight_type', e.target.value)}
+                      style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '15px', color: '#ffffff', fontWeight: '500' }}>
+                      ✈️ Air Freight
                     </span>
                   </label>
-                  <input
-                    type="number"
-                    className="apf-input"
-                    step="0.01"
-                    value={formData.freight_cost}
-                    onChange={(e) => calculatePrices('freight_cost', e.target.value)}
-                    placeholder="0.00"
-                    onWheel={(e) => e.target.blur()}
-                    style={{ width: '100%' }}
-                  />
+                  <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="freight_type"
+                      value="sea"
+                      checked={formData.freight_type === 'sea'}
+                      onChange={(e) => calculatePrices('freight_type', e.target.value)}
+                      style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '15px', color: '#ffffff', fontWeight: '500' }}>
+                      🚢 Sea Freight
+                    </span>
+                  </label>
                 </div>
               </div>
+
+              {/* Air Freight Configuration */}
+              {formData.freight_type === 'air' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+                  {/* Gross Weight Tier */}
+                  <div style={{
+                    backgroundColor: 'transparent',
+                    padding: '15px',
+                    borderRadius: '6px',
+                    border: '1px solid #a5d6a7'
+                  }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '8px', 
+                      fontSize: '14px', 
+                      color: '#ffffff',
+                      fontWeight: '600'
+                    }}>
+                      Gross Weight Tier
+                    </label>
+                    <select
+                      className="apf-input"
+                      value={formData.gross_weight_tier}
+                      onChange={(e) => calculatePrices('gross_weight_tier', e.target.value)}
+                      style={{ width: '100%' }}
+                    >
+                      <option value="">-- Select Weight Tier --</option>
+                      <option value="gross+45kg">Gross +45kg</option>
+                      <option value="gross+100kg">Gross +100kg</option>
+                      <option value="gross+300kg">Gross +300kg</option>
+                      <option value="gross+500kg">Gross +500kg</option>
+                    </select>
+                  </div>
+
+                  {/* Multiplier */}
+                  <div style={{
+                    backgroundColor: 'transparent',
+                    padding: '15px',
+                    borderRadius: '6px',
+                    border: '1px solid #ddd'
+                  }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '8px', 
+                      fontSize: '14px', 
+                      color: '#ffffff',
+                      fontWeight: '600'
+                    }}>
+                      Gross Weight (kg) - Multiplier
+                    </label>
+                    <input
+                      type="number"
+                      className="apf-input"
+                      step="0.01"
+                      value={formData.multiplier}
+                      onChange={(e) => calculatePrices('multiplier', e.target.value)}
+                      placeholder="e.g., 150"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+
+                  {/* Divisor */}
+                  <div style={{
+                    backgroundColor: 'transparent',
+                    padding: '15px',
+                    borderRadius: '6px',
+                    border: '1px solid #ddd'
+                  }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '8px', 
+                      fontSize: '14px', 
+                      color: '#ffffff',
+                      fontWeight: '600'
+                    }}>
+                      Divisor
+                    </label>
+                    <input
+                      type="number"
+                      className="apf-input"
+                      step="0.01"
+                      value={formData.divisor}
+                      onChange={(e) => calculatePrices('divisor', e.target.value)}
+                      placeholder="e.g., 1"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+
+                  {/* Freight Cost */}
+                  <div style={{
+                    backgroundColor: 'transparent',
+                    padding: '15px',
+                    borderRadius: '6px',
+                    border: '1px solid #ddd'
+                  }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '8px', 
+                      fontSize: '14px', 
+                      color: '#ffffff',
+                      fontWeight: '600'
+                    }}>
+                      Freight Cost (USD)
+                      <span style={{ fontSize: '11px', color: '#ffffff', marginLeft: '5px', fontWeight: 'normal' }}>
+                        - Calculated
+                      </span>
+                    </label>
+                    <input
+                      type="number"
+                      className="apf-input"
+                      step="0.01"
+                      value={formData.freight_cost}
+                      onChange={(e) => calculatePrices('freight_cost', e.target.value)}
+                      placeholder="0.00"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Sea Freight Configuration */}
+              {formData.freight_type === 'sea' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+                  {/* Container Type */}
+                  <div style={{
+                    backgroundColor: 'transparent',
+                    padding: '15px',
+                    borderRadius: '6px',
+                    border: '1px solid #64b5f6'
+                  }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '8px', 
+                      fontSize: '14px', 
+                      color: '#ffffff',
+                      fontWeight: '600'
+                    }}>
+                      Container Type
+                    </label>
+                    <select
+                      className="apf-input"
+                      value={formData.container_type}
+                      onChange={(e) => calculatePrices('container_type', e.target.value)}
+                      style={{ width: '100%' }}
+                    >
+                      <option value="">-- Select Container --</option>
+                      <option value="20ft">20ft Container</option>
+                      <option value="40ft">40ft Container</option>
+                    </select>
+                  </div>
+
+                  {/* Freight Cost */}
+                  <div style={{
+                    backgroundColor: 'transparent',
+                    padding: '15px',
+                    borderRadius: '6px',
+                    border: '1px solid #ddd'
+                  }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '8px', 
+                      fontSize: '14px', 
+                      color: '#ffffff',
+                      fontWeight: '600'
+                    }}>
+                      Freight Cost (USD)
+                      <span style={{ fontSize: '11px', color: '#ffffff', marginLeft: '5px', fontWeight: 'normal' }}>
+                        - Full Container Rate
+                      </span>
+                    </label>
+                    <input
+                      type="number"
+                      className="apf-input"
+                      step="0.01"
+                      value={formData.freight_cost}
+                      disabled
+                      placeholder="0.00"
+                      onWheel={(e) => e.target.blur()}
+                      style={{ 
+                        width: '100%',
+                        backgroundColor: '#e3f2fd',
+                        color: '#1976d2',
+                        fontWeight: 'bold',
+                        cursor: 'not-allowed'
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* CNF - Full Width */}
               <div style={{
@@ -1441,6 +1718,7 @@ const ExportCustomerDetail = () => {
 
               {prices.map(price => {
                 const cnfValue = price.cnf || calculateCNF(price.fob_price, price.freight_cost);
+                const freightType = price.freight_type === 'sea' ? '🚢' : '✈️';
 
                 return (
                   <tr key={price.id} className="responsive-row">
@@ -1459,11 +1737,16 @@ const ExportCustomerDetail = () => {
                     <td data-label="Freight Cost">
                       {price.freight_cost && parseFloat(price.freight_cost) > 0 ? (
                         <>
-                          $ {parseFloat(price.freight_cost).toFixed(2)}
-                          {price.gross_weight_tier && (
+                          {freightType} ${parseFloat(price.freight_cost).toFixed(2)}
+                          {price.freight_type === 'air' && price.gross_weight_tier && (
                             <small style={{ display: 'block', color: '#666', fontSize: '0.8rem' }}>
                               {price.gross_weight_tier.replace('gross+', '+')}
                               {price.multiplier && ` (${price.multiplier}kg ÷ ${price.divisor || 1})`}
+                            </small>
+                          )}
+                          {price.freight_type === 'sea' && price.container_type && (
+                            <small style={{ display: 'block', color: '#666', fontSize: '0.8rem' }}>
+                              {price.container_type} Container
                             </small>
                           )}
                         </>

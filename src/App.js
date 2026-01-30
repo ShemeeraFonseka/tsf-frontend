@@ -15,6 +15,7 @@ import ExportCustomerDetail from './components/Customers/ExportCustomerDetail';
 import UsdRateForm from './components/pricelist/UsdRateForm';
 import FreightRatesForm from './components/Products/Freightratesform';
 import SeaFreightRatesForm from './components/Products/SeaFreightratesform';
+import Dashboard from './components/Navbar/Dashboard';
 
 
 function App() {
@@ -33,6 +34,8 @@ function App() {
             </>
           }
         />
+
+        <Route path="/dashboard" element={<Dashboard />} />
 
         <Route path="/productform" element={<AddProductForm />} />
         <Route path="/productform/:id" element={<AddProductForm />} />

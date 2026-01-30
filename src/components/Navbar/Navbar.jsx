@@ -2,11 +2,7 @@ import React, { useState, useEffect } from 'react'
 import './Navbar.css'
 import { Link } from "react-router-dom";
 
-
 const Navbar = () => {
-
-
-
   const [menuOpen, setMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
 
@@ -30,40 +26,13 @@ const Navbar = () => {
         {menuOpen ? "✖" : "☰"}
       </div>
 
-
       <ul className={`nav-links ${menuOpen ? 'active' : ''}`}>
         <li>
           <Link to="/">Home</Link>
         </li>
-        
         <li>
-          <Link to="/productlist">Product List</Link>
+          <Link to="/dashboard">Dashboard</Link>
         </li>
-
-        <li>
-          <Link to="/exportproductlist">Export Product List</Link>
-        </li>
-
-        <li>
-          <Link to="/customerlist">Customer List</Link>
-        </li>
-
-        <li>
-          <Link to="/exportcustomerlist">Export Customer List</Link>
-        </li>
-
-        <li>
-          <Link to="/usdrate">USD Rate</Link>
-        </li>
-
-        <li>
-          <Link to="/freightrates">Air Freight Rates</Link>
-        </li>
-
-        <li>
-          <Link to="/seafreightrates">Sea Freight Rates</Link>
-        </li>
-        
       </ul>
     </nav>
   )
