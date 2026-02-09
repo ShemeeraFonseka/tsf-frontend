@@ -6,7 +6,7 @@ const Home = () => {
   const navigate = useNavigate()
 
   const navigatePackages = () => {
-    navigate('/packages')
+    navigate('/productlist')
   }
 
   return (
