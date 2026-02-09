@@ -78,7 +78,7 @@ const Productlist = () => {
 
     return (
         <div className="pricelist-container">
-            <h2>Product List</h2>
+            <h2>Local Product List</h2>
 
             <div className='add-section'>
                 <button className='apf-btn' onClick={navigateForm}>+ Add Product</button>
