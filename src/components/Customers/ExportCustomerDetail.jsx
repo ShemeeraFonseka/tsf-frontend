@@ -94,7 +94,7 @@ const ExportCustomerDetail = () => {
     }
   }, [formData.exfactoryprice, formData.export_doc_usd, formData.transport_cost_usd, 
       formData.loading_cost_usd, formData.airway_cost_usd, formData.forwardHandling_cost_usd, 
-      formData.freight_cost, currentUsdRate]); // eslint-disable-line react-hooks/exhaustive-deps
+      formData.freight_cost, currentUsdRate,calculateCNF,formData.cnf,formData.fob_price]); // eslint-disable-line react-hooks/exhaustive-deps
 
   
 
