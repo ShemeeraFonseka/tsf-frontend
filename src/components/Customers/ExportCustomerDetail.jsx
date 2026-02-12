@@ -57,46 +57,53 @@ const ExportCustomerDetail = () => {
     fetchUsdRate();
   }, [cus_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Trigger FOB and CNF calculation whenever exfactoryprice changes
   useEffect(() => {
-    if (formData.exfactoryprice && currentUsdRate) {
-      const exfactoryprice = parseFloat(formData.exfactoryprice) || 0;
-      
-      // Use USD values for calculation
-      let export_doc_usd = parseFloat(formData.export_doc_usd) || 0;
-      let transport_cost_usd = parseFloat(formData.transport_cost_usd) || 0;
-      let loading_cost_usd = parseFloat(formData.loading_cost_usd) || 0;
-      let airway_cost_usd = parseFloat(formData.airway_cost_usd) || 0;
-      let forwardHandling_cost_usd = parseFloat(formData.forwardHandling_cost_usd) || 0;
-      let freight_cost = parseFloat(formData.freight_cost) || 0;
+  if (formData.exfactoryprice && currentUsdRate) {
+    const exfactoryprice = parseFloat(formData.exfactoryprice) || 0;
+    
+    let export_doc_usd = parseFloat(formData.export_doc_usd) || 0;
+    let transport_cost_usd = parseFloat(formData.transport_cost_usd) || 0;
+    let loading_cost_usd = parseFloat(formData.loading_cost_usd) || 0;
+    let airway_cost_usd = parseFloat(formData.airway_cost_usd) || 0;
+    let forwardHandling_cost_usd = parseFloat(formData.forwardHandling_cost_usd) || 0;
+    let freight_cost = parseFloat(formData.freight_cost) || 0;
 
-      // Calculate total costs in USD
-      const totalCostsUSD = export_doc_usd + transport_cost_usd + loading_cost_usd + airway_cost_usd + forwardHandling_cost_usd;
-      
-      // Convert total costs to LKR
-      const totalCostsLKR = totalCostsUSD * parseFloat(currentUsdRate);
-      
-      // Calculate FOB in LKR (Ex-Factory + all costs in LKR)
-      const fobPriceLKR = exfactoryprice + totalCostsLKR;
-      const fob_price = fobPriceLKR.toFixed(2);
-      
-      // Calculate CNF (FOB in USD + Freight)
-      const cnf = calculateCNF(fobPriceLKR, freight_cost);
+    const totalCostsUSD =
+      export_doc_usd +
+      transport_cost_usd +
+      loading_cost_usd +
+      airway_cost_usd +
+      forwardHandling_cost_usd;
 
-      // Only update if values have changed
-      if (formData.fob_price !== fob_price || formData.cnf !== cnf) {
-        setFormData(prev => ({
-          ...prev,
-          fob_price,
-          cnf
-        }));
-      }
+    const totalCostsLKR = totalCostsUSD * parseFloat(currentUsdRate);
+
+    const fobPriceLKR = exfactoryprice + totalCostsLKR;
+    const fob_price = fobPriceLKR.toFixed(2);
+
+    const cnf = calculateCNF(fobPriceLKR, freight_cost);
+
+    if (formData.fob_price !== fob_price || formData.cnf !== cnf) {
+      setFormData(prev => ({
+        ...prev,
+        fob_price,
+        cnf
+      }));
     }
-  }, [formData.exfactoryprice, formData.export_doc_usd, formData.transport_cost_usd, 
-      formData.loading_cost_usd, formData.airway_cost_usd, formData.forwardHandling_cost_usd, 
-      formData.freight_cost, currentUsdRate,calculateCNF,formData.cnf,formData.fob_price]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
+}, [
+  formData.exfactoryprice,
+  formData.export_doc_usd,
+  formData.transport_cost_usd,
+  formData.loading_cost_usd,
+  formData.airway_cost_usd,
+  formData.forwardHandling_cost_usd,
+  formData.freight_cost,
+  currentUsdRate,
+  calculateCNF,
+  formData.cnf,
+  formData.fob_price
+]);
 
-  
 
  
   const fetchCustomer = async () => {
