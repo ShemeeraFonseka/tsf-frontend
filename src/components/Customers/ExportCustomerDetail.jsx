@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate,useCallback } from 'react-router-dom';
 import './CustomerDetail.css'
 
 const ExportCustomerDetail = () => {
