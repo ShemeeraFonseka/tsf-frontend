@@ -277,13 +277,20 @@ const ExportCustomerDetail = () => {
     return (parseFloat(usdAmount) * parseFloat(currentUsdRate)).toFixed(2);
   };
 
-  const calculateCNF = (fobPriceLKR, freightCostUSD) => {
-    if (!currentUsdRate || !fobPriceLKR) return '0.00';
-    const fobInUSD = parseFloat(fobPriceLKR) / parseFloat(currentUsdRate);
-    const freightUSD = parseFloat(freightCostUSD) || 0;
-    const cnf = fobInUSD + freightUSD;
-    return cnf.toFixed(2);
-  };
+ const calculateCNF = useCallback((fobPriceLKR, freightCostUSD) => {
+  const usdRate = parseFloat(currentUsdRate);
+
+  if (!usdRate || isNaN(usdRate)) return '0.00';
+
+  const fobLKR = parseFloat(fobPriceLKR) || 0;
+  const freightUSD = parseFloat(freightCostUSD) || 0;
+
+  const fobInUSD = fobLKR / usdRate;
+  const cnf = fobInUSD + freightUSD;
+
+  return cnf.toFixed(2);
+}, [currentUsdRate]);
+
 
   const handleProductSelect = (e) => {
     const productId = e.target.value;
