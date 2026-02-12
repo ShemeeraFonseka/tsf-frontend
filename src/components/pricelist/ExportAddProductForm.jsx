@@ -1,3 +1,5 @@
+// Key changes marked with // ADDED or // MODIFIED comments
+
 import React, { useState, useEffect } from 'react'
 import './AddProductForm.css'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -17,6 +19,8 @@ const ExportAddProductForm = () => {
     })
 
     const [variants, setVariants] = useState([])
+    
+    // MODIFIED: Added multiplier and divisor to newVariant state
     const [newVariant, setNewVariant] = useState({
         size: '',
         unit: '',
@@ -26,7 +30,9 @@ const ExportAddProductForm = () => {
         labour_overhead: '',
         profit: '',
         profit_margin: '',
-        exfactoryprice: ''
+        exfactoryprice: '',
+        multiplier: '',  // ADDED
+        divisor: '1'     // ADDED with default value
     })
     const [editingVariant, setEditingVariant] = useState(null)
 
@@ -40,7 +46,7 @@ const ExportAddProductForm = () => {
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
 
-    // Calculate Cost Price (without profit)
+    // ... (keep all existing calculation functions unchanged)
     const calculateCostPrice = (purchasePrice, packingCost, labourOverhead) => {
         const purchase = parseFloat(purchasePrice) || 0
         const packing = parseFloat(packingCost) || 0
@@ -48,14 +54,12 @@ const ExportAddProductForm = () => {
         return purchase + packing + labour
     }
 
-    // Calculate Ex-Factory Price (cost + profit)
     const calculateExFactoryPrice = (purchasePrice, packingCost, labourOverhead, profit) => {
         const costPrice = calculateCostPrice(purchasePrice, packingCost, labourOverhead)
         const profitAmount = parseFloat(profit) || 0
         return (costPrice + profitAmount).toFixed(2)
     }
 
-    // Calculate Profit Margin from Profit amount using: profit_margin = profit / (purchasing_price + profit)
     const calculateMarginFromProfit = (purchasePrice, profit) => {
         const purchase = parseFloat(purchasePrice) || 0
         const profitAmount = parseFloat(profit) || 0
@@ -64,13 +68,11 @@ const ExportAddProductForm = () => {
         return ((profitAmount / total) * 100).toFixed(2)
     }
 
-    // Calculate Profit from Margin percentage using: profit = (margin * purchasing_price) / (100 - margin)
     const calculateProfitFromMargin = (purchasePrice, profitMargin) => {
         const purchase = parseFloat(purchasePrice) || 0
         const margin = parseFloat(profitMargin) || 0
         
         if (margin >= 100) {
-            // If margin is 100% or more, profit would be infinite
             return '0.00'
         }
         
@@ -79,7 +81,6 @@ const ExportAddProductForm = () => {
         return ((margin * purchase) / (100 - margin)).toFixed(2)
     }
 
-    // Fetch USD rate from database
     const fetchUsdRateFromDB = async () => {
         setLoadingRate(true)
         try {
@@ -95,10 +96,8 @@ const ExportAddProductForm = () => {
                 setCurrentUsdRate(data.rate)
                 setRateLastUpdated(data.updated_at || data.updatedAt)
 
-                // Auto-populate the USD rate field for new variants
                 setNewVariant(prev => ({ ...prev, usdrate: data.rate.toFixed(2) }))
                 
-                // Also update editing variant's USD rate if it's being edited
                 if (editingVariant) {
                     setEditingVariant(prev => ({ ...prev, usdrate: data.rate.toFixed(2) }))
                 }
@@ -114,12 +113,10 @@ const ExportAddProductForm = () => {
         }
     }
 
-    // Fetch USD rate on component mount
     useEffect(() => {
         fetchUsdRateFromDB()
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Helper function to get the correct image URL
     const getImageUrl = (imageUrl) => {
         if (!imageUrl) return null
         if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
@@ -128,7 +125,6 @@ const ExportAddProductForm = () => {
         return `${API_URL}${imageUrl}`
     }
 
-    // Fetch product data if in edit mode
     useEffect(() => {
         if (isEditMode) {
             setLoading(true)
@@ -184,14 +180,11 @@ const ExportAddProductForm = () => {
         if (editingVariant) {
             const updated = { ...editingVariant, [name]: value }
             
-            // Handle profit and profit_margin calculations
             if (name === 'profit') {
-                // When profit changes, calculate margin
                 updated.profit_margin = calculateMarginFromProfit(
                     updated.purchasing_price,
                     value
                 )
-                // Then calculate ex-factory price with all costs
                 updated.exfactoryprice = calculateExFactoryPrice(
                     updated.purchasing_price,
                     updated.packing_cost,
@@ -199,12 +192,10 @@ const ExportAddProductForm = () => {
                     value
                 )
             } else if (name === 'profit_margin') {
-                // When margin changes, calculate profit
                 updated.profit = calculateProfitFromMargin(
                     updated.purchasing_price,
                     value
                 )
-                // Then calculate ex-factory price with all costs
                 updated.exfactoryprice = calculateExFactoryPrice(
                     updated.purchasing_price,
                     updated.packing_cost,
@@ -213,9 +204,7 @@ const ExportAddProductForm = () => {
                 )
             }
 
-            // Recalculate when cost components change
             if (name === 'purchasing_price' || name === 'packing_cost' || name === 'labour_overhead') {
-                // First, calculate ex-factory price based on current profit
                 updated.exfactoryprice = calculateExFactoryPrice(
                     name === 'purchasing_price' ? value : updated.purchasing_price,
                     name === 'packing_cost' ? value : updated.packing_cost,
@@ -223,7 +212,6 @@ const ExportAddProductForm = () => {
                     updated.profit
                 )
                 
-                // If purchasing_price changes, recalculate margin based on new purchasing price
                 if (name === 'purchasing_price' && updated.profit) {
                     updated.profit_margin = calculateMarginFromProfit(value, updated.profit)
                 }
@@ -233,14 +221,11 @@ const ExportAddProductForm = () => {
         } else {
             const updated = { ...newVariant, [name]: value }
             
-            // Handle profit and profit_margin calculations
             if (name === 'profit') {
-                // When profit changes, calculate margin
                 updated.profit_margin = calculateMarginFromProfit(
                     updated.purchasing_price,
                     value
                 )
-                // Then calculate ex-factory price with all costs
                 updated.exfactoryprice = calculateExFactoryPrice(
                     updated.purchasing_price,
                     updated.packing_cost,
@@ -248,12 +233,10 @@ const ExportAddProductForm = () => {
                     value
                 )
             } else if (name === 'profit_margin') {
-                // When margin changes, calculate profit
                 updated.profit = calculateProfitFromMargin(
                     updated.purchasing_price,
                     value
                 )
-                // Then calculate ex-factory price with all costs
                 updated.exfactoryprice = calculateExFactoryPrice(
                     updated.purchasing_price,
                     updated.packing_cost,
@@ -262,9 +245,7 @@ const ExportAddProductForm = () => {
                 )
             }
 
-            // Recalculate when cost components change
             if (name === 'purchasing_price' || name === 'packing_cost' || name === 'labour_overhead') {
-                // First, calculate ex-factory price based on current profit
                 updated.exfactoryprice = calculateExFactoryPrice(
                     name === 'purchasing_price' ? value : updated.purchasing_price,
                     name === 'packing_cost' ? value : updated.packing_cost,
@@ -272,7 +253,6 @@ const ExportAddProductForm = () => {
                     updated.profit
                 )
                 
-                // If purchasing_price changes, recalculate margin based on new purchasing price
                 if (name === 'purchasing_price' && updated.profit) {
                     updated.profit_margin = calculateMarginFromProfit(value, updated.profit)
                 }
@@ -282,6 +262,7 @@ const ExportAddProductForm = () => {
         }
     }
 
+    // MODIFIED: Added multiplier and divisor to variant data
     const handleAddVariant = async () => {
         if (!newVariant.size || !newVariant.purchasing_price) {
             setError('Please fill in size and purchase price')
@@ -299,11 +280,14 @@ const ExportAddProductForm = () => {
             labour_overhead: parseFloat(newVariant.labour_overhead) || 0,
             profit: parseFloat(newVariant.profit) || 0,
             profit_margin: parseFloat(newVariant.profit_margin) || 0,
-            exfactoryprice: parseFloat(newVariant.exfactoryprice)
+            exfactoryprice: parseFloat(newVariant.exfactoryprice),
+            multiplier: parseFloat(newVariant.multiplier) || 0,  // ADDED
+            divisor: parseFloat(newVariant.divisor) || 1          // ADDED
         }
 
         if (!isEditMode) {
             setVariants(prev => [...prev, variantToAdd])
+            // MODIFIED: Reset with default multiplier/divisor values
             setNewVariant({
                 size: '',
                 unit: 'kg',
@@ -313,7 +297,9 @@ const ExportAddProductForm = () => {
                 labour_overhead: '',
                 profit: '',
                 profit_margin: '',
-                exfactoryprice: ''
+                exfactoryprice: '',
+                multiplier: '',     // ADDED
+                divisor: '1'        // ADDED
             })
             setSuccess('Variant added (will be saved with product)')
             setTimeout(() => setSuccess(''), 2000)
@@ -321,6 +307,7 @@ const ExportAddProductForm = () => {
         }
 
         try {
+            // MODIFIED: Include multiplier and divisor in API call
             const res = await fetch(`${API_URL}/api/exportproductlist/${id}/variants`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -333,7 +320,9 @@ const ExportAddProductForm = () => {
                     labour_overhead: newVariant.labour_overhead || 0,
                     profit: newVariant.profit || 0,
                     profit_margin: newVariant.profit_margin || 0,
-                    exfactoryprice: newVariant.exfactoryprice
+                    exfactoryprice: newVariant.exfactoryprice,
+                    multiplier: newVariant.multiplier || 0,  // ADDED
+                    divisor: newVariant.divisor || 1          // ADDED
                 })
             })
 
@@ -341,6 +330,7 @@ const ExportAddProductForm = () => {
 
             const savedVariant = await res.json()
             setVariants(prev => [...prev, savedVariant])
+            // MODIFIED: Reset form
             setNewVariant({
                 size: '',
                 unit: 'kg',
@@ -350,7 +340,9 @@ const ExportAddProductForm = () => {
                 labour_overhead: '',
                 profit: '',
                 profit_margin: '',
-                exfactoryprice: ''
+                exfactoryprice: '',
+                multiplier: '',  // ADDED
+                divisor: '1'     // ADDED
             })
             setSuccess('Variant added successfully!')
             setTimeout(() => setSuccess(''), 2000)
@@ -360,16 +352,19 @@ const ExportAddProductForm = () => {
         }
     }
 
+    // MODIFIED: Include multiplier and divisor when editing
     const handleEditVariant = (variant) => {
         setEditingVariant({ 
             ...variant,
-            // Use current USD rate from DB when editing
             usdrate: currentUsdRate ? currentUsdRate.toFixed(2) : variant.usdrate,
             profit: variant.profit || '',
-            profit_margin: variant.profit_margin || ''
+            profit_margin: variant.profit_margin || '',
+            multiplier: variant.multiplier || '',  // ADDED
+            divisor: variant.divisor || '1'         // ADDED
         })
     }
 
+    // MODIFIED: Include multiplier and divisor in update
     const handleUpdateVariant = async () => {
         if (!editingVariant.size || !editingVariant.purchasing_price) {
             setError('Please fill in size and purchase price')
@@ -388,7 +383,9 @@ const ExportAddProductForm = () => {
                     labour_overhead: parseFloat(editingVariant.labour_overhead) || 0,
                     profit: parseFloat(editingVariant.profit) || 0,
                     profit_margin: parseFloat(editingVariant.profit_margin) || 0,
-                    exfactoryprice: parseFloat(editingVariant.exfactoryprice)
+                    exfactoryprice: parseFloat(editingVariant.exfactoryprice),
+                    multiplier: parseFloat(editingVariant.multiplier) || 0,  // ADDED
+                    divisor: parseFloat(editingVariant.divisor) || 1          // ADDED
                 } : v)
             )
             setEditingVariant(null)
@@ -398,6 +395,7 @@ const ExportAddProductForm = () => {
         }
 
         try {
+            // MODIFIED: Include multiplier and divisor in API call
             const res = await fetch(
                 `${API_URL}/api/exportproductlist/${id}/variants/${editingVariant.id}`,
                 {
@@ -412,7 +410,9 @@ const ExportAddProductForm = () => {
                         labour_overhead: editingVariant.labour_overhead || 0,
                         profit: editingVariant.profit || 0,
                         profit_margin: editingVariant.profit_margin || 0,
-                        exfactoryprice: editingVariant.exfactoryprice
+                        exfactoryprice: editingVariant.exfactoryprice,
+                        multiplier: editingVariant.multiplier || 0,  // ADDED
+                        divisor: editingVariant.divisor || 1          // ADDED
                     })
                 }
             )
@@ -515,7 +515,6 @@ const ExportAddProductForm = () => {
         <div className='form-container'>
             <h2>{isEditMode ? 'Edit Product' : 'Add Product'}</h2>
 
-            {/* Display current USD rate from database */}
             {currentUsdRate && (
                 <div style={{
                     padding: '12px 15px',
@@ -608,6 +607,7 @@ const ExportAddProductForm = () => {
 
                 <h3 style={{ marginTop: '20px' }}>Product Variants (Size & Pricing)</h3>
                 <br />
+                {/* MODIFIED: Added Multiplier and Divisor columns to the table */}
                 {variants.length > 0 && (
                     <div style={{ overflowX: 'auto' }}>
                         <table className="variants-table" style={{ width: '100%', marginBottom: '20px', borderCollapse: 'collapse' }}>
@@ -616,12 +616,9 @@ const ExportAddProductForm = () => {
                                     <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'left' }}>Size</th>
                                     <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'left' }}>Unit</th>
                                     <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'left' }}>Purchase (LKR)</th>
-                                    <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'left' }}>Packing</th>
-                                    <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'left' }}>Labour</th>
-                                    <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'left' }}>Profit (LKR)</th>
-                                    <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'left' }}>Margin (%)</th>
                                     <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'left' }}>Ex-Factory (LKR)</th>
-                                    <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'left' }}>Ex-Factory (USD)</th>
+                                    <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'left' }}>Multiplier</th>
+                                    <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'left' }}>Divisor</th>
                                     <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', width: '150px' }}>Actions</th>
                                 </tr>
                             </thead>
@@ -633,23 +630,14 @@ const ExportAddProductForm = () => {
                                         <td style={{ padding: '10px', border: '1px solid #ddd' }}>
                                             Rs. {parseFloat(variant.purchasing_price).toFixed(2)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                                            Rs. {parseFloat(variant.packing_cost || 0).toFixed(2)}
-                                        </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                                            Rs. {parseFloat(variant.labour_overhead || 0).toFixed(2)}
-                                        </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', color: '#2e7d32' }}>
-                                            Rs. {parseFloat(variant.profit || 0).toFixed(2)}
-                                        </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', color: '#2e7d32' }}>
-                                            {parseFloat(variant.profit_margin || 0).toFixed(2)}%
-                                        </td>
                                         <td style={{ padding: '10px', border: '1px solid #ddd', fontWeight: 'bold' }}>
                                             Rs. {parseFloat(variant.exfactoryprice).toFixed(2)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', color: '#1976d2', fontWeight: '500' }}>
-                                            $ {(parseFloat(variant.exfactoryprice) / parseFloat(variant.usdrate)).toFixed(2)}
+                                        <td style={{ padding: '10px', border: '1px solid #ddd', color: '#2196f3' }}>
+                                            {variant.multiplier || '-'}
+                                        </td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd', color: '#2196f3' }}>
+                                            {variant.divisor || '-'}
                                         </td>
                                         <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
                                             <button
@@ -754,25 +742,6 @@ const ExportAddProductForm = () => {
                                 onChange={handleVariantChange}
                                 onWheel={(e) => e.target.blur()}
                             />
-
-                            <label className="apf-label">Purchase Price (USD)</label>
-                            <input
-                                className="apf-input"
-                                type="number"
-                                step="0.01"
-                                placeholder="0.00"
-                                value={
-                                    editingVariant
-                                        ? (editingVariant.purchasing_price && editingVariant.usdrate
-                                            ? (parseFloat(editingVariant.purchasing_price) / parseFloat(editingVariant.usdrate)).toFixed(2)
-                                            : '0.00')
-                                        : (newVariant.purchasing_price && newVariant.usdrate
-                                            ? (parseFloat(newVariant.purchasing_price) / parseFloat(newVariant.usdrate)).toFixed(2)
-                                            : '0.00')
-                                }
-                                disabled
-                                onWheel={(e) => e.target.blur()}
-                            />
                         </div>
 
                         <div>
@@ -844,25 +813,59 @@ const ExportAddProductForm = () => {
                                 disabled
                                 onWheel={(e) => e.target.blur()}
                             />
+                        </div>
 
-                            <label className="apf-label">Ex-Factory Price (USD)</label>
-                            <input
-                                className="apf-input"
-                                type="number"
-                                step="0.01"
-                                placeholder="0.00"
-                                value={
-                                    editingVariant
-                                        ? (editingVariant.exfactoryprice && editingVariant.usdrate
-                                            ? (parseFloat(editingVariant.exfactoryprice) / parseFloat(editingVariant.usdrate)).toFixed(2)
-                                            : '0.00')
-                                        : (newVariant.exfactoryprice && newVariant.usdrate
-                                            ? (parseFloat(newVariant.exfactoryprice) / parseFloat(newVariant.usdrate)).toFixed(2)
-                                            : '0.00')
-                                }
-                                disabled
-                                onWheel={(e) => e.target.blur()}
-                            />
+                        {/* ADDED: Multiplier and Divisor fields */}
+                        <div style={{
+                            gridColumn: '1 / -1',
+                            backgroundColor: '#e3f2fd',
+                            padding: '15px',
+                            borderRadius: '6px',
+                            marginTop: '15px',
+                            border: '2px solid #2196f3'
+                        }}>
+                            <h4 style={{ marginTop: 0, marginBottom: '15px', color: '#1976d2' }}>
+                                ✈️ Air Freight Parameters
+                            </h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                <div>
+                                    <label className="apf-label" style={{ color: '#1976d2' }}>
+                                        Multiplier (Gross Weight in kg)
+                                    </label>
+                                    <input
+                                        className="apf-input"
+                                        name="multiplier"
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="e.g., 150"
+                                        value={editingVariant ? editingVariant.multiplier : newVariant.multiplier}
+                                        onChange={handleVariantChange}
+                                        onWheel={(e) => e.target.blur()}
+                                    />
+                                    <small style={{ color: '#666', fontSize: '11px' }}>
+                                        Used in freight calculation: (multiplier × rate) / divisor
+                                    </small>
+                                </div>
+
+                                <div>
+                                    <label className="apf-label" style={{ color: '#1976d2' }}>
+                                        Divisor
+                                    </label>
+                                    <input
+                                        className="apf-input"
+                                        name="divisor"
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="Default: 1"
+                                        value={editingVariant ? editingVariant.divisor : newVariant.divisor}
+                                        onChange={handleVariantChange}
+                                        onWheel={(e) => e.target.blur()}
+                                    />
+                                    <small style={{ color: '#666', fontSize: '11px' }}>
+                                        Default is 1 (usually no division needed)
+                                    </small>
+                                </div>
+                            </div>
                         </div>
 
                         <div>

@@ -57,6 +57,48 @@ const ExportCustomerDetail = () => {
     fetchUsdRate();
   }, [cus_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Trigger FOB and CNF calculation whenever exfactoryprice changes
+  useEffect(() => {
+    if (formData.exfactoryprice && currentUsdRate) {
+      const exfactoryprice = parseFloat(formData.exfactoryprice) || 0;
+      
+      // Use USD values for calculation
+      let export_doc_usd = parseFloat(formData.export_doc_usd) || 0;
+      let transport_cost_usd = parseFloat(formData.transport_cost_usd) || 0;
+      let loading_cost_usd = parseFloat(formData.loading_cost_usd) || 0;
+      let airway_cost_usd = parseFloat(formData.airway_cost_usd) || 0;
+      let forwardHandling_cost_usd = parseFloat(formData.forwardHandling_cost_usd) || 0;
+      let freight_cost = parseFloat(formData.freight_cost) || 0;
+
+      // Calculate total costs in USD
+      const totalCostsUSD = export_doc_usd + transport_cost_usd + loading_cost_usd + airway_cost_usd + forwardHandling_cost_usd;
+      
+      // Convert total costs to LKR
+      const totalCostsLKR = totalCostsUSD * parseFloat(currentUsdRate);
+      
+      // Calculate FOB in LKR (Ex-Factory + all costs in LKR)
+      const fobPriceLKR = exfactoryprice + totalCostsLKR;
+      const fob_price = fobPriceLKR.toFixed(2);
+      
+      // Calculate CNF (FOB in USD + Freight)
+      const cnf = calculateCNF(fobPriceLKR, freight_cost);
+
+      // Only update if values have changed
+      if (formData.fob_price !== fob_price || formData.cnf !== cnf) {
+        setFormData(prev => ({
+          ...prev,
+          fob_price,
+          cnf
+        }));
+      }
+    }
+  }, [formData.exfactoryprice, formData.export_doc_usd, formData.transport_cost_usd, 
+      formData.loading_cost_usd, formData.airway_cost_usd, formData.forwardHandling_cost_usd, 
+      formData.freight_cost, currentUsdRate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  
+
+ 
   const fetchCustomer = async () => {
     try {
       const res = await fetch(`${API_URL}/api/exportcustomerlist/${cus_id}`);
@@ -273,9 +315,13 @@ const ExportCustomerDetail = () => {
       setFormData(prev => ({
         ...prev,
         variant_id: '',
-        size_range: '',
-        purchasing_price: '',
-        exfactoryprice: '',
+      size_range: '',
+      purchasing_price: '',
+      exfactoryprice: '',
+      multiplier: '',      // ADD THIS
+      divisor: '',         // ADD THIS
+      fob_price: '',
+      cnf: ''
       }));
       return;
     }
@@ -284,15 +330,20 @@ const ExportCustomerDetail = () => {
       const sizeRange = `${variant.size}`;
       const purchasingPrice = variant.purchasing_price;
       const exfactoryprice = variant.exfactoryprice;
+      const multiplier = variant.multiplier || '';     // ADD THIS
+    const divisor = variant.divisor || '1';          // ADD THIS
 
+
+      // Update formData - useEffect will handle FOB/CNF calculation
       setFormData(prev => ({
         ...prev,
         variant_id: String(variantId),
         size_range: sizeRange,
         purchasing_price: purchasingPrice,
         exfactoryprice: exfactoryprice,
+        multiplier: multiplier,      // ADD THIS
+      divisor: divisor             // ADD THIS
       }));
-      
     }
   };
 

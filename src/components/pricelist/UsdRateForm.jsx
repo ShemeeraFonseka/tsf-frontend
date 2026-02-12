@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import './AddProductForm.css' // Reusing existing styles
+import './AddProductForm.css'
 
 const UsdRateForm = () => {
     const API_URL = process.env.REACT_APP_API_URL
 
     const [form, setForm] = useState({
         rate: '',
-        date: new Date().toISOString().split('T')[0] // Today's date
+        date: new Date().toISOString().split('T')[0]
     })
 
     const [currentRate, setCurrentRate] = useState(null)
@@ -14,8 +14,8 @@ const UsdRateForm = () => {
     const [success, setSuccess] = useState('')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    const [recalcInfo, setRecalcInfo] = useState(null)
 
-    // Fetch current USD rate
     const fetchCurrentRate = async () => {
         try {
             const response = await fetch(`${API_URL}/api/usd-rate`)
@@ -28,7 +28,6 @@ const UsdRateForm = () => {
         }
     }
 
-    // Fetch rate history
     const fetchRateHistory = async () => {
         try {
             const response = await fetch(`${API_URL}/api/usd-rate/history`)
@@ -42,22 +41,23 @@ const UsdRateForm = () => {
     }
 
     useEffect(() => {
-  fetchCurrentRate();
-  fetchRateHistory();
-}, []); // eslint-disable-line react-hooks/exhaustive-deps
-
+        fetchCurrentRate();
+        fetchRateHistory();
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleChange = (e) => {
         const { name, value } = e.target
         setForm(prev => ({ ...prev, [name]: value }))
         setSuccess('')
         setError('')
+        setRecalcInfo(null)
     }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         setError('')
         setSuccess('')
+        setRecalcInfo(null)
         setLoading(true)
 
         if (!form.rate || parseFloat(form.rate) <= 0) {
@@ -82,20 +82,28 @@ const UsdRateForm = () => {
                 throw new Error('Failed to update USD rate')
             }
 
-            await response.json()
-setSuccess('USD rate updated successfully!')
+            const data = await response.json()
             
-            // Refresh current rate and history
+            // Show success with recalculation info
+            if (data.recalculation) {
+                setRecalcInfo(data.recalculation)
+                setSuccess(`USD rate updated successfully! ${data.recalculation.productsUpdated} product${data.recalculation.productsUpdated !== 1 ? 's' : ''} recalculated.`)
+            } else {
+                setSuccess('USD rate updated successfully!')
+            }
+            
             await fetchCurrentRate()
             await fetchRateHistory()
             
-            // Reset form
             setForm({
                 rate: '',
                 date: new Date().toISOString().split('T')[0]
             })
 
-            setTimeout(() => setSuccess(''), 3000)
+            setTimeout(() => {
+                setSuccess('')
+                setRecalcInfo(null)
+            }, 5000)
         } catch (err) {
             setError(err.message)
             setTimeout(() => setError(''), 3000)
@@ -200,8 +208,45 @@ setSuccess('USD rate updated successfully!')
                 </button>
             </form>
 
-            {success && <div className="apf-success">{success}</div>}
+            {success && (
+                <div className="apf-success">
+                    {success}
+                    {recalcInfo && recalcInfo.errors > 0 && (
+                        <div style={{ 
+                            marginTop: '8px', 
+                            fontSize: '13px', 
+                            color: '#ff9800' 
+                        }}>
+                            ⚠️ {recalcInfo.errors} product{recalcInfo.errors !== 1 ? 's' : ''} had errors during recalculation
+                        </div>
+                    )}
+                </div>
+            )}
             {error && <div className="apf-error">{error}</div>}
+
+            {/* Recalculation Info */}
+            {recalcInfo && (
+                <div style={{
+                    padding: '12px',
+                    backgroundColor: '#e3f2fd',
+                    borderLeft: '4px solid #2196f3',
+                    borderRadius: '4px',
+                    marginTop: '15px',
+                    marginBottom: '15px'
+                }}>
+                    <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#1976d2', marginBottom: '5px' }}>
+                        🔄 Automatic Recalculation Complete
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#424242' }}>
+                        ✓ Updated {recalcInfo.productsUpdated} product price{recalcInfo.productsUpdated !== 1 ? 's' : ''}
+                    </div>
+                    {recalcInfo.errors > 0 && (
+                        <div style={{ fontSize: '13px', color: '#d32f2f', marginTop: '3px' }}>
+                            ✗ {recalcInfo.errors} error{recalcInfo.errors !== 1 ? 's' : ''}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Rate History */}
             {rateHistory.length > 0 && (
@@ -251,7 +296,7 @@ setSuccess('USD rate updated successfully!')
                                         })}
                                     </td>
                                     <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
-                                        {index !== 0 && ( // Don't allow deleting the current rate
+                                        {index !== 0 && (
                                             <button
                                                 type="button"
                                                 onClick={() => handleDelete(entry.id)}

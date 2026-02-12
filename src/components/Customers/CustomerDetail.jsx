@@ -30,11 +30,25 @@ const CustomerDetail = () => {
     selling_price: ''
   });
 
-  useEffect(() => {
-    fetchCustomer();
+  // Add this useEffect in CustomerDetail to listen for price updates
+useEffect(() => {
+  // Refresh customer data when component mounts or when cus_id changes
+  fetchCustomer();
+  fetchPrices();
+  fetchProducts();
+  
+  // Optional: Set up polling or websocket for real-time updates
+  // For simplicity, we'll refresh when the window gets focus
+  const handleFocus = () => {
     fetchPrices();
-    fetchProducts();
-  }, [cus_id]); // eslint-disable-line react-hooks/exhaustive-deps
+  };
+  
+  window.addEventListener('focus', handleFocus);
+  
+  return () => {
+    window.removeEventListener('focus', handleFocus);
+  };
+}, [cus_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchCustomer = async () => {
     try {

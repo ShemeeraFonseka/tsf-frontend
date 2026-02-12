@@ -4,6 +4,8 @@ import '../pricelist/AddProductForm.css'
 const SeaFreightRatesForm = () => {
     const API_URL = process.env.REACT_APP_API_URL
 
+    const [recalcInfo, setRecalcInfo] = useState(null)
+
     const [form, setForm] = useState({
         country: '',
         port_code: '',
@@ -231,12 +233,14 @@ const SeaFreightRatesForm = () => {
         
         setSuccess('')
         setError('')
+        setRecalcInfo(null)
     }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         setError('')
         setSuccess('')
+        setRecalcInfo(null)
         setLoading(true)
 
         if (!form.country || !form.port_code || !form.port_name ||
@@ -285,10 +289,19 @@ const SeaFreightRatesForm = () => {
             })
 
             if (!response.ok) {
-                throw new Error(`Failed to ${editingId ? 'update' : 'add'} sea freight rate`)
-            }
+            throw new Error(`Failed to ${editingId ? 'update' : 'add'} sea freight rate`)
+        }
 
+        const data = await response.json()  // Change this line
+
+        // Show success with recalculation info
+        if (data.recalculation) {
+            setRecalcInfo(data.recalculation)
+            setSuccess(`Sea freight rate ${editingId ? 'updated' : 'added'} successfully! ${data.recalculation.productsUpdated} product${data.recalculation.productsUpdated !== 1 ? 's' : ''} recalculated.`)
+        } else {
             setSuccess(`Sea freight rate ${editingId ? 'updated' : 'added'} successfully!`)
+        }
+        
             
             // Refresh rates list
             await fetchSeaRates()
@@ -306,7 +319,10 @@ const SeaFreightRatesForm = () => {
             })
             setEditingId(null)
 
-            setTimeout(() => setSuccess(''), 3000)
+            setTimeout(() => {
+                setSuccess('')
+                setRecalcInfo(null)
+            }, 3000)
         } catch (err) {
             setError(err.message)
             setTimeout(() => setError(''), 3000)
@@ -586,9 +602,55 @@ const SeaFreightRatesForm = () => {
                 </div>
             </form>
 
-            {success && <div className="apf-success">{success}</div>}
-            {error && <div className="apf-error">{error}</div>}
+           {success && (
+    <div style={{
+        padding: '15px',
+        backgroundColor: '#d4edda',
+        border: '1px solid #c3e6cb',
+        borderRadius: '4px',
+        color: '#155724',
+        marginTop: '15px'
+    }}>
+        {success}
+    </div>
+)}
 
+{error && (
+    <div style={{
+        padding: '15px',
+        backgroundColor: '#f8d7da',
+        border: '1px solid #f5c6cb',
+        borderRadius: '4px',
+        color: '#721c24',
+        marginTop: '15px'
+    }}>
+        {error}
+    </div>
+)}
+
+{/* Recalculation Info */}
+{recalcInfo && (
+    <div style={{
+        padding: '12px',
+        backgroundColor: '#e3f2fd',
+        borderLeft: '4px solid #2196f3',
+        borderRadius: '4px',
+        marginTop: '15px',
+        marginBottom: '15px'
+    }}>
+        <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#1976d2', marginBottom: '5px' }}>
+            🔄 Automatic Recalculation Complete
+        </div>
+        <div style={{ fontSize: '13px', color: '#424242' }}>
+            ✓ Updated {recalcInfo.productsUpdated} product price{recalcInfo.productsUpdated !== 1 ? 's' : ''}
+        </div>
+        {recalcInfo.errors > 0 && (
+            <div style={{ fontSize: '13px', color: '#d32f2f', marginTop: '3px' }}>
+                ✗ {recalcInfo.errors} error{recalcInfo.errors !== 1 ? 's' : ''}
+            </div>
+        )}
+    </div>
+)}
             {/* Current Rates by Country and Port */}
             {getLatestRatesByCountryPort().length > 0 && (
                 <div style={{ marginTop: '30px' }}>
