@@ -1,4 +1,4 @@
-import React, { useEffect, useState,useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './CustomerDetail.css'
 
@@ -39,17 +39,23 @@ const ExportCustomerDetail = () => {
     forwardHandling_cost_usd: '',
     forwardHandling_cost_lkr: '',
     freight_type: 'air', // 'air' or 'sea'
-    gross_weight_tier: '',
     container_type: '', // '20ft' or '40ft'
     multiplier: '',
     divisor: '',
-    freight_cost: '',
+    freight_cost_sea: '',
+    // Air freight - all tiers
+    freight_cost_45kg: '',
+    freight_cost_100kg: '',
+    freight_cost_300kg: '',
+    freight_cost_500kg: '',
+    cnf_45kg: '',
+    cnf_100kg: '',
+    cnf_300kg: '',
+    cnf_500kg: '',
     fob_price: '',
-    cnf: ''
+    cnf_sea: ''
   });
 
-  
- 
   const fetchCustomer = async () => {
     try {
       const res = await fetch(`${API_URL}/api/exportcustomerlist/${cus_id}`);
@@ -108,11 +114,9 @@ const ExportCustomerDetail = () => {
     }
   };
 
-  // Get air freight rate for customer's specific country AND airport code
   const getAirFreightRateForCustomer = (customer) => {
     if (!customer || freightRates.length === 0) return null;
     
-    // First, try to find rate for specific country AND airport code
     if (customer.airport_code) {
       const exactMatch = freightRates.filter(rate =>
         rate.country.toLowerCase() === customer.country.toLowerCase() &&
@@ -120,27 +124,22 @@ const ExportCustomerDetail = () => {
       );
       
       if (exactMatch.length > 0) {
-        // Return the most recent rate for this country + airport combination
         return exactMatch.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
       }
     }
     
-    // Fallback: If no specific airport match, get any rate for the country
     const countryRates = freightRates.filter(rate =>
       rate.country.toLowerCase() === customer.country.toLowerCase()
     );
     
     if (countryRates.length === 0) return null;
     
-    // Return the most recent rate for this country
     return countryRates.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
   };
 
-  // Get sea freight rate for customer's specific country AND port code
   const getSeaFreightRateForCustomer = (customer) => {
     if (!customer || seaFreightRates.length === 0) return null;
     
-    // First, try to find rate for specific country AND port code
     if (customer.port_code) {
       const exactMatch = seaFreightRates.filter(rate =>
         rate.country.toLowerCase() === customer.country.toLowerCase() &&
@@ -148,40 +147,21 @@ const ExportCustomerDetail = () => {
       );
       
       if (exactMatch.length > 0) {
-        // Return the most recent rate for this country + port combination
         return exactMatch.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
       }
     }
     
-    // Fallback: If no specific port match, get any rate for the country
     const countryRates = seaFreightRates.filter(rate =>
       rate.country.toLowerCase() === customer.country.toLowerCase()
     );
     
     if (countryRates.length === 0) return null;
     
-    // Return the most recent rate for this country
     return countryRates.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
   };
 
-  const getAirFreightRateByTier = (tier, rateData) => {
-    if (!rateData || !tier) return 0;
-    switch (tier) {
-      case 'gross+45kg':
-        return parseFloat(rateData.rate_45kg);
-      case 'gross+100kg':
-        return parseFloat(rateData.rate_100kg);
-      case 'gross+300kg':
-        return parseFloat(rateData.rate_300kg);
-      case 'gross+500kg':
-        return parseFloat(rateData.rate_500kg);
-      default:
-        return 0;
-    }
-  };
-
   const getSeaFreightRateByContainer = (containerType, rateData) => {
-    if (!rateData || !containerType) return { rate: 0, kilos: 0 };
+    if (!rateData || !containerType) return { rate: 0, kilos: 0, perKilo: 0 };
     
     if (containerType === '20ft') {
       return {
@@ -221,20 +201,41 @@ const ExportCustomerDetail = () => {
     return (parseFloat(usdAmount) * parseFloat(currentUsdRate)).toFixed(2);
   };
 
- const calculateCNF = useCallback((fobPriceLKR, freightCostUSD) => {
-  const usdRate = parseFloat(currentUsdRate);
+  const calculateCNF = useCallback((fobPriceLKR, freightCostUSD) => {
+    const usdRate = parseFloat(currentUsdRate);
 
-  if (!usdRate || isNaN(usdRate)) return '0.00';
+    if (!usdRate || isNaN(usdRate)) return '0.00';
 
-  const fobLKR = parseFloat(fobPriceLKR) || 0;
-  const freightUSD = parseFloat(freightCostUSD) || 0;
+    const fobLKR = parseFloat(fobPriceLKR) || 0;
+    const freightUSD = parseFloat(freightCostUSD) || 0;
 
-  const fobInUSD = fobLKR / usdRate;
-  const cnf = fobInUSD + freightUSD;
+    const fobInUSD = fobLKR / usdRate;
+    const cnf = fobInUSD + freightUSD;
 
-  return cnf.toFixed(2);
-}, [currentUsdRate]);
+    return cnf.toFixed(2);
+  }, [currentUsdRate]);
 
+  // Calculate all air freight tiers
+  const calculateAllAirFreightTiers = (multiplier, divisor, airRateData) => {
+    if (!airRateData || !multiplier || !divisor || divisor === 0) {
+      return {
+        freight_cost_45kg: '0.00',
+        freight_cost_100kg: '0.00',
+        freight_cost_300kg: '0.00',
+        freight_cost_500kg: '0.00'
+      };
+    }
+
+    const mult = parseFloat(multiplier);
+    const div = parseFloat(divisor);
+
+    return {
+      freight_cost_45kg: ((mult * parseFloat(airRateData.rate_45kg)) / div).toFixed(2),
+      freight_cost_100kg: ((mult * parseFloat(airRateData.rate_100kg)) / div).toFixed(2),
+      freight_cost_300kg: ((mult * parseFloat(airRateData.rate_300kg)) / div).toFixed(2),
+      freight_cost_500kg: ((mult * parseFloat(airRateData.rate_500kg)) / div).toFixed(2)
+    };
+  };
 
   const handleProductSelect = (e) => {
     const productId = e.target.value;
@@ -273,13 +274,20 @@ const ExportCustomerDetail = () => {
       setFormData(prev => ({
         ...prev,
         variant_id: '',
-      size_range: '',
-      purchasing_price: '',
-      exfactoryprice: '',
-      multiplier: '',      // ADD THIS
-      divisor: '',         // ADD THIS
-      fob_price: '',
-      cnf: ''
+        size_range: '',
+        purchasing_price: '',
+        exfactoryprice: '',
+        multiplier: '',
+        divisor: '',
+        fob_price: '',
+        freight_cost_45kg: '',
+        freight_cost_100kg: '',
+        freight_cost_300kg: '',
+        freight_cost_500kg: '',
+        cnf_45kg: '',
+        cnf_100kg: '',
+        cnf_300kg: '',
+        cnf_500kg: ''
       }));
       return;
     }
@@ -288,20 +296,52 @@ const ExportCustomerDetail = () => {
       const sizeRange = `${variant.size}`;
       const purchasingPrice = variant.purchasing_price;
       const exfactoryprice = variant.exfactoryprice;
-      const multiplier = variant.multiplier || '';     // ADD THIS
-    const divisor = variant.divisor || '1';          // ADD THIS
+      const multiplier = variant.multiplier || '';
+      const divisor = variant.divisor || '1';
 
-
-      // Update formData - useEffect will handle FOB/CNF calculation
-      setFormData(prev => ({
-        ...prev,
+      // Update formData with variant data
+      const updatedData = {
+        ...formData,
         variant_id: String(variantId),
         size_range: sizeRange,
         purchasing_price: purchasingPrice,
         exfactoryprice: exfactoryprice,
-        multiplier: multiplier,      // ADD THIS
-      divisor: divisor             // ADD THIS
-      }));
+        multiplier: multiplier,
+        divisor: divisor
+      };
+
+      // Calculate FOB first
+      const exfactoryprice_num = parseFloat(exfactoryprice) || 0;
+      let export_doc_usd = parseFloat(updatedData.export_doc_usd) || 0;
+      let transport_cost_usd = parseFloat(updatedData.transport_cost_usd) || 0;
+      let loading_cost_usd = parseFloat(updatedData.loading_cost_usd) || 0;
+      let airway_cost_usd = parseFloat(updatedData.airway_cost_usd) || 0;
+      let forwardHandling_cost_usd = parseFloat(updatedData.forwardHandling_cost_usd) || 0;
+
+      const totalCostsUSD = export_doc_usd + transport_cost_usd + loading_cost_usd + airway_cost_usd + forwardHandling_cost_usd;
+      const totalCostsLKR = currentUsdRate ? totalCostsUSD * parseFloat(currentUsdRate) : 0;
+      const fobPriceLKR = exfactoryprice_num + totalCostsLKR;
+      updatedData.fob_price = fobPriceLKR.toFixed(2);
+
+      // Calculate all air freight tiers if we have multiplier and divisor
+      if (updatedData.freight_type === 'air' && multiplier && divisor) {
+        const airRateData = getAirFreightRateForCustomer(customer);
+        if (airRateData) {
+          const tierCosts = calculateAllAirFreightTiers(multiplier, divisor, airRateData);
+          updatedData.freight_cost_45kg = tierCosts.freight_cost_45kg;
+          updatedData.freight_cost_100kg = tierCosts.freight_cost_100kg;
+          updatedData.freight_cost_300kg = tierCosts.freight_cost_300kg;
+          updatedData.freight_cost_500kg = tierCosts.freight_cost_500kg;
+
+          // Calculate CNF for all tiers
+          updatedData.cnf_45kg = calculateCNF(fobPriceLKR, updatedData.freight_cost_45kg);
+          updatedData.cnf_100kg = calculateCNF(fobPriceLKR, updatedData.freight_cost_100kg);
+          updatedData.cnf_300kg = calculateCNF(fobPriceLKR, updatedData.freight_cost_300kg);
+          updatedData.cnf_500kg = calculateCNF(fobPriceLKR, updatedData.freight_cost_500kg);
+        }
+      }
+
+      setFormData(updatedData);
     }
   };
 
@@ -336,10 +376,17 @@ const ExportCustomerDetail = () => {
 
     // Reset freight-specific fields when freight type changes
     if (field === 'freight_type') {
-      data.gross_weight_tier = '';
       data.container_type = '';
-      data.freight_cost = '';
-      // Clear multiplier and divisor only when switching to sea freight
+      data.freight_cost_sea = '';
+      data.freight_cost_45kg = '';
+      data.freight_cost_100kg = '';
+      data.freight_cost_300kg = '';
+      data.freight_cost_500kg = '';
+      data.cnf_45kg = '';
+      data.cnf_100kg = '';
+      data.cnf_300kg = '';
+      data.cnf_500kg = '';
+      data.cnf_sea = '';
       if (value === 'sea') {
         data.multiplier = '';
         data.divisor = '';
@@ -348,40 +395,11 @@ const ExportCustomerDetail = () => {
 
     const exfactoryprice = parseFloat(data.exfactoryprice) || 0;
     
-    // Use USD values for calculation
     let export_doc_usd = parseFloat(data.export_doc_usd) || 0;
     let transport_cost_usd = parseFloat(data.transport_cost_usd) || 0;
     let loading_cost_usd = parseFloat(data.loading_cost_usd) || 0;
     let airway_cost_usd = parseFloat(data.airway_cost_usd) || 0;
     let forwardHandling_cost_usd = parseFloat(data.forwardHandling_cost_usd) || 0;
-    
-    let multiplier = parseFloat(data.multiplier) || 0;
-    let divisor = parseFloat(data.divisor) || 1;
-    let freight_cost = parseFloat(data.freight_cost) || 0;
-
-    // Calculate freight cost based on type
-    if (data.freight_type === 'air') {
-      // Air freight calculation
-      if (field === 'gross_weight_tier' || field === 'multiplier' || field === 'divisor') {
-        const airRateData = getAirFreightRateForCustomer(customer);
-        if (airRateData && data.gross_weight_tier && multiplier > 0 && divisor > 0) {
-          const applicableRate = getAirFreightRateByTier(data.gross_weight_tier, airRateData);
-          freight_cost = (multiplier * applicableRate) / divisor;
-          data.freight_cost = freight_cost.toFixed(2);
-        }
-      }
-    } else if (data.freight_type === 'sea') {
-      // Sea freight calculation - use full container rate
-      if (field === 'container_type') {
-        const seaRateData = getSeaFreightRateForCustomer(customer);
-        if (seaRateData && data.container_type) {
-          const containerData = getSeaFreightRateByContainer(data.container_type, seaRateData);
-          // Use the full container rate directly
-          freight_cost = containerData.perKilo;
-          data.freight_cost = freight_cost.toFixed(4);
-        }
-      }
-    }
 
     // Calculate total costs in USD
     const totalCostsUSD = export_doc_usd + transport_cost_usd + loading_cost_usd + airway_cost_usd + forwardHandling_cost_usd;
@@ -392,9 +410,39 @@ const ExportCustomerDetail = () => {
     // Calculate FOB in LKR (Ex-Factory + all costs in LKR)
     const fobPriceLKR = exfactoryprice + totalCostsLKR;
     data.fob_price = fobPriceLKR.toFixed(2);
-    
-    // Calculate CNF (FOB in USD + Freight)
-    data.cnf = calculateCNF(fobPriceLKR, freight_cost);
+
+    // Calculate freight costs based on type
+    if (data.freight_type === 'air') {
+      // Calculate ALL air freight tiers whenever we have the data
+      // This includes when multiplier/divisor changes OR when costs change (affecting FOB/CNF)
+      const airRateData = getAirFreightRateForCustomer(customer);
+      if (airRateData && data.multiplier && data.divisor) {
+        const tierCosts = calculateAllAirFreightTiers(data.multiplier, data.divisor, airRateData);
+        data.freight_cost_45kg = tierCosts.freight_cost_45kg;
+        data.freight_cost_100kg = tierCosts.freight_cost_100kg;
+        data.freight_cost_300kg = tierCosts.freight_cost_300kg;
+        data.freight_cost_500kg = tierCosts.freight_cost_500kg;
+
+        // Calculate CNF for all tiers
+        data.cnf_45kg = calculateCNF(fobPriceLKR, data.freight_cost_45kg);
+        data.cnf_100kg = calculateCNF(fobPriceLKR, data.freight_cost_100kg);
+        data.cnf_300kg = calculateCNF(fobPriceLKR, data.freight_cost_300kg);
+        data.cnf_500kg = calculateCNF(fobPriceLKR, data.freight_cost_500kg);
+      }
+    } else if (data.freight_type === 'sea') {
+      // Sea freight calculation
+      if (field === 'container_type') {
+        const seaRateData = getSeaFreightRateForCustomer(customer);
+        if (seaRateData && data.container_type) {
+          const containerData = getSeaFreightRateByContainer(data.container_type, seaRateData);
+          data.freight_cost_sea = containerData.perKilo.toFixed(4);
+          data.cnf_sea = calculateCNF(fobPriceLKR, data.freight_cost_sea);
+        }
+      } else if (data.freight_cost_sea) {
+        // Recalculate CNF if FOB changed
+        data.cnf_sea = calculateCNF(fobPriceLKR, data.freight_cost_sea);
+      }
+    }
 
     setFormData(data);
   };
@@ -407,7 +455,6 @@ const ExportCustomerDetail = () => {
         : `${API_URL}/api/exportcustomer-products`;
       const method = editingPrice ? 'PUT' : 'POST';
       
-      // Save USD values to database
       const payload = {
         cus_id: parseInt(cus_id),
         product_id: formData.product_id ? parseInt(formData.product_id) : null,
@@ -423,23 +470,35 @@ const ExportCustomerDetail = () => {
         airway_cost: parseFloat(formData.airway_cost_usd) || 0,
         forwardHandling_cost: parseFloat(formData.forwardHandling_cost_usd) || 0,
         freight_type: formData.freight_type,
-        gross_weight_tier: formData.freight_type === 'air' ? formData.gross_weight_tier : null,
-        container_type: formData.freight_type === 'sea' ? formData.container_type : null,
         multiplier: formData.freight_type === 'air' ? parseFloat(formData.multiplier) || 0 : 0,
         divisor: formData.freight_type === 'air' ? parseFloat(formData.divisor) || 1 : 1,
-        freight_cost: parseFloat(formData.freight_cost) || 0,
         fob_price: parseFloat(formData.fob_price),
-        cnf: parseFloat(formData.cnf) || 0
+        // Air freight - all tiers
+        freight_cost_45kg: formData.freight_type === 'air' ? parseFloat(formData.freight_cost_45kg) || 0 : 0,
+        freight_cost_100kg: formData.freight_type === 'air' ? parseFloat(formData.freight_cost_100kg) || 0 : 0,
+        freight_cost_300kg: formData.freight_type === 'air' ? parseFloat(formData.freight_cost_300kg) || 0 : 0,
+        freight_cost_500kg: formData.freight_type === 'air' ? parseFloat(formData.freight_cost_500kg) || 0 : 0,
+        cnf_45kg: formData.freight_type === 'air' ? parseFloat(formData.cnf_45kg) || 0 : 0,
+        cnf_100kg: formData.freight_type === 'air' ? parseFloat(formData.cnf_100kg) || 0 : 0,
+        cnf_300kg: formData.freight_type === 'air' ? parseFloat(formData.cnf_300kg) || 0 : 0,
+        cnf_500kg: formData.freight_type === 'air' ? parseFloat(formData.cnf_500kg) || 0 : 0,
+        // Sea freight
+        container_type: formData.freight_type === 'sea' ? formData.container_type : null,
+        freight_cost_sea: formData.freight_type === 'sea' ? parseFloat(formData.freight_cost_sea) || 0 : 0,
+        cnf_sea: formData.freight_type === 'sea' ? parseFloat(formData.cnf_sea) || 0 : 0
       };
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Failed to save');
       }
+
       await fetchPrices();
       resetForm();
       alert(editingPrice ? 'Price updated successfully!' : 'Price added successfully!');
@@ -469,7 +528,6 @@ const ExportCustomerDetail = () => {
       setEditingPrice(price);
       setShowForm(true);
       
-      // Costs are stored in USD, populate both USD and LKR fields
       setFormData({
         product_id: String(price.product_id),
         variant_id: variantId,
@@ -489,43 +547,22 @@ const ExportCustomerDetail = () => {
         forwardHandling_cost_usd: price.forwardHandling_cost || '',
         forwardHandling_cost_lkr: convertToLKR(price.forwardHandling_cost),
         freight_type: price.freight_type || 'air',
-        gross_weight_tier: price.gross_weight_tier || '',
-        container_type: price.container_type || '',
         multiplier: price.multiplier || '',
         divisor: price.divisor || '',
-        freight_cost: price.freight_cost || '',
         fob_price: price.fob_price,
-        cnf: price.cnf || calculateCNF(price.fob_price, price.freight_cost)
-      });
-    } else {
-      setEditingPrice(price);
-      setShowForm(true);
-      setFormData({
-        product_id: String(price.product_id),
-        variant_id: price.variant_id ? String(price.variant_id) : '',
-        common_name: price.common_name,
-        category: price.category,
-        size_range: price.size_range,
-        purchasing_price: price.purchasing_price,
-        exfactoryprice: price.exfactoryprice,
-        export_doc_usd: price.export_doc || '',
-        export_doc_lkr: convertToLKR(price.export_doc),
-        transport_cost_usd: price.transport_cost || '',
-        transport_cost_lkr: convertToLKR(price.transport_cost),
-        loading_cost_usd: price.loading_cost || '',
-        loading_cost_lkr: convertToLKR(price.loading_cost),
-        airway_cost_usd: price.airway_cost || '',
-        airway_cost_lkr: convertToLKR(price.airway_cost),
-        forwardHandling_cost_usd: price.forwardHandling_cost || '',
-        forwardHandling_cost_lkr: convertToLKR(price.forwardHandling_cost),
-        freight_type: price.freight_type || 'air',
-        gross_weight_tier: price.gross_weight_tier || '',
+        // Air freight tiers
+        freight_cost_45kg: price.freight_cost_45kg || '',
+        freight_cost_100kg: price.freight_cost_100kg || '',
+        freight_cost_300kg: price.freight_cost_300kg || '',
+        freight_cost_500kg: price.freight_cost_500kg || '',
+        cnf_45kg: price.cnf_45kg || '',
+        cnf_100kg: price.cnf_100kg || '',
+        cnf_300kg: price.cnf_300kg || '',
+        cnf_500kg: price.cnf_500kg || '',
+        // Sea freight
         container_type: price.container_type || '',
-        multiplier: price.multiplier || '',
-        divisor: price.divisor || '',
-        freight_cost: price.freight_cost || '',
-        fob_price: price.fob_price,
-        cnf: price.cnf || calculateCNF(price.fob_price, price.freight_cost)
+        freight_cost_sea: price.freight_cost_sea || '',
+        cnf_sea: price.cnf_sea || ''
       });
     }
   };
@@ -568,13 +605,20 @@ const ExportCustomerDetail = () => {
       forwardHandling_cost_usd: '',
       forwardHandling_cost_lkr: '',
       freight_type: 'air',
-      gross_weight_tier: '',
       container_type: '',
       multiplier: '',
       divisor: '',
-      freight_cost: '',
-      fob_price: '',
-      cnf: ''
+      freight_cost_45kg: '',
+      freight_cost_100kg: '',
+      freight_cost_300kg: '',
+      freight_cost_500kg: '',
+      cnf_45kg: '',
+      cnf_100kg: '',
+      cnf_300kg: '',
+      cnf_500kg: '',
+      freight_cost_sea: '',
+      cnf_sea: '',
+      fob_price: ''
     });
     setSelectedProduct(null);
     setEditingPrice(null);
@@ -619,7 +663,6 @@ const ExportCustomerDetail = () => {
     
     return (
       <>
-        {/* Air Freight Rates */}
         {airRateData && (
           <div style={{
             backgroundColor: '#1b5e20',
@@ -660,7 +703,6 @@ const ExportCustomerDetail = () => {
           </div>
         )}
 
-        {/* Sea Freight Rates */}
         {seaRateData && (
           <div style={{
             backgroundColor: '#0d47a1',
@@ -729,7 +771,7 @@ const ExportCustomerDetail = () => {
     );
   };
 
-  // PDF Download Function
+  // PDF Download Function - Updated to include all tiers
   const handleDownloadPDF = async () => {
     if (prices.length === 0) {
       alert('No products to download');
@@ -775,75 +817,152 @@ const ExportCustomerDetail = () => {
         day: 'numeric'
       });
       doc.text(`Generated: ${currentDate}`, 14, yPos);
-      yPos += 6;
+      yPos += 10;
 
-      const tableData = prices.map(price => {
-        const cnfValue = price.cnf || calculateCNF(price.fob_price, price.freight_cost);
-        const exFactoryUSD = convertToUSD(price.exfactoryprice);
-        const fobUSD = convertToUSD(price.fob_price);
+      // Separate air freight and sea freight products
+      const airProducts = prices.filter(p => p.freight_type === 'air');
+      const seaProducts = prices.filter(p => p.freight_type === 'sea');
 
-        let freightInfo = '-';
-        if (price.freight_cost && parseFloat(price.freight_cost) > 0) {
-          const freightType = price.freight_type === 'sea' ? '(SEA)' : '(AIR)';
-          if (price.freight_type === 'air' && price.gross_weight_tier) {
-            freightInfo = `${freightType} $${parseFloat(price.freight_cost).toFixed(2)}\n${price.gross_weight_tier.replace('gross+', '+')}`;
-          } else if (price.freight_type === 'sea' && price.container_type) {
-            freightInfo = `${freightType} $${parseFloat(price.freight_cost).toFixed(2)}\n${price.container_type} Container`;
-          } else {
-            freightInfo = `$${parseFloat(price.freight_cost).toFixed(2)}`;
-          }
+      // Air Freight Table
+      if (airProducts.length > 0) {
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text('✈️ Air Freight Products', 14, yPos);
+        yPos += 8;
+
+        const airTableData = airProducts.map(price => {
+          const exFactoryUSD = convertToUSD(price.exfactoryprice);
+          const fobUSD = convertToUSD(price.fob_price);
+
+          return [
+            price.common_name,
+            formatCategory(price.category),
+            price.size_range || '-',
+            `Rs.${parseFloat(price.purchasing_price).toFixed(2)}`,
+            `Rs.${parseFloat(price.exfactoryprice).toFixed(2)}\n$${exFactoryUSD}`,
+            `Rs.${parseFloat(price.fob_price).toFixed(2)}\n$${fobUSD}`,
+            `$${parseFloat(price.cnf_45kg || 0).toFixed(2)}`,
+            `$${parseFloat(price.cnf_100kg || 0).toFixed(2)}`,
+            `$${parseFloat(price.cnf_300kg || 0).toFixed(2)}`,
+            `$${parseFloat(price.cnf_500kg || 0).toFixed(2)}`
+          ];
+        });
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Product', 'Category', 'Size', 'Purchasing\nPrice', 'Ex-Factory\nPrice', 'FOB\nPrice', 'CNF\n+45kg', 'CNF\n+100kg', 'CNF\n+300kg', 'CNF\n+500kg']],
+          body: airTableData,
+          theme: 'grid',
+          headStyles: {
+            fillColor: [76, 175, 80],
+            textColor: 255,
+            fontStyle: 'bold',
+            halign: 'center',
+            fontSize: 9
+          },
+          bodyStyles: {
+            fontSize: 8,
+            cellPadding: 2
+          },
+          columnStyles: {
+            0: { cellWidth: 35 },
+            1: { cellWidth: 20 },
+            2: { cellWidth: 20 },
+            3: { cellWidth: 25 },
+            4: { cellWidth: 28 },
+            5: { cellWidth: 28 },
+            6: { cellWidth: 20 },
+            7: { cellWidth: 20 },
+            8: { cellWidth: 20 },
+            9: { cellWidth: 20 }
+          },
+          styles: {
+            overflow: 'linebreak',
+            cellPadding: 2,
+            fontSize: 8,
+            valign: 'middle',
+            halign: 'left'
+          },
+          alternateRowStyles: {
+            fillColor: [245, 245, 245]
+          },
+          margin: { top: yPos }
+        });
+
+        yPos = doc.lastAutoTable.finalY + 15;
+      }
+
+      // Sea Freight Table
+      if (seaProducts.length > 0) {
+        // Check if we need a new page
+        if (yPos > 160) {
+          doc.addPage();
+          yPos = 20;
         }
 
-        return [
-          price.common_name,
-          formatCategory(price.category),
-          price.size_range || '-',
-          `Rs.${parseFloat(price.purchasing_price).toFixed(2)}`,
-          `Rs.${parseFloat(price.exfactoryprice).toFixed(2)}\n$${exFactoryUSD}`,
-          freightInfo,
-          `Rs.${parseFloat(price.fob_price).toFixed(2)}\n$${fobUSD}`,
-          `$${cnfValue}`
-        ];
-      });
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text('🚢 Sea Freight Products', 14, yPos);
+        yPos += 8;
 
-      autoTable(doc, {
-        startY: yPos,
-        head: [['Product Name', 'Category', 'Size Range', 'Purchasing\nPrice (LKR)', 'Ex-Factory\nPrice', 'Freight\nCost', 'FOB\nPrice', 'CNF\n(USD)']],
-        body: tableData,
-        theme: 'grid',
-        headStyles: {
-          fillColor: [33, 150, 243],
-          textColor: 255,
-          fontStyle: 'bold',
-          halign: 'center',
-          fontSize: 10
-        },
-        bodyStyles: {
-          fontSize: 9,
-          cellPadding: 3
-        },
-        columnStyles: {
-          0: { cellWidth: 45 },
-          1: { cellWidth: 25 },
-          2: { cellWidth: 30 },
-          3: { cellWidth: 30 },
-          4: { cellWidth: 35 },
-          5: { cellWidth: 30 },
-          6: { cellWidth: 35 },
-          7: { cellWidth: 25 }
-        },
-        styles: {
-          overflow: 'linebreak',
-          cellPadding: 3,
-          fontSize: 9,
-          valign: 'middle',
-          halign: 'left'
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245]
-        },
-        margin: { top: yPos }
-      });
+        const seaTableData = seaProducts.map(price => {
+          const exFactoryUSD = convertToUSD(price.exfactoryprice);
+          const fobUSD = convertToUSD(price.fob_price);
+          const containerType = price.container_type || '-';
+
+          return [
+            price.common_name,
+            formatCategory(price.category),
+            price.size_range || '-',
+            `Rs.${parseFloat(price.purchasing_price).toFixed(2)}`,
+            `Rs.${parseFloat(price.exfactoryprice).toFixed(2)}\n$${exFactoryUSD}`,
+            containerType,
+            `$${parseFloat(price.freight_cost_sea || 0).toFixed(4)}/kg`,
+            `Rs.${parseFloat(price.fob_price).toFixed(2)}\n$${fobUSD}`,
+            `$${parseFloat(price.cnf_sea || 0).toFixed(2)}`
+          ];
+        });
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Product', 'Category', 'Size', 'Purchasing\nPrice', 'Ex-Factory\nPrice', 'Container\nType', 'Freight\nCost', 'FOB\nPrice', 'CNF\n(USD)']],
+          body: seaTableData,
+          theme: 'grid',
+          headStyles: {
+            fillColor: [33, 150, 243],
+            textColor: 255,
+            fontStyle: 'bold',
+            halign: 'center',
+            fontSize: 9
+          },
+          bodyStyles: {
+            fontSize: 8,
+            cellPadding: 2
+          },
+          columnStyles: {
+            0: { cellWidth: 40 },
+            1: { cellWidth: 25 },
+            2: { cellWidth: 25 },
+            3: { cellWidth: 30 },
+            4: { cellWidth: 32 },
+            5: { cellWidth: 22 },
+            6: { cellWidth: 25 },
+            7: { cellWidth: 32 },
+            8: { cellWidth: 25 }
+          },
+          styles: {
+            overflow: 'linebreak',
+            cellPadding: 2,
+            fontSize: 8,
+            valign: 'middle',
+            halign: 'left'
+          },
+          alternateRowStyles: {
+            fillColor: [245, 245, 245]
+          },
+          margin: { top: yPos }
+        });
+      }
 
       const fileName = `${customer?.cus_name || 'Customer'}_Product_List_${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(fileName);
@@ -855,17 +974,6 @@ const ExportCustomerDetail = () => {
   };
 
   useEffect(() => {
-    console.log('=== DEBUG INFO ===');
-    console.log('Customer:', customer);
-    console.log('Air Freight Rates:', freightRates);
-    console.log('Sea Freight Rates:', seaFreightRates);
-    console.log('Matched Air Rate:', customer ? getAirFreightRateForCustomer(customer) : null);
-    console.log('Matched Sea Rate:', customer ? getSeaFreightRateForCustomer(customer) : null);
-    console.log('==================');
-  }, [customer, freightRates, seaFreightRates]); // eslint-disable-line react-hooks/exhaustive-deps
-
-
-  useEffect(() => {
     fetchCustomer();
     fetchPrices();
     fetchProducts();
@@ -875,53 +983,68 @@ const ExportCustomerDetail = () => {
   }, [cus_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-  if (formData.exfactoryprice && currentUsdRate) {
-    const exfactoryprice = parseFloat(formData.exfactoryprice) || 0;
-    
-    let export_doc_usd = parseFloat(formData.export_doc_usd) || 0;
-    let transport_cost_usd = parseFloat(formData.transport_cost_usd) || 0;
-    let loading_cost_usd = parseFloat(formData.loading_cost_usd) || 0;
-    let airway_cost_usd = parseFloat(formData.airway_cost_usd) || 0;
-    let forwardHandling_cost_usd = parseFloat(formData.forwardHandling_cost_usd) || 0;
-    let freight_cost = parseFloat(formData.freight_cost) || 0;
+    if (formData.exfactoryprice && currentUsdRate) {
+      const exfactoryprice = parseFloat(formData.exfactoryprice) || 0;
+      
+      let export_doc_usd = parseFloat(formData.export_doc_usd) || 0;
+      let transport_cost_usd = parseFloat(formData.transport_cost_usd) || 0;
+      let loading_cost_usd = parseFloat(formData.loading_cost_usd) || 0;
+      let airway_cost_usd = parseFloat(formData.airway_cost_usd) || 0;
+      let forwardHandling_cost_usd = parseFloat(formData.forwardHandling_cost_usd) || 0;
 
-    const totalCostsUSD =
-      export_doc_usd +
-      transport_cost_usd +
-      loading_cost_usd +
-      airway_cost_usd +
-      forwardHandling_cost_usd;
+      const totalCostsUSD =
+        export_doc_usd +
+        transport_cost_usd +
+        loading_cost_usd +
+        airway_cost_usd +
+        forwardHandling_cost_usd;
 
-    const totalCostsLKR = totalCostsUSD * parseFloat(currentUsdRate);
+      const totalCostsLKR = totalCostsUSD * parseFloat(currentUsdRate);
 
-    const fobPriceLKR = exfactoryprice + totalCostsLKR;
-    const fob_price = fobPriceLKR.toFixed(2);
+      const fobPriceLKR = exfactoryprice + totalCostsLKR;
+      const fob_price = fobPriceLKR.toFixed(2);
 
-    const cnf = calculateCNF(fobPriceLKR, freight_cost);
+      // Recalculate CNF for all tiers if FOB changes
+      let updates = { fob_price };
 
-    if (formData.fob_price !== fob_price || formData.cnf !== cnf) {
+      if (formData.freight_type === 'air') {
+        if (formData.freight_cost_45kg) {
+          updates.cnf_45kg = calculateCNF(fobPriceLKR, formData.freight_cost_45kg);
+        }
+        if (formData.freight_cost_100kg) {
+          updates.cnf_100kg = calculateCNF(fobPriceLKR, formData.freight_cost_100kg);
+        }
+        if (formData.freight_cost_300kg) {
+          updates.cnf_300kg = calculateCNF(fobPriceLKR, formData.freight_cost_300kg);
+        }
+        if (formData.freight_cost_500kg) {
+          updates.cnf_500kg = calculateCNF(fobPriceLKR, formData.freight_cost_500kg);
+        }
+      } else if (formData.freight_type === 'sea' && formData.freight_cost_sea) {
+        updates.cnf_sea = calculateCNF(fobPriceLKR, formData.freight_cost_sea);
+      }
+
       setFormData(prev => ({
         ...prev,
-        fob_price,
-        cnf
+        ...updates
       }));
     }
-  }
-}, [
-  formData.exfactoryprice,
-  formData.export_doc_usd,
-  formData.transport_cost_usd,
-  formData.loading_cost_usd,
-  formData.airway_cost_usd,
-  formData.forwardHandling_cost_usd,
-  formData.freight_cost,
-  currentUsdRate,
-  calculateCNF,
-  formData.cnf,
-  formData.fob_price
-]);
-
-
+  }, [
+    formData.exfactoryprice,
+    formData.export_doc_usd,
+    formData.transport_cost_usd,
+    formData.loading_cost_usd,
+    formData.airway_cost_usd,
+    formData.forwardHandling_cost_usd,
+    formData.freight_cost_45kg,
+    formData.freight_cost_100kg,
+    formData.freight_cost_300kg,
+    formData.freight_cost_500kg,
+    formData.freight_cost_sea,
+    currentUsdRate,
+    calculateCNF,
+    formData.freight_type
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="pricelist-container">
@@ -1107,6 +1230,7 @@ const ExportCustomerDetail = () => {
               </div>
             )}
 
+            {/* Additional Costs Section - Same as before */}
             <div style={{
               gridColumn: '1 / -1',
               backgroundColor: 'transparent',
@@ -1451,6 +1575,7 @@ const ExportCustomerDetail = () => {
               }}
             />
 
+            {/* Freight Calculation Section */}
             <div style={{
               gridColumn: '1 / -1',
               backgroundColor: 'transparent',
@@ -1462,7 +1587,9 @@ const ExportCustomerDetail = () => {
                 Freight Calculation
               </h3>
               <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#c9c9c9', fontStyle: 'italic' }}>
-                Configure freight rates based on type and weight
+                {formData.freight_type === 'air' 
+                  ? 'All weight tiers will be calculated automatically'
+                  : 'Configure sea freight rate'}
               </p>
 
               {/* Freight Type Selection */}
@@ -1493,7 +1620,7 @@ const ExportCustomerDetail = () => {
                       style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
                     />
                     <span style={{ fontSize: '15px', color: '#ffffff', fontWeight: '500' }}>
-                      ✈️ Air Freight
+                      ✈️ Air Freight (All Tiers)
                     </span>
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
@@ -1514,124 +1641,151 @@ const ExportCustomerDetail = () => {
 
               {/* Air Freight Configuration */}
               {formData.freight_type === 'air' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
-                  {/* Gross Weight Tier */}
-                  <div style={{
-                    backgroundColor: 'transparent',
-                    padding: '15px',
-                    borderRadius: '6px',
-                    border: '1px solid #a5d6a7'
-                  }}>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '8px', 
-                      fontSize: '14px', 
-                      color: '#ffffff',
-                      fontWeight: '600'
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '20px' }}>
+                    {/* Multiplier */}
+                    <div style={{
+                      backgroundColor: 'transparent',
+                      padding: '15px',
+                      borderRadius: '6px',
+                      border: '1px solid #ddd'
                     }}>
-                      Gross Weight Tier
-                    </label>
-                    <select
-                      className="apf-input"
-                      value={formData.gross_weight_tier}
-                      onChange={(e) => calculatePrices('gross_weight_tier', e.target.value)}
-                      style={{ width: '100%' }}
-                    >
-                      <option value="">-- Select Weight Tier --</option>
-                      <option value="gross+45kg">Gross +45kg</option>
-                      <option value="gross+100kg">Gross +100kg</option>
-                      <option value="gross+300kg">Gross +300kg</option>
-                      <option value="gross+500kg">Gross +500kg</option>
-                    </select>
+                      <label style={{ 
+                        display: 'block', 
+                        marginBottom: '8px', 
+                        fontSize: '14px', 
+                        color: '#ffffff',
+                        fontWeight: '600'
+                      }}>
+                        Gross Weight (kg) - Multiplier
+                      </label>
+                      <input
+                        type="number"
+                        className="apf-input"
+                        step="0.01"
+                        value={formData.multiplier}
+                        onChange={(e) => calculatePrices('multiplier', e.target.value)}
+                        placeholder="e.g., 150"
+                        onWheel={(e) => e.target.blur()}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+
+                    {/* Divisor */}
+                    <div style={{
+                      backgroundColor: 'transparent',
+                      padding: '15px',
+                      borderRadius: '6px',
+                      border: '1px solid #ddd'
+                    }}>
+                      <label style={{ 
+                        display: 'block', 
+                        marginBottom: '8px', 
+                        fontSize: '14px', 
+                        color: '#ffffff',
+                        fontWeight: '600'
+                      }}>
+                        Divisor
+                      </label>
+                      <input
+                        type="number"
+                        className="apf-input"
+                        step="0.01"
+                        value={formData.divisor}
+                        onChange={(e) => calculatePrices('divisor', e.target.value)}
+                        placeholder="e.g., 1"
+                        onWheel={(e) => e.target.blur()}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
                   </div>
 
-                  {/* Multiplier */}
+                  {/* All Tiers Display */}
                   <div style={{
-                    backgroundColor: 'transparent',
-                    padding: '15px',
-                    borderRadius: '6px',
-                    border: '1px solid #ddd'
+                    backgroundColor: '#1b5e20',
+                    padding: '20px',
+                    borderRadius: '8px',
+                    border: '2px solid #4caf50'
                   }}>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '8px', 
-                      fontSize: '14px', 
-                      color: '#ffffff',
-                      fontWeight: '600'
-                    }}>
-                      Gross Weight (kg) - Multiplier
-                    </label>
-                    <input
-                      type="number"
-                      className="apf-input"
-                      step="0.01"
-                      value={formData.multiplier}
-                      onChange={(e) => calculatePrices('multiplier', e.target.value)}
-                      placeholder="e.g., 150"
-                      onWheel={(e) => e.target.blur()}
-                      style={{ width: '100%' }}
-                    />
-                  </div>
+                    <h4 style={{ marginTop: 0, marginBottom: '15px', color: '#81c784' }}>
+                      Calculated Freight & CNF for All Tiers
+                    </h4>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+                      {/* 45kg Tier */}
+                      <div style={{ 
+                        backgroundColor: 'rgba(129, 199, 132, 0.1)',
+                        padding: '12px',
+                        borderRadius: '6px',
+                        border: '1px solid #4caf50'
+                      }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#81c784' }}>
+                          +45kg Tier
+                        </div>
+                        <div style={{ fontSize: '0.9rem', marginBottom: '5px' }}>
+                          Freight: <strong>${formData.freight_cost_45kg || '0.00'}</strong>
+                        </div>
+                        <div style={{ fontSize: '0.9rem', color: '#c8e6c9' }}>
+                          CNF: <strong>${formData.cnf_45kg || '0.00'}</strong>
+                        </div>
+                      </div>
 
-                  {/* Divisor */}
-                  <div style={{
-                    backgroundColor: 'transparent',
-                    padding: '15px',
-                    borderRadius: '6px',
-                    border: '1px solid #ddd'
-                  }}>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '8px', 
-                      fontSize: '14px', 
-                      color: '#ffffff',
-                      fontWeight: '600'
-                    }}>
-                      Divisor
-                    </label>
-                    <input
-                      type="number"
-                      className="apf-input"
-                      step="0.01"
-                      value={formData.divisor}
-                      onChange={(e) => calculatePrices('divisor', e.target.value)}
-                      placeholder="e.g., 1"
-                      onWheel={(e) => e.target.blur()}
-                      style={{ width: '100%' }}
-                    />
-                  </div>
+                      {/* 100kg Tier */}
+                      <div style={{ 
+                        backgroundColor: 'rgba(129, 199, 132, 0.1)',
+                        padding: '12px',
+                        borderRadius: '6px',
+                        border: '1px solid #4caf50'
+                      }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#81c784' }}>
+                          +100kg Tier
+                        </div>
+                        <div style={{ fontSize: '0.9rem', marginBottom: '5px' }}>
+                          Freight: <strong>${formData.freight_cost_100kg || '0.00'}</strong>
+                        </div>
+                        <div style={{ fontSize: '0.9rem', color: '#c8e6c9' }}>
+                          CNF: <strong>${formData.cnf_100kg || '0.00'}</strong>
+                        </div>
+                      </div>
 
-                  {/* Freight Cost */}
-                  <div style={{
-                    backgroundColor: 'transparent',
-                    padding: '15px',
-                    borderRadius: '6px',
-                    border: '1px solid #ddd'
-                  }}>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '8px', 
-                      fontSize: '14px', 
-                      color: '#ffffff',
-                      fontWeight: '600'
-                    }}>
-                      Freight Cost (USD)
-                      <span style={{ fontSize: '11px', color: '#ffffff', marginLeft: '5px', fontWeight: 'normal' }}>
-                        - Calculated
-                      </span>
-                    </label>
-                    <input
-                      type="number"
-                      className="apf-input"
-                      step="0.01"
-                      value={formData.freight_cost}
-                      onChange={(e) => calculatePrices('freight_cost', e.target.value)}
-                      placeholder="0.00"
-                      onWheel={(e) => e.target.blur()}
-                      style={{ width: '100%' }}
-                    />
+                      {/* 300kg Tier */}
+                      <div style={{ 
+                        backgroundColor: 'rgba(129, 199, 132, 0.1)',
+                        padding: '12px',
+                        borderRadius: '6px',
+                        border: '1px solid #4caf50'
+                      }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#81c784' }}>
+                          +300kg Tier
+                        </div>
+                        <div style={{ fontSize: '0.9rem', marginBottom: '5px' }}>
+                          Freight: <strong>${formData.freight_cost_300kg || '0.00'}</strong>
+                        </div>
+                        <div style={{ fontSize: '0.9rem', color: '#c8e6c9' }}>
+                          CNF: <strong>${formData.cnf_300kg || '0.00'}</strong>
+                        </div>
+                      </div>
+
+                      {/* 500kg Tier */}
+                      <div style={{ 
+                        backgroundColor: 'rgba(129, 199, 132, 0.1)',
+                        padding: '12px',
+                        borderRadius: '6px',
+                        border: '1px solid #4caf50'
+                      }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#81c784' }}>
+                          +500kg Tier
+                        </div>
+                        <div style={{ fontSize: '0.9rem', marginBottom: '5px' }}>
+                          Freight: <strong>${formData.freight_cost_500kg || '0.00'}</strong>
+                        </div>
+                        <div style={{ fontSize: '0.9rem', color: '#c8e6c9' }}>
+                          CNF: <strong>${formData.cnf_500kg || '0.00'}</strong>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </>
               )}
 
               {/* Sea Freight Configuration */}
@@ -1679,18 +1833,18 @@ const ExportCustomerDetail = () => {
                       color: '#ffffff',
                       fontWeight: '600'
                     }}>
-                      Freight Cost (USD)
+                      Freight Cost (USD/kg)
                       <span style={{ fontSize: '11px', color: '#ffffff', marginLeft: '5px', fontWeight: 'normal' }}>
-                        - Full Container Rate
+                        - Per Kilo Rate
                       </span>
                     </label>
                     <input
                       type="number"
                       className="apf-input"
-                      step="0.01"
-                      value={formData.freight_cost}
+                      step="0.0001"
+                      value={formData.freight_cost_sea}
                       disabled
-                      placeholder="0.00"
+                      placeholder="0.0000"
                       onWheel={(e) => e.target.blur()}
                       style={{ 
                         width: '100%',
@@ -1701,48 +1855,48 @@ const ExportCustomerDetail = () => {
                       }}
                     />
                   </div>
+
+                  {/* CNF Sea - Full Width */}
+                  <div style={{
+                    gridColumn: '1 / -1',
+                    backgroundColor: 'transparent',
+                    padding: '15px',
+                    borderRadius: '6px',
+                    border: '2px solid #ffffff'
+                  }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '8px', 
+                      fontSize: '15px', 
+                      color: '#ffffff',
+                      fontWeight: '700'
+                    }}>
+                      CNF (Cost and Freight) - USD
+                      <span style={{ fontSize: '12px', color: '#d6d6d6', marginLeft: '8px', fontWeight: 'normal' }}>
+                        (FOB + Freight Cost)
+                      </span>
+                    </label>
+                    <input
+                      type="number"
+                      className="apf-input"
+                      step="0.01"
+                      value={formData.cnf_sea}
+                      disabled
+                      placeholder="0.00"
+                      onWheel={(e) => e.target.blur()}
+                      style={{
+                        width: '100%',
+                        backgroundColor: '#ffffff',
+                        color: '#6a1b9a',
+                        fontWeight: 'bold',
+                        cursor: 'not-allowed',
+                        fontSize: '16px',
+                        border: '2px solid #ba68c8'
+                      }}
+                    />
+                  </div>
                 </div>
               )}
-
-              {/* CNF - Full Width */}
-              <div style={{
-                backgroundColor: 'transparent',
-                padding: '15px',
-                borderRadius: '6px',
-                border: '2px solid #ffffff',
-                marginTop: '15px'
-              }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '8px', 
-                  fontSize: '15px', 
-                  color: '#ffffff',
-                  fontWeight: '700'
-                }}>
-                  CNF (Cost and Freight) - USD
-                  <span style={{ fontSize: '12px', color: '#d6d6d6', marginLeft: '8px', fontWeight: 'normal' }}>
-                    (FOB + Freight Cost)
-                  </span>
-                </label>
-                <input
-                  type="number"
-                  className="apf-input"
-                  step="0.01"
-                  value={formData.cnf}
-                  disabled
-                  placeholder="0.00"
-                  onWheel={(e) => e.target.blur()}
-                  style={{
-                    width: '100%',
-                    backgroundColor: '#ffffff',
-                    color: '#6a1b9a',
-                    fontWeight: 'bold',
-                    cursor: 'not-allowed',
-                    fontSize: '16px',
-                    border: '2px solid #ba68c8'
-                  }}
-                />
-              </div>
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
@@ -1765,14 +1919,14 @@ const ExportCustomerDetail = () => {
           <table className="pricelist-table">
             <thead>
               <tr>
-                <th>Common Name</th>
+                <th>Product Name</th>
                 <th>Category</th>
                 <th>Size Range</th>
                 <th>Purchasing Price</th>
                 <th>Ex-Factory Price</th>
-                <th>Freight Cost</th>
                 <th>FOB Price</th>
-                <th>CNF (USD)</th>
+                <th>Freight Type</th>
+                <th>CNF Details</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -1784,12 +1938,11 @@ const ExportCustomerDetail = () => {
               )}
 
               {prices.map(price => {
-                const cnfValue = price.cnf || calculateCNF(price.fob_price, price.freight_cost);
-                const freightType = price.freight_type === 'sea' ? '🚢' : '✈️';
+                const freightIcon = price.freight_type === 'sea' ? '🚢' : '✈️';
 
                 return (
                   <tr key={price.id} className="responsive-row">
-                    <td data-label="Common Name">{price.common_name}</td>
+                    <td data-label="Product Name">{price.common_name}</td>
                     <td data-label="Category">{formatCategory(price.category)}</td>
                     <td data-label="Size Range">{price.size_range || '-'}</td>
                     <td data-label="Purchasing Price">Rs.{parseFloat(price.purchasing_price).toFixed(2)}</td>
@@ -1801,24 +1954,6 @@ const ExportCustomerDetail = () => {
                         </small>
                       )}
                     </td>
-                    <td data-label="Freight Cost">
-                      {price.freight_cost && parseFloat(price.freight_cost) > 0 ? (
-                        <>
-                          {freightType} ${parseFloat(price.freight_cost).toFixed(2)}
-                          {price.freight_type === 'air' && price.gross_weight_tier && (
-                            <small style={{ display: 'block', color: '#666', fontSize: '0.8rem' }}>
-                              {price.gross_weight_tier.replace('gross+', '+')}
-                              {price.multiplier && ` (${price.multiplier}kg ÷ ${price.divisor || 1})`}
-                            </small>
-                          )}
-                          {price.freight_type === 'sea' && price.container_type && (
-                            <small style={{ display: 'block', color: '#666', fontSize: '0.8rem' }}>
-                              {price.container_type} Container
-                            </small>
-                          )}
-                        </>
-                      ) : '-'}
-                    </td>
                     <td data-label="FOB Price">
                       <div style={{ fontWeight: 'bold' }}>Rs.{parseFloat(price.fob_price).toFixed(2)}</div>
                       {currentUsdRate && (
@@ -1827,13 +1962,27 @@ const ExportCustomerDetail = () => {
                         </small>
                       )}
                     </td>
-                    <td data-label="CNF (USD)">
-                      <div style={{ fontWeight: 'bold', color: '#ffffff', fontSize: '15px' }}>
-                        ${cnfValue}
-                      </div>
-                      <small style={{ color: '#666', fontSize: '0.75rem' }}>
-                        (Cost & Freight)
-                      </small>
+                    <td data-label="Freight Type">
+                      {freightIcon} {price.freight_type === 'sea' ? 'Sea' : 'Air'}
+                      {price.freight_type === 'sea' && price.container_type && (
+                        <small style={{ display: 'block', color: '#666', fontSize: '0.8rem' }}>
+                          {price.container_type} Container
+                        </small>
+                      )}
+                    </td>
+                    <td data-label="CNF Details">
+                      {price.freight_type === 'air' ? (
+                        <div style={{ fontSize: '0.85rem' }}>
+                          <div><strong>+45kg:</strong> ${parseFloat(price.cnf_45kg || 0).toFixed(2)}</div>
+                          <div><strong>+100kg:</strong> ${parseFloat(price.cnf_100kg || 0).toFixed(2)}</div>
+                          <div><strong>+300kg:</strong> ${parseFloat(price.cnf_300kg || 0).toFixed(2)}</div>
+                          <div><strong>+500kg:</strong> ${parseFloat(price.cnf_500kg || 0).toFixed(2)}</div>
+                        </div>
+                      ) : (
+                        <div style={{ fontWeight: 'bold', color: '#ffffff', fontSize: '15px' }}>
+                          ${parseFloat(price.cnf_sea || 0).toFixed(2)}
+                        </div>
+                      )}
                     </td>
                     <td data-label="Actions">
                       <div className="actions-wrapper">
