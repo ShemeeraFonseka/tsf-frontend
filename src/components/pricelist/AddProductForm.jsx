@@ -12,6 +12,7 @@ const AddProductForm = () => {
         common_name: '',
         scientific_name: '',
         category: 'live',
+        species_type: 'fish',
         image: null,
         existing_image_url: null
     })
@@ -52,6 +53,7 @@ const AddProductForm = () => {
                         common_name: product.common_name,
                         scientific_name: product.scientific_name || '',
                         category: product.category || 'live',
+                        species_type: product.species_type || 'fish',
                         image: null,
                         existing_image_url: product.image_url
                     })
@@ -245,6 +247,7 @@ const AddProductForm = () => {
             data.append('common_name', form.common_name)
             data.append('scientific_name', form.scientific_name)
             data.append('category', form.category)
+            data.append('species_type', form.species_type)
             data.append('variants', JSON.stringify(variants))
 
             if (form.image) {
@@ -306,7 +309,7 @@ const AddProductForm = () => {
                     onChange={handleChange}
                 />
 
-                <label className="apf-label">Product Category</label>
+                <label className="apf-label">Product Condition</label>
                 <select
                     className="apf-input"
                     name="category"
@@ -317,6 +320,19 @@ const AddProductForm = () => {
                     <option value="live">Live</option>
                     <option value="fresh">Fresh</option>
                     <option value="frozen">Frozen</option>
+                </select>
+
+                <label className="apf-label">Species Type</label>
+                <select
+                    className="apf-input"
+                    name="species_type"
+                    value={form.species_type}
+                    onChange={handleChange}
+                    required
+                >
+                    <option value="crustacean">🦪 Crustacean</option>
+                    <option value="fish">🐟 Fish</option>
+    
                 </select>
                 
                 <label className="apf-label">Product Image</label>
@@ -397,13 +413,12 @@ const AddProductForm = () => {
                     
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '10px', alignItems: 'end' }}>
                         <div>
-                            <label className="apf-label">Size</label>
+                            <label className="apf-label">Variant</label>
                             <input
                                 className="apf-input"
                                 name="size"
                                 type="text"
-                                step="0.01"
-                                placeholder="e.g., 1, 5, 10"
+                                placeholder="e.g., 100-150g, 2-5 inches"
                                 value={editingVariant ? editingVariant.size : newVariant.size}
                                 onChange={handleVariantChange}
                             />
