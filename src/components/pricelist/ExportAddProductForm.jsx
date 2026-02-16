@@ -1,5 +1,3 @@
-// Key changes marked with // ADDED or // MODIFIED comments
-
 import React, { useState, useEffect } from 'react'
 import './AddProductForm.css'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -14,13 +12,13 @@ const ExportAddProductForm = () => {
         common_name: '',
         scientific_name: '',
         category: 'live',
+        species_type: 'crustacean',
         image: null,
         existing_image_url: null
     })
 
     const [variants, setVariants] = useState([])
     
-    // MODIFIED: Added multiplier and divisor to newVariant state
     const [newVariant, setNewVariant] = useState({
         size: '',
         unit: '',
@@ -31,8 +29,8 @@ const ExportAddProductForm = () => {
         profit: '',
         profit_margin: '',
         exfactoryprice: '',
-        multiplier: '',  // ADDED
-        divisor: '1'     // ADDED with default value
+        multiplier: '',
+        divisor: '1'
     })
     const [editingVariant, setEditingVariant] = useState(null)
 
@@ -46,16 +44,22 @@ const ExportAddProductForm = () => {
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
 
-    // ... (keep all existing calculation functions unchanged)
-    const calculateCostPrice = (purchasePrice, packingCost, labourOverhead) => {
+    // MODIFIED: Calculation functions now convert USD to LKR for costs
+    const calculateCostPrice = (purchasePrice, packingCostUSD, labourOverheadUSD, usdRate) => {
         const purchase = parseFloat(purchasePrice) || 0
-        const packing = parseFloat(packingCost) || 0
-        const labour = parseFloat(labourOverhead) || 0
-        return purchase + packing + labour
+        const packingUSD = parseFloat(packingCostUSD) || 0
+        const labourUSD = parseFloat(labourOverheadUSD) || 0
+        const rate = parseFloat(usdRate) || 1
+        
+        // Convert USD costs to LKR
+        const packingLKR = packingUSD * rate
+        const labourLKR = labourUSD * rate
+        
+        return purchase + packingLKR + labourLKR
     }
 
-    const calculateExFactoryPrice = (purchasePrice, packingCost, labourOverhead, profit) => {
-        const costPrice = calculateCostPrice(purchasePrice, packingCost, labourOverhead)
+    const calculateExFactoryPrice = (purchasePrice, packingCostUSD, labourOverheadUSD, profit, usdRate) => {
+        const costPrice = calculateCostPrice(purchasePrice, packingCostUSD, labourOverheadUSD, usdRate)
         const profitAmount = parseFloat(profit) || 0
         return (costPrice + profitAmount).toFixed(2)
     }
@@ -138,6 +142,7 @@ const ExportAddProductForm = () => {
                         common_name: product.common_name,
                         scientific_name: product.scientific_name || '',
                         category: product.category || 'live',
+                        species_type: product.species_type || 'crustacean',
                         image: null,
                         existing_image_url: product.image_url
                     })
@@ -174,6 +179,7 @@ const ExportAddProductForm = () => {
         setError('')
     }
 
+    // MODIFIED: Updated to use USD rate in calculations
     const handleVariantChange = e => {
         const { name, value } = e.target
         
@@ -189,7 +195,8 @@ const ExportAddProductForm = () => {
                     updated.purchasing_price,
                     updated.packing_cost,
                     updated.labour_overhead,
-                    value
+                    value,
+                    updated.usdrate
                 )
             } else if (name === 'profit_margin') {
                 updated.profit = calculateProfitFromMargin(
@@ -200,7 +207,8 @@ const ExportAddProductForm = () => {
                     updated.purchasing_price,
                     updated.packing_cost,
                     updated.labour_overhead,
-                    updated.profit
+                    updated.profit,
+                    updated.usdrate
                 )
             }
 
@@ -209,7 +217,8 @@ const ExportAddProductForm = () => {
                     name === 'purchasing_price' ? value : updated.purchasing_price,
                     name === 'packing_cost' ? value : updated.packing_cost,
                     name === 'labour_overhead' ? value : updated.labour_overhead,
-                    updated.profit
+                    updated.profit,
+                    updated.usdrate
                 )
                 
                 if (name === 'purchasing_price' && updated.profit) {
@@ -230,7 +239,8 @@ const ExportAddProductForm = () => {
                     updated.purchasing_price,
                     updated.packing_cost,
                     updated.labour_overhead,
-                    value
+                    value,
+                    updated.usdrate
                 )
             } else if (name === 'profit_margin') {
                 updated.profit = calculateProfitFromMargin(
@@ -241,7 +251,8 @@ const ExportAddProductForm = () => {
                     updated.purchasing_price,
                     updated.packing_cost,
                     updated.labour_overhead,
-                    updated.profit
+                    updated.profit,
+                    updated.usdrate
                 )
             }
 
@@ -250,7 +261,8 @@ const ExportAddProductForm = () => {
                     name === 'purchasing_price' ? value : updated.purchasing_price,
                     name === 'packing_cost' ? value : updated.packing_cost,
                     name === 'labour_overhead' ? value : updated.labour_overhead,
-                    updated.profit
+                    updated.profit,
+                    updated.usdrate
                 )
                 
                 if (name === 'purchasing_price' && updated.profit) {
@@ -262,7 +274,6 @@ const ExportAddProductForm = () => {
         }
     }
 
-    // MODIFIED: Added multiplier and divisor to variant data
     const handleAddVariant = async () => {
         if (!newVariant.size || !newVariant.purchasing_price) {
             setError('Please fill in size and purchase price')
@@ -281,13 +292,12 @@ const ExportAddProductForm = () => {
             profit: parseFloat(newVariant.profit) || 0,
             profit_margin: parseFloat(newVariant.profit_margin) || 0,
             exfactoryprice: parseFloat(newVariant.exfactoryprice),
-            multiplier: parseFloat(newVariant.multiplier) || 0,  // ADDED
-            divisor: parseFloat(newVariant.divisor) || 1          // ADDED
+            multiplier: parseFloat(newVariant.multiplier) || 0,
+            divisor: parseFloat(newVariant.divisor) || 1
         }
 
         if (!isEditMode) {
             setVariants(prev => [...prev, variantToAdd])
-            // MODIFIED: Reset with default multiplier/divisor values
             setNewVariant({
                 size: '',
                 unit: 'kg',
@@ -298,8 +308,8 @@ const ExportAddProductForm = () => {
                 profit: '',
                 profit_margin: '',
                 exfactoryprice: '',
-                multiplier: '',     // ADDED
-                divisor: '1'        // ADDED
+                multiplier: '',
+                divisor: '1'
             })
             setSuccess('Variant added (will be saved with product)')
             setTimeout(() => setSuccess(''), 2000)
@@ -307,7 +317,6 @@ const ExportAddProductForm = () => {
         }
 
         try {
-            // MODIFIED: Include multiplier and divisor in API call
             const res = await fetch(`${API_URL}/api/exportproductlist/${id}/variants`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -321,8 +330,8 @@ const ExportAddProductForm = () => {
                     profit: newVariant.profit || 0,
                     profit_margin: newVariant.profit_margin || 0,
                     exfactoryprice: newVariant.exfactoryprice,
-                    multiplier: newVariant.multiplier || 0,  // ADDED
-                    divisor: newVariant.divisor || 1          // ADDED
+                    multiplier: newVariant.multiplier || 0,
+                    divisor: newVariant.divisor || 1
                 })
             })
 
@@ -330,7 +339,6 @@ const ExportAddProductForm = () => {
 
             const savedVariant = await res.json()
             setVariants(prev => [...prev, savedVariant])
-            // MODIFIED: Reset form
             setNewVariant({
                 size: '',
                 unit: 'kg',
@@ -341,8 +349,8 @@ const ExportAddProductForm = () => {
                 profit: '',
                 profit_margin: '',
                 exfactoryprice: '',
-                multiplier: '',  // ADDED
-                divisor: '1'     // ADDED
+                multiplier: '',
+                divisor: '1'
             })
             setSuccess('Variant added successfully!')
             setTimeout(() => setSuccess(''), 2000)
@@ -352,19 +360,17 @@ const ExportAddProductForm = () => {
         }
     }
 
-    // MODIFIED: Include multiplier and divisor when editing
     const handleEditVariant = (variant) => {
         setEditingVariant({ 
             ...variant,
             usdrate: currentUsdRate ? currentUsdRate.toFixed(2) : variant.usdrate,
             profit: variant.profit || '',
             profit_margin: variant.profit_margin || '',
-            multiplier: variant.multiplier || '',  // ADDED
-            divisor: variant.divisor || '1'         // ADDED
+            multiplier: variant.multiplier || '',
+            divisor: variant.divisor || '1'
         })
     }
 
-    // MODIFIED: Include multiplier and divisor in update
     const handleUpdateVariant = async () => {
         if (!editingVariant.size || !editingVariant.purchasing_price) {
             setError('Please fill in size and purchase price')
@@ -384,8 +390,8 @@ const ExportAddProductForm = () => {
                     profit: parseFloat(editingVariant.profit) || 0,
                     profit_margin: parseFloat(editingVariant.profit_margin) || 0,
                     exfactoryprice: parseFloat(editingVariant.exfactoryprice),
-                    multiplier: parseFloat(editingVariant.multiplier) || 0,  // ADDED
-                    divisor: parseFloat(editingVariant.divisor) || 1          // ADDED
+                    multiplier: parseFloat(editingVariant.multiplier) || 0,
+                    divisor: parseFloat(editingVariant.divisor) || 1
                 } : v)
             )
             setEditingVariant(null)
@@ -395,7 +401,6 @@ const ExportAddProductForm = () => {
         }
 
         try {
-            // MODIFIED: Include multiplier and divisor in API call
             const res = await fetch(
                 `${API_URL}/api/exportproductlist/${id}/variants/${editingVariant.id}`,
                 {
@@ -411,8 +416,8 @@ const ExportAddProductForm = () => {
                         profit: editingVariant.profit || 0,
                         profit_margin: editingVariant.profit_margin || 0,
                         exfactoryprice: editingVariant.exfactoryprice,
-                        multiplier: editingVariant.multiplier || 0,  // ADDED
-                        divisor: editingVariant.divisor || 1          // ADDED
+                        multiplier: editingVariant.multiplier || 0,
+                        divisor: editingVariant.divisor || 1
                     })
                 }
             )
@@ -473,6 +478,7 @@ const ExportAddProductForm = () => {
             data.append('common_name', form.common_name)
             data.append('scientific_name', form.scientific_name)
             data.append('category', form.category)
+            data.append('species_type', form.species_type)
             data.append('variants', JSON.stringify(variants))
 
             if (form.image) {
@@ -590,6 +596,18 @@ const ExportAddProductForm = () => {
                     <option value="frozen">Frozen</option>
                 </select>
 
+                <label className="apf-label">Species Type</label>
+                <select
+                    className="apf-input"
+                    name="species_type"
+                    value={form.species_type}
+                    onChange={handleChange}
+                    required
+                >
+                    <option value="crustacean">Crustacean</option>
+                    <option value="fish">Fish</option>
+                </select>
+
                 <label className="apf-label">Product Image</label>
                 <input
                     className="apf-input"
@@ -607,7 +625,6 @@ const ExportAddProductForm = () => {
 
                 <h3 style={{ marginTop: '20px' }}>Product Variants (Size & Pricing)</h3>
                 <br />
-                {/* MODIFIED: Added Multiplier and Divisor columns to the table */}
                 {variants.length > 0 && (
                     <div style={{ overflowX: 'auto' }}>
                         <table className="variants-table" style={{ width: '100%', marginBottom: '20px', borderCollapse: 'collapse' }}>
@@ -745,7 +762,8 @@ const ExportAddProductForm = () => {
                         </div>
 
                         <div>
-                            <label className="apf-label">Packing Cost (LKR)</label>
+                            {/* FIXED: Changed from usdrate to packing_cost and changed label to USD */}
+                            <label className="apf-label">Packing Cost (USD)</label>
                             <input
                                 className="apf-input"
                                 name="packing_cost"
@@ -757,7 +775,7 @@ const ExportAddProductForm = () => {
                                 onWheel={(e) => e.target.blur()}
                             />
 
-                            <label className="apf-label">Labour Overhead (LKR)</label>
+                            <label className="apf-label">Factory Overhead (USD)</label>
                             <input
                                 className="apf-input"
                                 name="labour_overhead"
@@ -815,7 +833,6 @@ const ExportAddProductForm = () => {
                             />
                         </div>
 
-                        {/* ADDED: Multiplier and Divisor fields */}
                         <div style={{
                             gridColumn: '1 / -1',
                             backgroundColor: '#e3f2fd',

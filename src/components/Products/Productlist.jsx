@@ -26,7 +26,7 @@ const Productlist = () => {
         if (selectedSpeciesType === 'all') {
             setFilteredItems(items)
         } else {
-            setFilteredItems(items.filter(item => 
+            setFilteredItems(items.filter(item =>
                 item.species_type?.toLowerCase() === selectedSpeciesType.toLowerCase()
             ))
         }
@@ -160,8 +160,8 @@ const Productlist = () => {
                                 {filteredItems.length === 0 && (
                                     <tr>
                                         <td colSpan={9} className="muted">
-                                            {selectedSpeciesType === 'all' 
-                                                ? 'No items found' 
+                                            {selectedSpeciesType === 'all'
+                                                ? 'No items found'
                                                 : `No ${formatSpeciesType(selectedSpeciesType)} found`}
                                         </td>
                                     </tr>
@@ -195,13 +195,13 @@ const Productlist = () => {
                                                         </td>
                                                     </>
                                                 )}
-                                                
+
                                                 <td>{variant.size}</td>
                                                 <td>{variant.unit}</td>
                                                 <td className="price-cell">
                                                     Rs. {parseFloat(variant.purchasing_price).toFixed(2)}
                                                 </td>
-                                                
+
                                                 {index === 0 && (
                                                     <td className="actions-cell" rowSpan={variants.length}>
                                                         <div className="actions-wrapper">

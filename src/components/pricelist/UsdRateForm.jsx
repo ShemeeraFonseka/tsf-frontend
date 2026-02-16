@@ -40,6 +40,95 @@ const UsdRateForm = () => {
         }
     }
 
+    // Function to recalculate Ex-Factory price with USD-based costs
+    const calculateExFactoryPrice = (purchasePrice, packingCostUSD, labourOverheadUSD, profit, usdRate) => {
+        const purchase = parseFloat(purchasePrice) || 0
+        const packingUSD = parseFloat(packingCostUSD) || 0
+        const labourUSD = parseFloat(labourOverheadUSD) || 0
+        const profitAmount = parseFloat(profit) || 0
+        const rate = parseFloat(usdRate) || 1
+        
+        // Convert USD costs to LKR
+        const packingLKR = packingUSD * rate
+        const labourLKR = labourUSD * rate
+        
+        const costPrice = purchase + packingLKR + labourLKR
+        return parseFloat((costPrice + profitAmount).toFixed(2))
+    }
+
+    // Enhanced function to update USD rate AND recalculate Ex-Factory prices
+    const updateExportProductsUsdRate = async (newRate) => {
+        try {
+            // Fetch all export products
+            const response = await fetch(`${API_URL}/api/exportproductlist`)
+            if (!response.ok) throw new Error('Failed to fetch products')
+            
+            const products = await response.json()
+            
+            let updatedCount = 0
+            let errorCount = 0
+
+            // Update each product's variants
+            for (const product of products) {
+                if (product.variants && product.variants.length > 0) {
+                    try {
+                        // Update each variant with new USD rate and recalculate Ex-Factory price
+                        const updatedVariants = product.variants.map(variant => {
+                            // Recalculate Ex-Factory price with existing values and new USD rate
+                            const newExFactoryPrice = calculateExFactoryPrice(
+                                variant.purchasing_price,
+                                variant.packing_cost,
+                                variant.labour_overhead,
+                                variant.profit,
+                                newRate  // Pass the new USD rate
+                            )
+
+                            return {
+                                ...variant,
+                                usdrate: parseFloat(newRate),
+                                exfactoryprice: newExFactoryPrice
+                            }
+                        })
+
+                        // Update the product using FormData (same as the form)
+                        const formData = new FormData()
+                        formData.append('common_name', product.common_name)
+                        formData.append('scientific_name', product.scientific_name || '')
+                        formData.append('category', product.category)
+                        formData.append('species_type', product.species_type || 'crustacean')
+                        formData.append('existing_image_url', product.image_url || '')
+                        formData.append('variants', JSON.stringify(updatedVariants))
+
+                        const updateResponse = await fetch(
+                            `${API_URL}/api/exportproductlist/upload/${product.id}`,
+                            {
+                                method: 'PUT',
+                                body: formData
+                            }
+                        )
+
+                        if (updateResponse.ok) {
+                            updatedCount++
+                        } else {
+                            errorCount++
+                            const errorData = await updateResponse.json()
+                            console.error(`Failed to update product ${product.id}:`, errorData)
+                        }
+                    } catch (err) {
+                        console.error(`Error updating product ${product.id}:`, err)
+                        errorCount++
+                    }
+                }
+            }
+
+            console.log(`Export products updated: ${updatedCount} success, ${errorCount} errors`)
+            return { updated: updatedCount, errors: errorCount }
+        } catch (err) {
+            console.error('Error updating export products:', err)
+            return { updated: 0, errors: 0 }
+        }
+    }
+
     useEffect(() => {
         fetchCurrentRate();
         fetchRateHistory();
@@ -67,13 +156,16 @@ const UsdRateForm = () => {
         }
 
         try {
+            const newRate = parseFloat(form.rate)
+
+            // Step 1: Update USD rate in database (this triggers customer product recalculation)
             const response = await fetch(`${API_URL}/api/usd-rate`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    rate: parseFloat(form.rate),
+                    rate: newRate,
                     date: form.date
                 })
             })
@@ -84,13 +176,21 @@ const UsdRateForm = () => {
 
             const data = await response.json()
             
+            // Step 2: Update export products with new USD rate and recalculate Ex-Factory prices
+            const exportProductsResult = await updateExportProductsUsdRate(newRate)
+            
             // Show success with recalculation info
-            if (data.recalculation) {
-                setRecalcInfo(data.recalculation)
-                setSuccess(`USD rate updated successfully! ${data.recalculation.productsUpdated} product${data.recalculation.productsUpdated !== 1 ? 's' : ''} recalculated.`)
-            } else {
-                setSuccess('USD rate updated successfully!')
-            }
+            const totalUpdated = (data.recalculation?.productsUpdated || 0) + exportProductsResult.updated
+            const totalErrors = (data.recalculation?.errors || 0) + exportProductsResult.errors
+            
+            setRecalcInfo({
+                customerProductsUpdated: data.recalculation?.productsUpdated || 0,
+                exportProductsUpdated: exportProductsResult.updated,
+                totalUpdated: totalUpdated,
+                errors: totalErrors
+            })
+            
+            setSuccess(`USD rate updated successfully! ${totalUpdated} item${totalUpdated !== 1 ? 's' : ''} recalculated.`)
             
             await fetchCurrentRate()
             await fetchRateHistory()
@@ -103,7 +203,7 @@ const UsdRateForm = () => {
             setTimeout(() => {
                 setSuccess('')
                 setRecalcInfo(null)
-            }, 5000)
+            }, 6000)
         } catch (err) {
             setError(err.message)
             setTimeout(() => setError(''), 3000)
@@ -173,6 +273,27 @@ const UsdRateForm = () => {
                 </div>
             )}
 
+            {/* Warning Banner */}
+            <div style={{
+                padding: '15px',
+                backgroundColor: '#fff3e0',
+                borderLeft: '4px solid #ff9800',
+                borderRadius: '4px',
+                marginBottom: '20px'
+            }}>
+                <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#e65100', marginBottom: '8px' }}>
+                    ⚠️ Important: Automatic Recalculation
+                </div>
+                <div style={{ fontSize: '13px', color: '#5d4037', lineHeight: '1.5' }}>
+                    Updating the USD rate will automatically:
+                    <ul style={{ marginTop: '8px', marginBottom: '0', paddingLeft: '20px' }}>
+                        <li>Update USD rate in all export product variants</li>
+                        <li>Recalculate Ex-Factory prices (converts USD packing/overhead costs to LKR)</li>
+                        <li>Recalculate FOB and CNF prices for all customer products</li>
+                    </ul>
+                </div>
+            </div>
+
             {/* Update Form */}
             <form onSubmit={handleSubmit} className="apf-container">
                 <label className="apf-label">USD Rate (LKR)</label>
@@ -204,7 +325,7 @@ const UsdRateForm = () => {
                     disabled={loading}
                     style={{ opacity: loading ? 0.6 : 1 }}
                 >
-                    {loading ? 'Updating...' : 'Update USD Rate'}
+                    {loading ? 'Updating & Recalculating...' : 'Update USD Rate'}
                 </button>
             </form>
 
@@ -217,31 +338,76 @@ const UsdRateForm = () => {
                             fontSize: '13px', 
                             color: '#ff9800' 
                         }}>
-                            ⚠️ {recalcInfo.errors} product{recalcInfo.errors !== 1 ? 's' : ''} had errors during recalculation
+                            ⚠️ {recalcInfo.errors} item{recalcInfo.errors !== 1 ? 's' : ''} had errors during recalculation
                         </div>
                     )}
                 </div>
             )}
             {error && <div className="apf-error">{error}</div>}
 
-            {/* Recalculation Info */}
+            {/* Enhanced Recalculation Info */}
             {recalcInfo && (
                 <div style={{
-                    padding: '12px',
+                    padding: '15px',
                     backgroundColor: '#e3f2fd',
                     borderLeft: '4px solid #2196f3',
                     borderRadius: '4px',
                     marginTop: '15px',
                     marginBottom: '15px'
                 }}>
-                    <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#1976d2', marginBottom: '5px' }}>
+                    <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#1976d2', marginBottom: '12px' }}>
                         🔄 Automatic Recalculation Complete
                     </div>
-                    <div style={{ fontSize: '13px', color: '#424242' }}>
-                        ✓ Updated {recalcInfo.productsUpdated} product price{recalcInfo.productsUpdated !== 1 ? 's' : ''}
+                    
+                    {/* Customer Products */}
+                    <div style={{ 
+                        fontSize: '13px', 
+                        color: '#424242', 
+                        marginBottom: '8px',
+                        paddingBottom: '8px',
+                        borderBottom: '1px solid #90caf9'
+                    }}>
+                        <div style={{ fontWeight: 'bold', color: '#1976d2', marginBottom: '4px' }}>
+                            Customer Products:
+                        </div>
+                        <div style={{ paddingLeft: '10px' }}>
+                            ✓ Recalculated {recalcInfo.customerProductsUpdated} FOB & CNF price{recalcInfo.customerProductsUpdated !== 1 ? 's' : ''}
+                        </div>
                     </div>
+
+                    {/* Export Products */}
+                    <div style={{ 
+                        fontSize: '13px', 
+                        color: '#424242', 
+                        marginBottom: '8px',
+                        paddingBottom: '8px',
+                        borderBottom: '1px solid #90caf9'
+                    }}>
+                        <div style={{ fontWeight: 'bold', color: '#1976d2', marginBottom: '4px' }}>
+                            Export Products:
+                        </div>
+                        <div style={{ paddingLeft: '10px' }}>
+                            ✓ Updated USD rate in {recalcInfo.exportProductsUpdated} product{recalcInfo.exportProductsUpdated !== 1 ? 's' : ''}
+                        </div>
+                        <div style={{ paddingLeft: '10px' }}>
+                            ✓ Recalculated Ex-Factory prices (USD costs converted to LKR)
+                        </div>
+                    </div>
+
+                    {/* Total */}
+                    <div style={{ 
+                        fontSize: '14px', 
+                        color: '#1976d2', 
+                        fontWeight: 'bold', 
+                        marginTop: '10px',
+                        paddingTop: '8px',
+                        borderTop: '2px solid #2196f3'
+                    }}>
+                        Total: {recalcInfo.totalUpdated} item{recalcInfo.totalUpdated !== 1 ? 's' : ''} updated
+                    </div>
+                    
                     {recalcInfo.errors > 0 && (
-                        <div style={{ fontSize: '13px', color: '#d32f2f', marginTop: '3px' }}>
+                        <div style={{ fontSize: '13px', color: '#d32f2f', marginTop: '8px' }}>
                             ✗ {recalcInfo.errors} error{recalcInfo.errors !== 1 ? 's' : ''}
                         </div>
                     )}
