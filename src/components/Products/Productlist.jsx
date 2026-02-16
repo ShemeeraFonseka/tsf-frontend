@@ -14,15 +14,8 @@ const Productlist = () => {
     // Seafood species types
     const speciesTypes = [
         { value: 'all', label: 'All Products', icon: '🌊' },
-        { value: 'shellfish', label: 'Shellfish', icon: '🦪' },
-        { value: 'prawns', label: 'Prawns', icon: '🦐' },
-        { value: 'crabs', label: 'Crabs', icon: '🦀' },
-        { value: 'crab-meat', label: 'Crab Meat', icon: '🥩' },
-        { value: 'cephalopods', label: 'Cephalopods', icon: '🦑' },
-        { value: 'fish', label: 'Fish', icon: '🐟' },
-        { value: 'tuna', label: 'Tuna', icon: '🐟' },
-        { value: 'salmon', label: 'Salmon', icon: '🐟' },
-        { value: 'lobster', label: 'Lobster', icon: '🦞' }
+        { value: 'crustacean', label: 'Crustacean', icon: '🦪' },
+        { value: 'fish', label: 'Fish', icon: '🐟' }
     ]
 
     useEffect(() => {

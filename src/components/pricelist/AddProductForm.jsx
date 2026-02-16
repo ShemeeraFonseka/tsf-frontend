@@ -12,7 +12,7 @@ const AddProductForm = () => {
         common_name: '',
         scientific_name: '',
         category: 'live',
-        species_type: 'fish',
+        species_type: 'crustacean',
         image: null,
         existing_image_url: null
     })
@@ -53,7 +53,7 @@ const AddProductForm = () => {
                         common_name: product.common_name,
                         scientific_name: product.scientific_name || '',
                         category: product.category || 'live',
-                        species_type: product.species_type || 'fish',
+                        species_type: product.species_type || 'crustacean',
                         image: null,
                         existing_image_url: product.image_url
                     })
