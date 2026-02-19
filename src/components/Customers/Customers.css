@@ -1,288 +1,331 @@
-/* Container */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+
+/* ══════════════════════════════════════════════
+   DESIGN TOKENS
+══════════════════════════════════════════════ */
+:root {
+  --bg-void:       #050810;
+  --bg-deep:       #080c18;
+  --bg-surface:    #0d1424;
+  --bg-raised:     #111828;
+  --bg-hover:      #16203a;
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-glow:   rgba(0,200,255,0.15);
+
+  --text-primary:   #f0f4ff;
+  --text-secondary: #8899bb;
+  --text-muted:     #4a5878;
+
+  --accent-cyan:    #00d4ff;
+  --accent-cyan-dim: rgba(0,212,255,0.1);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+}
+
+/* ══════════════════════════════════════════════
+   CONTAINER
+══════════════════════════════════════════════ */
 .pricelist-container {
-  padding: 10rem 4rem;
-  background: linear-gradient(to bottom right, #000000, #0d0d0d);
+  padding: 9rem 3rem 4rem;
+  background: var(--bg-void);
   min-height: 100vh;
-  color: #fff;
-  text-align: center;
-  font-family: 'Poppins', sans-serif;
+  color: var(--text-primary);
+  position: relative;
+  overflow-x: hidden;
 }
 
-/* Heading */
+.pricelist-container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(0,180,255,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(99,102,241,0.04) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ══════════════════════════════════════════════
+   HEADING
+══════════════════════════════════════════════ */
 .pricelist-container h2 {
-  font-size: 25px;
+  font-size: clamp(22px, 3vw, 32px);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--text-primary);
   margin-bottom: 2rem;
-  font-weight: 600;
-  letter-spacing: 1px;
-  color: #ffffff;
-  text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-/* Table wrapper */
+
+
+/* ══════════════════════════════════════════════
+   ADD SECTION
+══════════════════════════════════════════════ */
+.add-section {
+  text-align: right;
+  margin-bottom: 1.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.apf-btn {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, #00c4f4, #0080d4);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(0,180,255,0.2);
+}
+
+.apf-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,180,255,0.35);
+}
+
+/* ══════════════════════════════════════════════
+   TABLE WRAPPER
+══════════════════════════════════════════════ */
 .table-wrap {
   width: 100%;
   overflow-x: auto;
-  margin-top: 1.5rem;
+  margin-top: 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-glow);
+  box-shadow: 0 0 20px rgba(0,180,255,0.06), 0 0 0 1px var(--border-subtle);
+  position: relative;
+  z-index: 1;
 }
 
-/* Table */
+.table-wrap::-webkit-scrollbar { height: 5px; }
+.table-wrap::-webkit-scrollbar-track { background: var(--bg-deep); }
+.table-wrap::-webkit-scrollbar-thumbcell { background: rgba(0,212,255,0.3); border-radius: 3px; }
+
+/* ══════════════════════════════════════════════
+   TABLE
+══════════════════════════════════════════════ */
 .pricelist-table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 12px;
+  border-collapse: collapse;
+}
+
+/* ── Header ── */
+.pricelist-table thead {
+  background: var(--bg-surface);
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .pricelist-table thead th {
-  padding: 20px;
-  background: #111;
-  color: #00d9ff;
-  font-weight: 600;
-  border-bottom: 1px solid #333;
+  padding: 16px 18px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-bottom: 2px solid rgba(0,212,255,0.18);
+  white-space: nowrap;
+  text-align: left;
 }
 
+.pricelist-table thead th:first-child { border-radius: var(--radius-lg) 0 0 0; }
+.pricelist-table thead th:last-child  { border-radius: 0 var(--radius-lg) 0 0; }
+
+/* ── Body rows ── */
 .pricelist-table tbody tr {
-  background: #1a1a1a;
-  transition: 0.3s ease;
+  background: var(--bg-deep);
+  transition: background 0.15s ease;
+  cursor: pointer;
 }
 
+
+
+/* ── All body cells ── */
+.pricelist-table td {
+  padding: 14px 18px;
+  color: var(--text-primary);
+  font-size: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  vertical-align: middle;
+  text-align: left;
+}
+
+.pricelist-table td.muted {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 3rem;
+}
+
+/* ══════════════════════════════════════════════
+   AVATAR / THUMBNAIL
+══════════════════════════════════════════════ */
+.thumb-cellperson {
+  width: 80px;
+  text-align: center !important;
+}
+
+.thumbcell {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid rgba(0,212,255,0.3);
+  display: block;
+  margin: 0 auto;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 0 12px rgba(0,212,255,0.15);
+}
+
+.pricelist-table tbody tr:hover .thumbcell {
+  transform: scale(1.08);
+  border-color: var(--accent-cyan);
+}
+
+/* ══════════════════════════════════════════════
+   CUSTOMER NAME  — highlight
+══════════════════════════════════════════════ */
+.td-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.td-company {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* Airport badge */
+.airport-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  background: rgba(129,140,248,0.1);
+  color: #818cf8;
+  border: 1px solid rgba(129,140,248,0.25);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+}
+
+/* ══════════════════════════════════════════════
+   ACTIONS CELL
+══════════════════════════════════════════════ */
 .actions-cell {
   padding: 0 !important;
   vertical-align: middle;
-  height: 100%;
+  text-align: center !important;
 }
 
 .actions-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  height: 100%;
-  justify-content: center;
+  gap: 7px;
+  padding: 10px 14px;
   align-items: center;
+  justify-content: center;
 }
 
-.clickable-row:hover {
-  background-color: #2e2e2e;
-  transition: background-color 0.2s;
-}
-
-.btn-edit, .btn-delete {
-  padding: 8px 16px;
+.btn-edit,
+.btn-delete {
+  width: 80px;
+  padding: 7px 0;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.3s;
-  width: 100%;
-  max-width: 100px;
-  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  transition: all 0.2s ease;
 }
 
 .btn-edit {
-  background:linear-gradient(90deg, #09d7fc, #109ac4);
-  color: white;
+  background: rgba(0,212,255,0.1);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0,212,255,0.25);
 }
-
 .btn-edit:hover {
-  background: #048399;
+  background: rgba(0,212,255,0.2);
+  border-color: var(--accent-cyan);
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
 }
 
 .btn-delete {
-  background: #dc3545;
-  color: white;
+  background: rgba(239,68,68,0.08);
+  color: #f87171;
+  border: 1px solid rgba(239,68,68,0.2);
 }
-
 .btn-delete:hover {
-  background: #c82333;
+  background: rgba(239,68,68,0.18);
+  border-color: #f87171;
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
-}
-.pricelist-table td {
-  padding: 16px;
-  color: #eaeaea;
-  border-bottom: 1px solid #222;
 }
 
-/* Image styling */
-.thumb-cell {
-  width: 120px;
-}
-
-.thumb {
-  width: 90px;
-  height: 90px;
-  object-fit: cover;
-  border-radius: 10px;
-  border: 2px solid #00d9ff;
-  box-shadow: 0 4px 10px rgba(0, 217, 255, 0.3);
-}
-
-/* Scientific Name styling */
-.scientific {
-  font-style: italic;
-  color: #8aefff;
-}
-
-/* No items */
-.muted {
-  color: #777;
-  padding: 2rem;
-}
-
-/* Loading / Error */
+/* ══════════════════════════════════════════════
+   INFO / ERROR
+══════════════════════════════════════════════ */
 .info {
-  color: #00d9ff;
-  font-size: 1.2rem;
+  color: var(--accent-cyan);
+  text-align: center;
+  padding: 3rem;
+  font-size: 15px;
+  position: relative;
+  z-index: 1;
 }
 
 .error {
-  color: #ff4d4d;
-  font-size: 1.2rem;
+  color: #f87171;
+  text-align: center;
+  padding: 3rem;
+  font-size: 15px;
+  position: relative;
+  z-index: 1;
 }
 
-.add-btn {
-  background:linear-gradient(90deg, #09d7fc, #109ac4);
-  color: white;
-  border: 1px solid #09d7fc;
-  padding: 1rem 1.5rem;
-  border-radius: 50px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.add-btn:hover {
-  transform: scale(1.05);
-}
-
-.add-section{
-    text-align: right;
-}
-
-/* ==============================
-   RESPONSIVE DESIGN
-   ============================== */
-
-/* Tablets (≤ 1024px) */
+/* ══════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════ */
 @media (max-width: 1024px) {
-  .pricelist-container {
-    padding: 8rem 2rem;
-  }
-
+  .pricelist-container { padding: 8rem 2rem 3rem; }
   .pricelist-table thead th,
-  .pricelist-table td {
-    padding: 14px;
-    font-size: 14px;
-  }
-
-  .thumb {
-    width: 70px;
-    height: 70px;
-  }
-
-  .btn-edit,
-  .btn-delete {
-    font-size: 13px;
-    padding: 6px 12px;
-  }
+  .pricelist-table td { padding: 12px 14px; font-size: 13px; }
+  .thumbcell { width: 48px; height: 48px; }
 }
-
-/* Mobile (≤ 768px) */
-@media (max-width: 768px) {
-  .pricelist-container {
-    padding: 6rem 1rem;
-  }
-
-  .add-section {
-    text-align: center;
-    margin-bottom: 1rem;
-  }
-
-  .add-btn {
-    width: 100%;
-    max-width: 280px;
-  }
-
-  .pricelist-container h2 {
-    font-size: 20px;
-  }
-
-  /* Enable horizontal scroll cleanly */
-  .table-wrap {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .pricelist-table {
-    min-width: 900px;
-  }
-
-  .thumb {
-    width: 60px;
-    height: 60px;
-  }
-
-  .actions-wrapper {
-    gap: 6px;
-  }
-}
-
-/* Small Mobile (≤ 480px) */
-@media (max-width: 480px) {
-  .pricelist-container {
-    padding: 9rem 0.8rem;
-  }
-
-  .pricelist-container h2 {
-    font-size: 18px;
-  }
-
-  .pricelist-table thead th,
-  .pricelist-table td {
-    font-size: 12px;
-    padding: 10px;
-  }
-
-  .thumb {
-    width: 50px;
-    height: 50px;
-  }
-
-  .btn-edit,
-  .btn-delete {
-    font-size: 12px;
-    padding: 6px 10px;
-    max-width: 80px;
-  }
-}
-
-/* ==============================
-   MOBILE CARD TABLE
-   ============================== */
 
 @media (max-width: 768px) {
+  .pricelist-container { padding: 6rem 1rem 3rem; }
+  .add-section { text-align: center; }
+  .apf-btn { width: 100%; max-width: 280px; }
+
+  /* Card layout on mobile */
   .pricelist-table,
   .pricelist-table thead,
   .pricelist-table tbody,
   .pricelist-table th,
   .pricelist-table td,
-  .pricelist-table tr {
-    display: block;
-  }
+  .pricelist-table tr { display: block; }
 
-  .pricelist-table thead {
-    display: none;
-  }
+  .pricelist-table thead { display: none; }
 
   .pricelist-table tbody tr {
-    background: #1a1a1a;
+    background: var(--bg-raised);
     margin-bottom: 1rem;
-    border-radius: 12px;
-    padding: 12px;
-    box-shadow: 0 4px 12px rgba(0, 217, 255, 0.15);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    border: 1px solid var(--border-glow);
+    box-shadow: 0 4px 16px rgba(0,180,255,0.06);
   }
 
   .pricelist-table td {
@@ -291,33 +334,36 @@
     align-items: center;
     padding: 10px 0;
     border: none;
-    font-size: 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13px;
   }
+
+  .pricelist-table td:last-child { border-bottom: none; }
 
   .pricelist-table td::before {
     content: attr(data-label);
-    font-weight: 600;
-    color: #00d9ff;
-    padding-right: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--accent-cyan);
     flex: 1;
-    text-align: center;
   }
 
-  .pricelist-table td img.thumb {
-    width: 60px;
-    height: 60px;
-  }
+  .thumbcell { width: 44px; height: 44px; }
 
   .actions-wrapper {
     flex-direction: row;
     gap: 10px;
     width: 100%;
     justify-content: flex-end;
+    padding: 0;
   }
 
-  .btn-edit,
-  .btn-delete {
-    width: auto;
-    max-width: none;
-  }
+  .btn-edit, .btn-delete { width: auto; }
+}
+
+@media (max-width: 480px) {
+  .pricelist-container { padding: 8.5rem 0.6rem 2rem; }
+  .pricelist-container h2 { font-size: 18px; }
 }

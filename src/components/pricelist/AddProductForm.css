@@ -1,151 +1,612 @@
-/* Container for the Add Product Form */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
 
+/* ══════════════════════════════════════════════
+   DESIGN TOKENS (mirrors Productlist.css)
+══════════════════════════════════════════════ */
+:root {
+  --bg-void:        #050810;
+  --bg-deep:        #080c18;
+  --bg-surface:     #0d1424;
+  --bg-raised:      #111828;
+  --bg-hover:       #16203a;
+  --border-subtle:  rgba(255,255,255,0.06);
+  --border-glow:    rgba(0,200,255,0.15);
+  --border-input:   rgba(255,255,255,0.08);
+
+  --text-primary:   #f0f4ff;
+  --text-secondary: #8899bb;
+  --text-muted:     #4a5878;
+  --text-label:     #7a8fbb;
+
+  --accent-cyan:     #00d4ff;
+  --accent-cyan-dim: rgba(0,212,255,0.1);
+  --accent-blue:     #1e90ff;
+
+  /* Condition colors */
+  --live-color:    #4ade80;
+  --live-bg:       rgba(74,222,128,0.08);
+  --fresh-color:   #818cf8;
+  --fresh-bg:      rgba(129,140,248,0.08);
+  --frozen-color:  #67e8f9;
+  --frozen-bg:     rgba(103,232,249,0.08);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+}
+
+/* ══════════════════════════════════════════════
+   PAGE CONTAINER
+══════════════════════════════════════════════ */
 .form-container {
-    padding: 10rem 4rem;
-    background: linear-gradient(to bottom right, #000000, #0d0d0d);
-    height: auto;
-    color: #fff;
-    text-align: left;
-    font-family: 'Poppins', sans-serif;
+  padding: 9rem 3rem 4rem;
+  background: var(--bg-void);
+  min-height: 100vh;
+  color: var(--text-primary);
+  position: relative;
 }
 
+.form-container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(0,180,255,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(99,102,241,0.04) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Heading ── */
 .form-container h2 {
-    font-size: 2.5rem;
-    margin-bottom: 2rem;
-    font-weight: 600;
-    letter-spacing: 1px;
-    color: #ffffff;
-    text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+  font-size: clamp(20px, 2.5vw, 28px);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--text-primary);
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
 }
 
-.varient-box {
-    display: flex;
-    flex-direction: column;
+.form-container h2::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border-glow), transparent);
 }
 
-.apf-container {
-    display: flex;
-    flex-direction: column;
-    background: #111;
-    /* Dark background */
-    padding: 2rem;
-    border-radius: 12px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
-
-    margin: 0 auto 2rem auto;
-    color: #ffffff;
-}
-
-/* Input fields */
-.apf-input {
-    margin-bottom: 20px;
-    padding: 0.75rem 1rem;
-    border-radius: 6px;
-    border: 1px solid #333;
-    background: #222;
-    color: #fff;
-    font-size: 20px;
-}
-
-.apf-label {
-    margin-bottom: 20px;
-    padding: 0.75rem 1rem;
-    color: #b8b8b8;
-    font-size: 20px;
-}
-
-.apf-input:focus {
-    border-color: #00d4ff;
-    /* Highlight input */
-    outline: none;
-}
-
-/* Buttons */
-.apf-btn {
-    padding: 0.85rem 1.8rem;
-    border-radius: 6px;
-    border: none;
-    background: linear-gradient(90deg, #00d4ff, #1e90ff);
-    color: #fff;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.3s;
-
-    margin-bottom: 20px;
-    font-size: 20px;
-}
-
-.apf-btn:hover {
-    background: linear-gradient(90deg, #1e90ff, #00d4ff);
-}
-
-.cancel-btn {
-    padding: 0.85rem 1.8rem;
-    border-radius: 6px;
-    border: none;
-    background: linear-gradient(90deg, #ff0000, #940404);
-    color: #fff;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.3s;
-
-    margin-bottom: 20px;
-    font-size: 20px;
-}
-
-.varient-btn {
-    padding: 0.85rem 1.8rem;
-    border-radius: 6px;
-    border: 1px solid #09d7fc;
-    background: transparent;
-    color: #fff;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.3s;
-    margin-bottom: 20px;
-    font-size: 20px;
-}
-
-.remove-btn {
-    padding: 0.85rem 1.8rem;
-    border-radius: 6px;
-    border: 1px solid #ff0000;
-    background: transparent;
-    color: #fff;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.3s;
-    margin-bottom: 20px;
-    font-size: 20px;
-}
-
-
-/* Calculate margin button */
-.apf-calc-btn {
-    background: #444;
-}
-
-.apf-calc-btn:hover {
-    background: #666;
-}
-
-/* Chrome, Safari, Edge */
-.apf-input::-webkit-outer-spin-button,
-.apf-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
+.form-container h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.3px;
   margin: 0;
 }
 
-/* Firefox */
-.apf-input[type="number"] {
-  -moz-appearance: textfield;
+.form-container h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  letter-spacing: 0.5px;
+  margin: 0 0 1rem;
 }
 
+/* ══════════════════════════════════════════════
+   MAIN FORM CARD
+══════════════════════════════════════════════ */
+.apf-container {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  padding: 2rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-glow);
+  box-shadow: 0 0 40px rgba(0,180,255,0.04);
+  margin: 0 auto 2rem auto;
+  color: var(--text-primary);
+  position: relative;
+  z-index: 1;
+}
+
+/* ══════════════════════════════════════════════
+   LABELS & INPUTS
+══════════════════════════════════════════════ */
+.apf-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-label);
+  margin-bottom: 6px;
+  padding: 0;
+}
+
+.apf-input {
+  display: block;
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-input);
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.apf-input:focus {
+  border-color: rgba(0,212,255,0.5);
+  background: var(--bg-hover);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0,212,255,0.06);
+}
+
+.apf-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.apf-input option {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+/* Remove number spinners */
+.apf-input::-webkit-outer-spin-button,
+.apf-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.apf-input[type="number"] { -moz-appearance: textfield; }
+
+/* File input */
+.apf-input[type="file"] {
+  padding: 8px 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.apf-input[type="file"]::file-selector-button {
+  background: var(--accent-cyan-dim);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0,212,255,0.3);
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-right: 10px;
+  transition: background 0.2s;
+}
+.apf-input[type="file"]::file-selector-button:hover {
+  background: rgba(0,212,255,0.2);
+}
+
+/* ── Section divider ── */
+.apf-container hr {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: 1.5rem 0;
+  width: 100%;
+}
+
+/* ══════════════════════════════════════════════
+   BUTTONS
+══════════════════════════════════════════════ */
+.apf-btn {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 11px 28px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: linear-gradient(135deg, #00c4f4, #1e80df);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 12px;
+  margin-right: 10px;
+  box-shadow: 0 4px 16px rgba(0,180,255,0.2);
+}
+
+.apf-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,180,255,0.35);
+}
+
+.cancel-btn {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 11px 28px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(239,68,68,0.3);
+  background: rgba(239,68,68,0.08);
+  color: #f87171;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 12px;
+}
+
+.cancel-btn:hover {
+  background: rgba(239,68,68,0.18);
+  border-color: #f87171;
+  transform: translateY(-2px);
+}
+
+.varient-btn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(0,212,255,0.3);
+  background: var(--accent-cyan-dim);
+  color: var(--accent-cyan);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 12px;
+}
+
+.varient-btn:hover {
+  background: rgba(0,212,255,0.2);
+  border-color: var(--accent-cyan);
+}
+
+.remove-btn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(239,68,68,0.25);
+  background: rgba(239,68,68,0.06);
+  color: #f87171;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 12px;
+}
+
+.remove-btn:hover {
+  background: rgba(239,68,68,0.16);
+  border-color: #f87171;
+}
+
+/* Inline variant action buttons (used via style props) — overridden via classes below */
+.vbtn {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* ══════════════════════════════════════════════
+   USD RATE BANNER
+══════════════════════════════════════════════ */
+.usd-rate-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: rgba(0,212,255,0.06);
+  border: 1px solid rgba(0,212,255,0.2);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: var(--radius-md);
+  margin-bottom: 1.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.usd-rate-banner .rate-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+.usd-rate-banner .rate-updated {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.usd-rate-banner .refresh-btn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 16px;
+  background: var(--accent-cyan-dim);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0,212,255,0.3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.usd-rate-banner .refresh-btn:hover:not(:disabled) {
+  background: rgba(0,212,255,0.2);
+  border-color: var(--accent-cyan);
+}
+
+.usd-rate-banner .refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════════════
+   VARIANTS TABLE
+══════════════════════════════════════════════ */
+.variants-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glow);
+  margin-bottom: 1.5rem;
+}
+
+.variants-table-wrap::-webkit-scrollbar { height: 4px; }
+.variants-table-wrap::-webkit-scrollbar-track { background: var(--bg-deep); }
+.variants-table-wrap::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.3); border-radius: 2px; }
+
+.variants-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.variants-table thead th {
+  padding: 12px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid rgba(0,212,255,0.1);
+  border-bottom: 2px solid rgba(0,212,255,0.15);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.variants-table tbody tr {
+  background: var(--bg-deep);
+  transition: background 0.15s ease;
+}
+
+.variants-table tbody tr:hover {
+  background: var(--bg-hover);
+}
+
+.variants-table tbody td {
+  padding: 11px 14px;
+  font-size: 13px;
+  color: var(--text-primary);
+  border: 1px solid rgba(255,255,255,0.06);
+  vertical-align: middle;
+}
+
+/* Price cells in variants table */
+.variants-table .td-price {
+  font-weight: 700;
+  color: var(--accent-cyan);
+  white-space: nowrap;
+}
+
+.variants-table .td-exfactory {
+  font-weight: 700;
+  color: #fbbf24;
+  white-space: nowrap;
+}
+
+.variants-table .td-multiplier {
+  color: #818cf8;
+  font-weight: 600;
+}
+
+.variants-table .td-actions {
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Inline edit/delete inside table */
+.tbl-btn-edit {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  margin-right: 6px;
+  background: rgba(0,212,255,0.1);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0,212,255,0.25);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.tbl-btn-edit:hover {
+  background: rgba(0,212,255,0.2);
+  border-color: var(--accent-cyan);
+}
+
+.tbl-btn-delete {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  background: rgba(239,68,68,0.08);
+  color: #f87171;
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.tbl-btn-delete:hover {
+  background: rgba(239,68,68,0.18);
+  border-color: #f87171;
+}
+
+/* ══════════════════════════════════════════════
+   VARIANT FORM PANEL
+══════════════════════════════════════════════ */
 .variant-form {
-    display: flex;
-    flex-direction: column;
-    background: #1a1a1a;
-    padding: 15px;
-    border-radius: 6px;
-    margin-bottom: 20px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.variant-form > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0 20px;
+}
+
+/* Air freight sub-panel */
+.air-freight-panel {
+  grid-column: 1 / -1;
+  background: rgba(0,212,255,0.04);
+  border: 1px solid rgba(0,212,255,0.18);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-top: 8px;
+}
+
+.air-freight-panel h4 {
+  font-size: 13px;
+  color: var(--accent-cyan);
+  margin-bottom: 1rem;
+}
+
+.air-freight-panel .inner-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
+}
+
+.air-freight-panel small {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: -14px;
+  margin-bottom: 16px;
+}
+
+/* Variant action buttons row */
+.variant-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.vbtn-update {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 20px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(34,197,94,0.2);
+}
+.vbtn-update:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(34,197,94,0.3); }
+
+.vbtn-cancel {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 20px;
+  background: rgba(255,255,255,0.05);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.vbtn-cancel:hover { background: rgba(255,255,255,0.09); color: var(--text-primary); }
+
+.vbtn-add {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 20px;
+  background: linear-gradient(135deg, #00c4f4, #1e80df);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(0,180,255,0.2);
+}
+.vbtn-add:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,180,255,0.35); }
+
+/* ══════════════════════════════════════════════
+   IMAGE PREVIEW
+══════════════════════════════════════════════ */
+.img-preview {
+  width: 110px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0,212,255,0.25);
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(0,180,255,0.12);
+}
+
+/* ══════════════════════════════════════════════
+   SUCCESS / ERROR TOASTS
+══════════════════════════════════════════════ */
+.apf-success {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  padding: 12px 20px;
+  background: rgba(34,197,94,0.12);
+  border: 1px solid rgba(34,197,94,0.3);
+  border-left: 3px solid #22c55e;
+  color: #4ade80;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  animation: slideUp 0.3s ease;
+}
+
+.apf-error {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  padding: 12px 20px;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-left: 3px solid #ef4444;
+  color: #f87171;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .form-container { padding: 8rem 2rem 3rem; }
+}
+
+@media (max-width: 768px) {
+  .form-container { padding: 6rem 1rem 3rem; }
+  .variant-form > div { grid-template-columns: 1fr 1fr; }
+  .air-freight-panel .inner-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .form-container { padding: 8rem 0.75rem 2rem; }
+  .apf-container { padding: 1.25rem; }
+  .variant-form > div { grid-template-columns: 1fr; }
+  .usd-rate-banner { flex-direction: column; align-items: flex-start; gap: 10px; }
 }
