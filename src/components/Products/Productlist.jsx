@@ -47,6 +47,19 @@ const Productlist = () => {
     const [error, setError] = useState(null)
     const [selectedSpeciesType, setSelectedSpeciesType] = useState('all')
 
+    // Define the section categories for grouping
+    const sectionCategories = [
+        { name: 'Oyster', keywords: ['oyster', 'depurated oyster'] },
+        { name: 'Clams', keywords: ['clam', 'clams', 'pen clams', 'short neck clams', 'blood clams', 'sea clams', 'mangrove clams'] },
+        { name: 'Mussel', keywords: ['mussel', 'brown mussel', 'green mussel'] },
+        { name: 'Crab', keywords: ['crab', 'sea crab', 'mud crab', 'cut crab'] },
+        { name: 'Prawn', keywords: ['prawn', 'flowery prawn', 'black tiger', 'white prawn','lobster'] },
+        { name: 'Scampi', keywords: ['scampi'] },
+        { name: 'Cuttlefish', keywords: ['cuttlefish','squid'] },
+        { name: 'Octopus', keywords: ['octopus', 'baby octopus'] },
+        { name: 'Fish', keywords: ['fish','jack','eel', 'tuna', 'tilapia', 'mackerel', 'rohu', 'sardine', 'mullet', 'barramundi', 'catla', 'parrot', 'red mullet', 'scad', 'mahi mahi', 'anchovy', 'snapper', 'grouper', 'seer', 'salmon'] }
+    ]
+
     const speciesTypes = [
         { value: 'all',        label: 'All Products', icon: '🌊' },
         { value: 'crustacean', label: 'Crustacean',   icon: '🦞' },
@@ -108,19 +121,62 @@ const Productlist = () => {
         return items.filter(item => item.species_type?.toLowerCase() === typeValue).length
     }
 
-    // ── Group filteredItems by common_name ────────────────────────────
-    const groupedProducts = filteredItems.reduce((acc, product) => {
-        const key = product.common_name
-        if (!acc[key]) acc[key] = []
-        acc[key].push(product)
-        return acc
-    }, {})
+    // Function to determine which section a product belongs to
+    const getProductSection = (product) => {
+        const commonName = product.common_name?.toLowerCase() || ''
+        
+        for (const section of sectionCategories) {
+            if (section.keywords.some(keyword => commonName.includes(keyword))) {
+                return section.name
+            }
+        }
+        
+        // Default to 'Other' if no section matches
+        return 'Other'
+    }
+
+    // Group products by section
+    const groupProductsBySection = (products) => {
+        const grouped = {}
+        
+        // Initialize all sections with empty arrays
+        sectionCategories.forEach(section => {
+            grouped[section.name] = []
+        })
+        grouped['Other'] = [] // Add Other section for uncategorized items
+        
+        products.forEach(product => {
+            const section = getProductSection(product)
+            grouped[section].push(product)
+        })
+        
+        return grouped
+    }
+
+    // Group filteredItems by common_name within each section
+    const groupedBySection = groupProductsBySection(filteredItems)
+    
+    // Further group by common_name within each section
+    const groupedProductsBySection = {}
+    Object.keys(groupedBySection).forEach(section => {
+        groupedProductsBySection[section] = groupedBySection[section].reduce((acc, product) => {
+            const key = product.common_name
+            if (!acc[key]) acc[key] = []
+            acc[key].push(product)
+            return acc
+        }, {})
+    })
 
     const getTotalRowsForGroup = (products) =>
         products.reduce((sum, product) => {
             const variants = product.variants || []
             return sum + (variants.length > 0 ? variants.length : 1)
         }, 0)
+
+    // Check if a section has any products
+    const sectionHasProducts = (section) => {
+        return Object.keys(groupedProductsBySection[section] || {}).length > 0
+    }
 
     return (
         <div className="pricelist-container">
@@ -174,7 +230,154 @@ const Productlist = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {Object.keys(groupedProducts).length === 0 && (
+                                {Object.keys(groupedProductsBySection).map(section => {
+                                    // Skip sections with no products
+                                    if (!sectionHasProducts(section)) return null
+                                    
+                                    const sectionProducts = groupedProductsBySection[section]
+                                    
+                                    return (
+                                        <React.Fragment key={section}>
+                                            {/* Section Header Row */}
+                                            <tr className="section-header">
+                                                <td colSpan={9} className="section-title">
+                                                    <span className="section-icon">
+                                                        {section === 'Oyster' && '🦪'}
+                                                        {section === 'Clams' && '🐚'}
+                                                        {section === 'Mussel' && '🦪'}
+                                                        {section === 'Crab' && '🦀'}
+                                                        {section === 'Prawn' && '🦐'}
+                                                        {section === 'Scampi' && '🦞'}
+                                                        {section === 'Cuttlefish' && '🐙'}
+                                                        {section === 'Octopus' && '🐙'}
+                                                        {section === 'Fish' && '🐟'}
+                                                        {section === 'Other' && '📦'}
+                                                    </span>
+                                                    {section}
+                                                </td>
+                                            </tr>
+                                            
+                                            {/* Products in this section */}
+                                            {Object.entries(sectionProducts).map(([commonName, products]) => {
+                                                const groupRowSpan  = getTotalRowsForGroup(products)
+                                                const firstProduct  = products[0]
+                                                const imgSrc        = getImageUrl(firstProduct.image_url)
+                                                let isFirstRowOfGroup = true
+
+                                                return products.map((product) => {
+                                                    const variants = product.variants || []
+
+                                                    // ── Product HAS variants ──────────────────────
+                                                    if (variants.length > 0) {
+                                                        return variants.map((variant, variantIndex) => {
+                                                            const isVeryFirstRow  = isFirstRowOfGroup && variantIndex === 0
+                                                            const isFirstOfProduct = variantIndex === 0
+                                                            if (isVeryFirstRow) isFirstRowOfGroup = false
+
+                                                            return (
+                                                                <tr
+                                                                    key={`${product.id}-${variant.id || variantIndex}`}
+                                                                    className={isVeryFirstRow ? 'product-group-start' : ''}
+                                                                >
+                                                                    {isVeryFirstRow && (
+                                                                        <>
+                                                                            <td className="thumb-cell" rowSpan={groupRowSpan}>
+                                                                                <img src={imgSrc} alt={commonName} className="thumb" />
+                                                                            </td>
+                                                                            <td rowSpan={groupRowSpan} style={{ fontWeight: 600 }}>
+                                                                                {commonName}
+                                                                            </td>
+                                                                            <td className="scientific" rowSpan={groupRowSpan}>
+                                                                                {firstProduct.scientific_name || '—'}
+                                                                            </td>
+                                                                            <td rowSpan={groupRowSpan}>
+                                                                                <span className={`species-badge ${getSpeciesBadgeClass(firstProduct.species_type)}`}>
+                                                                                    {getSpeciesBadgeIcon(firstProduct.species_type)}{' '}
+                                                                                    {formatSpeciesType(firstProduct.species_type)}
+                                                                                </span>
+                                                                            </td>
+                                                                        </>
+                                                                    )}
+
+                                                                    {isFirstOfProduct && (
+                                                                        <td rowSpan={variants.length}>
+                                                                            <span className={`category-badge ${getCategoryBadgeClass(product.category)}`}>
+                                                                                {getCategoryBadgeIcon(product.category)}{' '}
+                                                                                {formatCategory(product.category)}
+                                                                            </span>
+                                                                        </td>
+                                                                    )}
+
+                                                                    <td>{variant.size || '—'}</td>
+                                                                    <td className="price-cell">
+                                                                        Rs.&nbsp;{parseFloat(variant.purchasing_price).toFixed(2)}
+                                                                    </td>
+
+                                                                    {isFirstOfProduct && (
+                                                                        <td className="actions-cell" rowSpan={variants.length}>
+                                                                            <div className="actions-wrapper">
+                                                                                <button className="btn-edit"   onClick={() => navigateEdit(product.id)}>Edit</button>
+                                                                                <button className="btn-delete" onClick={() => handleDelete(product.id, product.common_name)}>Delete</button>
+                                                                            </div>
+                                                                        </td>
+                                                                    )}
+                                                                </tr>
+                                                            )
+                                                        })
+                                                    }
+
+                                                    // ── Product has NO variants ───────────────────
+                                                    const isVeryFirstRow = isFirstRowOfGroup
+                                                    if (isVeryFirstRow) isFirstRowOfGroup = false
+
+                                                    return (
+                                                        <tr
+                                                            key={product.id}
+                                                            className={isVeryFirstRow ? 'product-group-start' : ''}
+                                                        >
+                                                            {isVeryFirstRow && (
+                                                                <>
+                                                                    <td className="thumb-cell" rowSpan={groupRowSpan}>
+                                                                        <img src={imgSrc} alt={commonName} className="thumb" />
+                                                                    </td>
+                                                                    <td rowSpan={groupRowSpan} style={{ fontWeight: 600 }}>
+                                                                        {commonName}
+                                                                    </td>
+                                                                    <td className="scientific" rowSpan={groupRowSpan}>
+                                                                        {firstProduct.scientific_name || '—'}
+                                                                    </td>
+                                                                    <td rowSpan={groupRowSpan}>
+                                                                        <span className={`species-badge ${getSpeciesBadgeClass(firstProduct.species_type)}`}>
+                                                                            {getSpeciesBadgeIcon(firstProduct.species_type)}{' '}
+                                                                            {formatSpeciesType(firstProduct.species_type)}
+                                                                        </span>
+                                                                    </td>
+                                                                </>
+                                                            )}
+                                                            <td>
+                                                                <span className={`category-badge ${getCategoryBadgeClass(product.category)}`}>
+                                                                    {getCategoryBadgeIcon(product.category)}{' '}
+                                                                    {formatCategory(product.category)}
+                                                                </span>
+                                                            </td>
+                                                            <td className="muted">—</td>
+                                                            <td className="muted">—</td>
+                                                            <td className="muted">—</td>
+                                                            <td className="actions-cell">
+                                                                <div className="actions-wrapper">
+                                                                    <button className="btn-edit"   onClick={() => navigateEdit(product.id)}>Edit</button>
+                                                                    <button className="btn-delete" onClick={() => handleDelete(product.id, product.common_name)}>Delete</button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                })
+                                            })}
+                                        </React.Fragment>
+                                    )
+                                })}
+                                
+                                {Object.keys(groupedProductsBySection).filter(section => sectionHasProducts(section)).length === 0 && (
                                     <tr>
                                         <td colSpan={9} className="muted" style={{ textAlign: 'center', padding: '3rem' }}>
                                             {selectedSpeciesType === 'all'
@@ -183,122 +386,6 @@ const Productlist = () => {
                                         </td>
                                     </tr>
                                 )}
-
-                                {Object.entries(groupedProducts).map(([commonName, products]) => {
-                                    const groupRowSpan  = getTotalRowsForGroup(products)
-                                    const firstProduct  = products[0]
-                                    const imgSrc        = getImageUrl(firstProduct.image_url)
-                                    let isFirstRowOfGroup = true
-
-                                    return products.map((product) => {
-                                        const variants = product.variants || []
-
-                                        // ── Product HAS variants ──────────────────────
-                                        if (variants.length > 0) {
-                                            return variants.map((variant, variantIndex) => {
-                                                const isVeryFirstRow  = isFirstRowOfGroup && variantIndex === 0
-                                                const isFirstOfProduct = variantIndex === 0
-                                                if (isVeryFirstRow) isFirstRowOfGroup = false
-
-                                                return (
-                                                    <tr
-                                                        key={`${product.id}-${variant.id || variantIndex}`}
-                                                        className={isVeryFirstRow ? 'product-group-start' : ''}
-                                                    >
-                                                        {isVeryFirstRow && (
-                                                            <>
-                                                                <td className="thumb-cell" rowSpan={groupRowSpan}>
-                                                                    <img src={imgSrc} alt={commonName} className="thumb" />
-                                                                </td>
-                                                                <td rowSpan={groupRowSpan} style={{ fontWeight: 600 }}>
-                                                                    {commonName}
-                                                                </td>
-                                                                <td className="scientific" rowSpan={groupRowSpan}>
-                                                                    {firstProduct.scientific_name || '—'}
-                                                                </td>
-                                                                <td rowSpan={groupRowSpan}>
-                                                                    <span className={`species-badge ${getSpeciesBadgeClass(firstProduct.species_type)}`}>
-                                                                        {getSpeciesBadgeIcon(firstProduct.species_type)}{' '}
-                                                                        {formatSpeciesType(firstProduct.species_type)}
-                                                                    </span>
-                                                                </td>
-                                                            </>
-                                                        )}
-
-                                                        {isFirstOfProduct && (
-                                                            <td rowSpan={variants.length}>
-                                                                <span className={`category-badge ${getCategoryBadgeClass(product.category)}`}>
-                                                                    {getCategoryBadgeIcon(product.category)}{' '}
-                                                                    {formatCategory(product.category)}
-                                                                </span>
-                                                            </td>
-                                                        )}
-
-                                                        <td>{variant.size || '—'}</td>
-                                                        <td className="price-cell">
-                                                            Rs.&nbsp;{parseFloat(variant.purchasing_price).toFixed(2)}
-                                                        </td>
-
-                                                        {isFirstOfProduct && (
-                                                            <td className="actions-cell" rowSpan={variants.length}>
-                                                                <div className="actions-wrapper">
-                                                                    <button className="btn-edit"   onClick={() => navigateEdit(product.id)}>Edit</button>
-                                                                    <button className="btn-delete" onClick={() => handleDelete(product.id, product.common_name)}>Delete</button>
-                                                                </div>
-                                                            </td>
-                                                        )}
-                                                    </tr>
-                                                )
-                                            })
-                                        }
-
-                                        // ── Product has NO variants ───────────────────
-                                        const isVeryFirstRow = isFirstRowOfGroup
-                                        if (isVeryFirstRow) isFirstRowOfGroup = false
-
-                                        return (
-                                            <tr
-                                                key={product.id}
-                                                className={isVeryFirstRow ? 'product-group-start' : ''}
-                                            >
-                                                {isVeryFirstRow && (
-                                                    <>
-                                                        <td className="thumb-cell" rowSpan={groupRowSpan}>
-                                                            <img src={imgSrc} alt={commonName} className="thumb" />
-                                                        </td>
-                                                        <td rowSpan={groupRowSpan} style={{ fontWeight: 600 }}>
-                                                            {commonName}
-                                                        </td>
-                                                        <td className="scientific" rowSpan={groupRowSpan}>
-                                                            {firstProduct.scientific_name || '—'}
-                                                        </td>
-                                                        <td rowSpan={groupRowSpan}>
-                                                            <span className={`species-badge ${getSpeciesBadgeClass(firstProduct.species_type)}`}>
-                                                                {getSpeciesBadgeIcon(firstProduct.species_type)}{' '}
-                                                                {formatSpeciesType(firstProduct.species_type)}
-                                                            </span>
-                                                        </td>
-                                                    </>
-                                                )}
-                                                <td>
-                                                    <span className={`category-badge ${getCategoryBadgeClass(product.category)}`}>
-                                                        {getCategoryBadgeIcon(product.category)}{' '}
-                                                        {formatCategory(product.category)}
-                                                    </span>
-                                                </td>
-                                                <td className="muted">—</td>
-                                                <td className="muted">—</td>
-                                                <td className="muted">—</td>
-                                                <td className="actions-cell">
-                                                    <div className="actions-wrapper">
-                                                        <button className="btn-edit"   onClick={() => navigateEdit(product.id)}>Edit</button>
-                                                        <button className="btn-delete" onClick={() => handleDelete(product.id, product.common_name)}>Delete</button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )
-                                    })
-                                })}
                             </tbody>
                         </table>
                     </div>
