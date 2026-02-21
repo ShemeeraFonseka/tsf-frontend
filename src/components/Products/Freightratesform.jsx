@@ -583,39 +583,35 @@ const FreightRatesForm = () => {
 
             {/* Current Rates by Country and Airport */}
             {getLatestRatesByCountryAirport().length > 0 && (
-                <div style={{ marginTop: '30px' }}>
+                <div >
                     <h3>Current Freight Rates by Country & Airport</h3>
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ 
-                            width: '100%', 
-                            borderCollapse: 'collapse',
-                            marginTop: '15px',
-                            minWidth: '900px'
-                        }}>
+                    <br />
+                    <div className="variants-table-wrap">
+                        <table className="variants-table">
                             <thead>
                                 <tr>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left', minWidth: '120px' }}>
+                                    <th>
                                         Country
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left', minWidth: '200px' }}>
+                                    <th>
                                         Airport
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', minWidth: '90px' }}>
+                                    <th>
                                         +45kg
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', minWidth: '90px' }}>
+                                    <th>
                                         +100kg
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', minWidth: '90px' }}>
+                                    <th>
                                         +300kg
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', minWidth: '90px' }}>
+                                    <th>
                                         +500kg
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left', minWidth: '100px' }}>
+                                    <th>
                                         Effective Date
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', width: '150px' }}>
+                                    <th>
                                         Actions
                                     </th>
                                 </tr>
@@ -623,65 +619,48 @@ const FreightRatesForm = () => {
                             <tbody>
                                 {getLatestRatesByCountryAirport().map((rate) => (
                                     <tr key={rate.id}>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', fontWeight: 'bold' }}>
+                                        <td>
                                             {rate.country}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                                            <strong style={{ color: '#2196f3' }}>{rate.airport_code}</strong>
+                                        <td >
+                                            <strong >{rate.airport_code}</strong>
                                             {rate.airport_name && (
-                                                <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '2px' }}>
+                                                <div>
                                                     {rate.airport_name}
                                                 </div>
                                             )}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 'bold', color: '#2196f3' }}>
+                                        <td>
                                             ${parseFloat(rate.rate_45kg).toFixed(2)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 'bold', color: '#2196f3' }}>
+                                        <td>
                                             ${parseFloat(rate.rate_100kg).toFixed(2)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 'bold', color: '#2196f3' }}>
+                                        <td >
                                             ${parseFloat(rate.rate_300kg).toFixed(2)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 'bold', color: '#2196f3' }}>
+                                        <td >
                                             ${parseFloat(rate.rate_500kg).toFixed(2)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                                        <td >
                                             {new Date(rate.date).toLocaleDateString('en-US', {
                                                 year: 'numeric',
                                                 month: 'short',
                                                 day: 'numeric'
                                             })}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        <td >
                                             <button
                                                 type="button"
                                                 onClick={() => handleEdit(rate)}
-                                                style={{
-                                                    padding: '5px 12px',
-                                                    cursor: 'pointer',
-                                                    backgroundColor: '#2196f3',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    marginRight: '5px'
-                                                }}
+                                               className="tbl-btn-edit"
                                             >
                                                 Edit
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => handleDelete(rate.id)}
-                                                style={{
-                                                    padding: '5px 12px',
-                                                    cursor: 'pointer',
-                                                    backgroundColor: '#dc3545',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px'
-                                                }}
+                                                className="tbl-btn-delete"
                                             >
                                                 Delete
                                             </button>
@@ -696,42 +675,38 @@ const FreightRatesForm = () => {
 
             {/* Full History */}
             {freightRates.length > 0 && (
-                <div style={{ marginTop: '30px' }}>
+                <div>
                     <h3>Complete Rate History</h3>
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ 
-                            width: '100%', 
-                            borderCollapse: 'collapse',
-                            marginTop: '15px',
-                            minWidth: '1000px'
-                        }}>
+                    <br />
+                    <div  className="variants-table-wrap">
+                        <table className="variants-table">
                             <thead>
                                 <tr>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
+                                    <th>
                                         Country
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
+                                    <th>
                                         Airport
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                    <th>
                                         +45kg
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                    <th>
                                         +100kg
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                    <th>
                                         +300kg
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                    <th>
                                         +500kg
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
+                                    <th>
                                         Effective Date
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
+                                    <th>
                                         Last Updated
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', width: '150px' }}>
+                                    <th>
                                         Actions
                                     </th>
                                 </tr>
@@ -739,37 +714,37 @@ const FreightRatesForm = () => {
                             <tbody>
                                 {freightRates.map((rate) => (
                                     <tr key={rate.id}>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                                        <td >
                                             {rate.country}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                                        <td >
                                             <strong>{rate.airport_code}</strong>
                                             {rate.airport_name && (
-                                                <div style={{ fontSize: '0.85rem', color: '#666' }}>
+                                                <div >
                                                     {rate.airport_name}
                                                 </div>
                                             )}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        <td>
                                             ${parseFloat(rate.rate_45kg).toFixed(2)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        <td>
                                             ${parseFloat(rate.rate_100kg).toFixed(2)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        <td>
                                             ${parseFloat(rate.rate_300kg).toFixed(2)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        <td>
                                             ${parseFloat(rate.rate_500kg).toFixed(2)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                                        <td>
                                             {new Date(rate.date).toLocaleDateString('en-US', {
                                                 year: 'numeric',
                                                 month: 'short',
                                                 day: 'numeric'
                                             })}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                                        <td>
                                             {new Date(rate.updated_at).toLocaleString('en-US', {
                                                 year: 'numeric',
                                                 month: 'short',
@@ -778,35 +753,18 @@ const FreightRatesForm = () => {
                                                 minute: '2-digit'
                                             })}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        <td>
                                             <button
                                                 type="button"
                                                 onClick={() => handleEdit(rate)}
-                                                style={{
-                                                    padding: '5px 12px',
-                                                    cursor: 'pointer',
-                                                    backgroundColor: '#2196f3',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    marginRight: '5px'
-                                                }}
+                                                className="tbl-btn-edit"
                                             >
                                                 Edit
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => handleDelete(rate.id)}
-                                                style={{
-                                                    padding: '5px 12px',
-                                                    cursor: 'pointer',
-                                                    backgroundColor: '#dc3545',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px'
-                                                }}
+                                                className="tbl-btn-delete"
                                             >
                                                 Delete
                                             </button>

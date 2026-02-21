@@ -653,45 +653,41 @@ const SeaFreightRatesForm = () => {
 )}
             {/* Current Rates by Country and Port */}
             {getLatestRatesByCountryPort().length > 0 && (
-                <div style={{ marginTop: '30px' }}>
+                <div>
                     <h3>Current Sea Freight Rates by Country & Port</h3>
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ 
-                            width: '100%', 
-                            borderCollapse: 'collapse',
-                            marginTop: '15px',
-                            minWidth: '1000px'
-                        }}>
+                    <br />
+                    <div className="variants-table-wrap">
+                        <table className="variants-table">
                             <thead>
                                 <tr>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left', minWidth: '120px' }}>
+                                    <th>
                                         Country
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left', minWidth: '200px' }}>
+                                    <th>
                                         Port
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', minWidth: '100px' }}>
+                                    <th>
                                         20ft Rate
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', minWidth: '90px' }}>
+                                    <th>
                                         20ft Kilos
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', minWidth: '100px' }}>
+                                    <th>
                                         20ft Per Kilo
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', minWidth: '100px' }}>
+                                    <th>
                                         40ft Rate
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', minWidth: '90px' }}>
+                                    <th>
                                         40ft Kilos
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', minWidth: '100px' }}>
+                                    <th>
                                         40ft Per Kilo
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left', minWidth: '100px' }}>
+                                    <th>
                                         Effective Date
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', width: '150px' }}>
+                                    <th>
                                         Actions
                                     </th>
                                 </tr>
@@ -699,10 +695,10 @@ const SeaFreightRatesForm = () => {
                             <tbody>
                                 {getLatestRatesByCountryPort().map((rate) => (
                                     <tr key={rate.id}>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', fontWeight: 'bold' }}>
+                                        <td >
                                             {rate.country}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                                        <td>
                                             <strong style={{ color: '#2196f3' }}>{rate.port_code}</strong>
                                             {rate.port_name && (
                                                 <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '2px' }}>
@@ -710,60 +706,43 @@ const SeaFreightRatesForm = () => {
                                                 </div>
                                             )}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', color: '#2196f3' }}>
+                                        <td>
                                             ${parseFloat(rate.rate_20ft).toFixed(2)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        <td>
                                             {parseFloat(rate.kilos_20ft).toLocaleString()} kg
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 'bold', color: '#2196f3' }}>
+                                        <td>
                                             ${parseFloat(rate.freight_per_kilo_20ft || 0).toFixed(4)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', color: '#4caf50' }}>
+                                        <td>
                                             ${parseFloat(rate.rate_40ft).toFixed(2)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        <td>
                                             {parseFloat(rate.kilos_40ft).toLocaleString()} kg
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 'bold', color: '#4caf50' }}>
+                                        <td>
                                             ${parseFloat(rate.freight_per_kilo_40ft || 0).toFixed(4)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                                        <td >
                                             {new Date(rate.date).toLocaleDateString('en-US', {
                                                 year: 'numeric',
                                                 month: 'short',
                                                 day: 'numeric'
                                             })}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        <td>
                                             <button
                                                 type="button"
                                                 onClick={() => handleEdit(rate)}
-                                                style={{
-                                                    padding: '5px 12px',
-                                                    cursor: 'pointer',
-                                                    backgroundColor: '#2196f3',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    marginRight: '5px'
-                                                }}
+                                                className="tbl-btn-edit" 
                                             >
                                                 Edit
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => handleDelete(rate.id)}
-                                                style={{
-                                                    padding: '5px 12px',
-                                                    cursor: 'pointer',
-                                                    backgroundColor: '#dc3545',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px'
-                                                }}
+                                                className="tbl-btn-delete" 
                                             >
                                                 Delete
                                             </button>
@@ -780,46 +759,40 @@ const SeaFreightRatesForm = () => {
             {seaRates.length > 0 && (
                 <div style={{ marginTop: '30px' }}>
                     <h3>Complete Rate History</h3>
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ 
-                            width: '100%', 
-                            borderCollapse: 'collapse',
-                            marginTop: '15px',
-                            minWidth: '1100px'
-                        }}>
+                    <br />
+                    <div className="variants-table-wrap">
+                        <table className="variants-table">
                             <thead>
                                 <tr>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
+                                    <th>
                                         Country
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
+                                    <th>
                                         Port
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                    <th>
                                         20ft Rate
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                    <th>
                                         20ft Kilos
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                    <th>
                                         20ft/kg
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                    <th>
                                         40ft Rate
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                    <th >
                                         40ft Kilos
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                    <th >
                                         40ft/kg
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
-                                        Effective Date
-                                    </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'left' }}>
+                                    
+                                    <th>
                                         Last Updated
                                     </th>
-                                    <th style={{ padding: '12px', border: '1px solid #ddd', textAlign: 'center', width: '150px' }}>
+                                    <th >
                                         Actions
                                     </th>
                                 </tr>
@@ -827,10 +800,10 @@ const SeaFreightRatesForm = () => {
                             <tbody>
                                 {seaRates.map((rate) => (
                                     <tr key={rate.id}>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                                        <td>
                                             {rate.country}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                                        <td>
                                             <strong>{rate.port_code}</strong>
                                             {rate.port_name && (
                                                 <div style={{ fontSize: '0.85rem', color: '#666' }}>
@@ -838,32 +811,26 @@ const SeaFreightRatesForm = () => {
                                                 </div>
                                             )}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        <td >
                                             ${parseFloat(rate.rate_20ft).toFixed(2)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        <td>
                                             {parseFloat(rate.kilos_20ft).toLocaleString()} kg
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 'bold', color: '#2196f3' }}>
+                                        <td >
                                             ${parseFloat(rate.freight_per_kilo_20ft || 0).toFixed(4)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        <td >
                                             ${parseFloat(rate.rate_40ft).toFixed(2)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        <td >
                                             {parseFloat(rate.kilos_40ft).toLocaleString()} kg
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 'bold', color: '#4caf50' }}>
+                                        <td >
                                             ${parseFloat(rate.freight_per_kilo_40ft || 0).toFixed(4)}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                                            {new Date(rate.date).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: 'numeric'
-                                            })}
-                                        </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                                       
+                                        <td >
                                             {new Date(rate.updated_at).toLocaleString('en-US', {
                                                 year: 'numeric',
                                                 month: 'short',
@@ -872,35 +839,18 @@ const SeaFreightRatesForm = () => {
                                                 minute: '2-digit'
                                             })}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                        <td >
                                             <button
                                                 type="button"
                                                 onClick={() => handleEdit(rate)}
-                                                style={{
-                                                    padding: '5px 12px',
-                                                    cursor: 'pointer',
-                                                    backgroundColor: '#2196f3',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    marginRight: '5px'
-                                                }}
+                                                className="tbl-btn-edit" 
                                             >
                                                 Edit
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => handleDelete(rate.id)}
-                                                style={{
-                                                    padding: '5px 12px',
-                                                    cursor: 'pointer',
-                                                    backgroundColor: '#dc3545',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px'
-                                                }}
+                                                className="tbl-btn-delete" 
                                             >
                                                 Delete
                                             </button>
