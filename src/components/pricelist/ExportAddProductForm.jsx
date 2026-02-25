@@ -11,6 +11,7 @@ const ExportAddProductForm = () => {
     const [form, setForm] = useState({
         common_name: '',
         scientific_name: '',
+        description: '',
         category: 'live',
         species_type: 'crustacean',
         image: null,
@@ -93,7 +94,7 @@ const ExportAddProductForm = () => {
             fetch(`${API_URL}/api/exportproductlist/${id}`)
                 .then(res => { if (!res.ok) throw new Error('Failed to fetch product'); return res.json() })
                 .then(product => {
-                    setForm({ common_name: product.common_name, scientific_name: product.scientific_name || '', category: product.category || 'live', species_type: product.species_type || 'crustacean', image: null, existing_image_url: product.image_url })
+                    setForm({ common_name: product.common_name, scientific_name: product.scientific_name || '', description: product.description || '',  category: product.category || 'live', species_type: product.species_type || 'crustacean', image: null, existing_image_url: product.image_url })
                     if (product.image_url) setPreview(getImageUrl(product.image_url))
                     if (product.variants && Array.isArray(product.variants)) setVariants(product.variants)
                     setLoading(false)
@@ -227,6 +228,7 @@ const ExportAddProductForm = () => {
             const data = new FormData()
             data.append('common_name', form.common_name)
             data.append('scientific_name', form.scientific_name)
+            data.append('description', form.description)
             data.append('category', form.category)
             data.append('species_type', form.species_type)
             data.append('variants', JSON.stringify(variants))
@@ -273,6 +275,9 @@ const ExportAddProductForm = () => {
 
                 <label className="apf-label">Scientific Name</label>
                 <input className="apf-input" name="scientific_name" placeholder="Scientific Name" value={form.scientific_name} onChange={handleChange} />
+
+                <label className="apf-label">Description</label>
+                <textarea className="apf-input" name="description" placeholder="Product Description" value={form.description} onChange={handleChange} />
 
                 <label className="apf-label">Product Condition</label>
                 <select className="apf-input" name="category" value={form.category} onChange={handleChange} required>

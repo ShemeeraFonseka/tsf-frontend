@@ -11,6 +11,7 @@ const AddProductForm = () => {
     const [form, setForm] = useState({
         common_name: '',
         scientific_name: '',
+        description: '',
         category: 'live',
         species_type: 'crustacean',
         image: null,
@@ -40,6 +41,7 @@ const AddProductForm = () => {
                     setForm({
                         common_name: product.common_name,
                         scientific_name: product.scientific_name || '',
+                        description: product.description || '',
                         category: product.category || 'live',
                         species_type: product.species_type || 'crustacean',
                         image: null,
@@ -100,7 +102,7 @@ const AddProductForm = () => {
         } catch (err) { setError(err.message); setTimeout(() => setError(''), 3000) }
     }
 
-    const handleEditVariant   = (variant) => setEditingVariant({ ...variant })
+    const handleEditVariant = (variant) => setEditingVariant({ ...variant })
 
     const handleUpdateVariant = async () => {
         if (!editingVariant.size || !editingVariant.purchasing_price) {
@@ -143,6 +145,7 @@ const AddProductForm = () => {
             const data = new FormData()
             data.append('common_name', form.common_name)
             data.append('scientific_name', form.scientific_name)
+            data.append('description', form.description)
             data.append('category', form.category)
             data.append('species_type', form.species_type)
             data.append('variants', JSON.stringify(variants))
@@ -172,6 +175,9 @@ const AddProductForm = () => {
 
                 <label className="apf-label">Scientific Name</label>
                 <input className="apf-input" name="scientific_name" placeholder="Scientific Name" value={form.scientific_name} onChange={handleChange} />
+
+                <label className="apf-label">Description</label>
+                <textarea className="apf-input" name="description" placeholder="Product Description" value={form.description} onChange={handleChange} />
 
                 <label className="apf-label">Product Condition</label>
                 <select className="apf-input" name="category" value={form.category} onChange={handleChange} required>
@@ -213,7 +219,7 @@ const AddProductForm = () => {
                                         <td>{variant.unit}</td>
                                         <td className="td-price">Rs.&nbsp;{parseFloat(variant.purchasing_price).toFixed(2)}</td>
                                         <td className="td-actions">
-                                            <button type="button" className="tbl-btn-edit"   onClick={() => handleEditVariant(variant)}>Edit</button>
+                                            <button type="button" className="tbl-btn-edit" onClick={() => handleEditVariant(variant)}>Edit</button>
                                             <button type="button" className="tbl-btn-delete" onClick={() => handleDeleteVariant(variant.id)}>Delete</button>
                                         </td>
                                     </tr>
@@ -269,7 +275,7 @@ const AddProductForm = () => {
             </form>
 
             {success && <div className="apf-success">{success}</div>}
-            {error   && <div className="apf-error">{error}</div>}
+            {error && <div className="apf-error">{error}</div>}
         </div>
     )
 }

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './CustomerDetail.css'
+import logoSrc from './logo.png';
 
 const CustomerDetail = () => {
   const API_URL = process.env.REACT_APP_API_URL;
@@ -19,7 +20,7 @@ const CustomerDetail = () => {
   const [formData, setFormData] = useState({
     product_id: '', variant_id: '', common_name: '', category: '',
     size_range: '', purchasing_price: '', margin: '',
-    margin_percentage: '', selling_price: ''
+    margin_percentage: '', selling_price: '', image: '', scientific_name: ''
   });
 
   useEffect(() => {
@@ -41,7 +42,10 @@ const CustomerDetail = () => {
     try {
       const res = await fetch(`${API_URL}/api/customer-products/${cus_id}`);
       if (!res.ok) throw new Error('Failed to fetch prices');
-      setPrices(await res.json());
+      const data = await res.json();
+      // Debug: verify scientific_name is returned by the API
+      if (data.length > 0) console.log('[CustomerDetail] prices[0] scientific_name:', data[0].scientific_name);
+      setPrices(data);
       setLoading(false);
     } catch (err) { setError(err.message); setLoading(false); }
   };
@@ -57,10 +61,11 @@ const CustomerDetail = () => {
   const handleProductSelect = (e) => {
     const productId = e.target.value;
     setFormData(prev => {
-      if (!productId) { setSelectedProduct(null); return { ...prev, product_id: '', variant_id: '', common_name: '', category: '', size_range: '', purchasing_price: '' }; }
+      if (!productId) { setSelectedProduct(null); return { ...prev, product_id: '', variant_id: '', common_name: '', category: '', size_range: '', purchasing_price: '', image: '', scientific_name: '' }; }
       const product = products.find(p => p.id === Number(productId));
       setSelectedProduct(product);
-      return { ...prev, product_id: productId, variant_id: '', common_name: product?.common_name || '', category: product?.category || '', size_range: '', purchasing_price: '' };
+      console.log('[ProductSelect] image_url field:', product?.image_url);
+      return { ...prev, product_id: productId, variant_id: '', common_name: product?.common_name || '', category: product?.category || '', size_range: '', purchasing_price: '', image: product?.image_url || '', scientific_name: product?.scientific_name || '' };
     });
   };
 
@@ -121,6 +126,8 @@ const CustomerDetail = () => {
         product_id: formData.product_id ? parseInt(formData.product_id) : null,
         variant_id: formData.variant_id ? parseInt(formData.variant_id) : null,
         common_name: formData.common_name, category: formData.category,
+        scientific_name: formData.scientific_name || null,
+        image_url: formData.image || null,
         size_range: formData.size_range, purchasing_price: parseFloat(formData.purchasing_price),
         margin: parseFloat(formData.margin) || 0,
         margin_percentage: parseFloat(formData.margin_percentage) || 0,
@@ -148,7 +155,9 @@ const CustomerDetail = () => {
       common_name: price.common_name, category: price.category,
       size_range: price.size_range, purchasing_price: price.purchasing_price,
       margin: price.margin, margin_percentage: price.margin_percentage,
-      selling_price: price.selling_price
+      selling_price: price.selling_price,
+      scientific_name: price.scientific_name || '',
+      image: price.image_url || products.find(pr => pr.id === price.product_id)?.image_url || ''
     });
   };
 
@@ -162,13 +171,306 @@ const CustomerDetail = () => {
   };
 
   const resetForm = () => {
-    setFormData({ product_id: '', variant_id: '', common_name: '', category: '', size_range: '', purchasing_price: '', margin: '', margin_percentage: '', selling_price: '' });
+    setFormData({ product_id: '', variant_id: '', common_name: '', category: '', size_range: '', purchasing_price: '', margin: '', margin_percentage: '', selling_price: '', image: '', scientific_name: '' });
     setSelectedProduct(null); setEditingPrice(null); setShowForm(false);
   };
 
   const formatCategory = (cat) => cat ? cat.charAt(0).toUpperCase() + cat.slice(1) : '—';
   const getProductDisplayName = (p) => `${p.common_name || 'Unnamed'} - ${formatCategory(p.category)}`;
 
+  /* ─────────────────────────────────────────────────────────────────────
+     PDF DOWNLOAD  —  Tropical Shellfish catalog style
+     Layout: Logo header | Sub-info strip | Per-category tables
+     Columns: Picture | Common Name | Scientific Name | Size Range + Selling Price (LKR)
+  ───────────────────────────────────────────────────────────────────── */
+  const handleDownloadPDF = async () => {
+    if (prices.length === 0) { alert('No products to download'); return; }
+
+    try {
+      const jsPDFModule     = await import('jspdf');
+      const jsPDF           = jsPDFModule.default || jsPDFModule.jsPDF;
+      const autoTableModule = await import('jspdf-autotable');
+      const autoTable       = autoTableModule.default;
+
+      const doc    = new jsPDF('p', 'mm', 'a4');   // Portrait A4
+      const pageW  = doc.internal.pageSize.getWidth();
+      const pageH  = doc.internal.pageSize.getHeight();
+      const margin = 14;
+
+      // ── Colour palette ────────────────────────────────────────────
+      const TEAL        = [13,  71, 161];   // deep blue
+      const TEAL_DARK   = [8,   47, 114];   // darker navy
+      const TEAL_LIGHT  = [224, 232, 247];  // pale blue tint
+      const WHITE       = [255, 255, 255];
+      const DARK        = [20,  20,  40];   // near-black with blue hint
+      const GREY_LINE   = [180, 200, 230];  // soft blue-grey
+
+      // ══════════════════════════════════════════════════════════════
+      //  HEADER BAND
+      // ══════════════════════════════════════════════════════════════
+      doc.setFillColor(...TEAL);
+      doc.rect(0, 0, pageW, 40, 'F');
+
+      doc.addImage(logoSrc, 'PNG', margin, 7, 36, 26);
+      // Company title + tagline
+      doc.setTextColor(...WHITE);
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text('Tropical Shellfish (Pvt) Ltd', margin + 42, 19);
+      doc.setFontSize(8.5);
+      doc.setFont(undefined, 'normal');
+      doc.text('Fresh & Frozen Seafood Exporters  |  Quality You Can Trust', margin + 42, 26);
+
+      // "PRICE LIST" badge (top-right corner)
+      doc.setFillColor(...WHITE);
+      doc.roundedRect(pageW - margin - 30, 9, 30, 11, 2, 2, 'F');
+      doc.setTextColor(...TEAL_DARK);
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'bold');
+      doc.text('PRICE LIST', pageW - margin - 15, 16.5, { align: 'center' });
+
+      // ── Sub-header info strip ─────────────────────────────────────
+      doc.setFillColor(...TEAL_LIGHT);
+      doc.rect(0, 40, pageW, 11, 'F');
+      doc.setDrawColor(...GREY_LINE);
+      doc.setLineWidth(0.3);
+      doc.line(0, 40, pageW, 40);
+      doc.line(0, 51, pageW, 51);
+
+      doc.setTextColor(...DARK);
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'bold');
+      doc.text('Customer:', margin, 47);
+      doc.setFont(undefined, 'normal');
+      doc.text(customer?.cus_name || 'N/A', margin + 19, 47);
+
+      const genDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      doc.setFont(undefined, 'bold');
+      doc.text('Date:', pageW - margin - 50, 47);
+      doc.setFont(undefined, 'normal');
+      doc.text(genDate, pageW - margin - 43, 47);
+
+      // ══════════════════════════════════════════════════════════════
+      //  IMAGE FETCH HELPER — convert relative path to base64
+      // ══════════════════════════════════════════════════════════════
+      const imageCache = {};
+      const fetchImageAsBase64 = async (imagePath) => {
+        if (!imagePath) return null;
+        if (imageCache[imagePath]) return imageCache[imagePath];
+        try {
+          const url = imagePath.startsWith('http') ? imagePath : `${API_URL}${imagePath}`;
+          const res = await fetch(url);
+          if (!res.ok) return null;
+          const blob = await res.blob();
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => { imageCache[imagePath] = reader.result; resolve(reader.result); };
+            reader.onerror  = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        } catch { return null; }
+      };
+
+      // Pre-fetch all unique product images before rendering tables
+      // Collect from both prices records (image_url saved at insert) and products array (fallback)
+      const uniqueImgPaths = [...new Set([
+        ...prices.map(p => p.image_url),
+        ...products.map(pr => pr.image_url),
+      ].filter(Boolean))];
+      await Promise.all(uniqueImgPaths.map(img => fetchImageAsBase64(img)));
+
+      // ══════════════════════════════════════════════════════════════
+      //  GROUP PRICES BY CATEGORY
+      // ══════════════════════════════════════════════════════════════
+      const grouped = prices.reduce((acc, p) => {
+        const cat = formatCategory(p.category) || 'Other';
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(p);
+        return acc;
+      }, {});
+
+      let startY = 57;
+
+      // Helper: draw image placeholder cell
+      const drawImgPlaceholder = (x, y, w, h) => {
+        doc.setFillColor(232, 238, 252);
+        doc.roundedRect(x, y, w, h, 2, 2, 'F');
+        doc.setDrawColor(...GREY_LINE);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(x, y, w, h, 2, 2, 'S');
+        const cx = x + w / 2, cy = y + h / 2;
+        doc.setDrawColor(25, 100, 200);
+        doc.setLineWidth(0.5);
+        doc.circle(cx, cy - 1, Math.min(w, h) * 0.2, 'S');
+        doc.setLineWidth(0.3);
+        doc.rect(cx - w * 0.2, cy - h * 0.22, w * 0.4, h * 0.35, 'S');
+        doc.setFontSize(5);
+        doc.setTextColor(25, 100, 200);
+        doc.setFont(undefined, 'normal');
+        doc.text('No Image', cx, cy + h * 0.28, { align: 'center' });
+      };
+
+      // ══════════════════════════════════════════════════════════════
+      //  RENDER EACH CATEGORY
+      // ══════════════════════════════════════════════════════════════
+      Object.entries(grouped).forEach(([category, items]) => {
+
+        // Check page space for category header
+        if (startY > pageH - 35) { doc.addPage(); startY = 20; }
+
+        // Category section header bar
+        doc.setFillColor(...TEAL);
+        doc.rect(margin, startY, pageW - margin * 2, 8, 'F');
+        doc.setTextColor(...WHITE);
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'bold');
+        doc.text(category.toUpperCase(), margin + 4, startY + 5.5);
+        startY += 10;
+
+        // Build rows: one row per variant — clean approach, no stacked text
+        const productMap = {};
+        items.forEach(p => {
+          const key = `${p.common_name}__${p.scientific_name || ''}`;
+          if (!productMap[key]) {
+            // Look up image from products array using product_id
+            // Use image_url from the price record (saved at insert time)
+            // Fallback to products array lookup if not stored
+            const productData = products.find(pr => pr.id === p.product_id);
+            const imgPath = p.image_url || productData?.image_url || null;
+            productMap[key] = {
+              common_name:     String(p.common_name || '—'),
+              scientific_name: (p.scientific_name && String(p.scientific_name).trim() !== '')
+                                 ? String(p.scientific_name).trim() : '—',
+              image:           imgPath,
+              variants: []
+            };
+          }
+          productMap[key].variants.push({
+            size:  String(p.size_range || '—'),
+            price: `${parseFloat(p.selling_price).toLocaleString('en-LK', {
+              minimumFractionDigits: 0, maximumFractionDigits: 0
+            })}`
+          });
+        });
+
+        // Flatten: one row per variant. Track first/last row per product group.
+        const tableBody   = [];
+        const firstRowSet = new Set();
+        const lastRowSet  = new Set();
+
+        Object.values(productMap).forEach(prod => {
+          prod.variants.forEach((v, vi) => {
+            const rowIdx = tableBody.length;
+            if (vi === 0) firstRowSet.add(rowIdx);
+            if (vi === prod.variants.length - 1) lastRowSet.add(rowIdx);
+            tableBody.push({ prod, v, vi });
+          });
+        });
+
+        const bodyRows = tableBody.map(({ prod, v, vi }) => [
+          '',                                                       // col 0: image (drawn in didDrawCell)
+          vi === 0 ? prod.common_name     : '',                    // col 1: shown only on first variant
+          vi === 0 ? prod.scientific_name : '',                    // col 2: shown only on first variant
+          v.size,                                                   // col 3: size per row
+          v.price,                                                  // col 4: price per row
+        ]);
+
+        autoTable(doc, {
+          startY,
+          margin: { left: margin, right: margin },
+          head: [[
+            { content: 'Picture',               styles: { halign: 'center' } },
+            { content: 'Common Name',           styles: { halign: 'left'   } },
+            { content: 'Scientific Name',       styles: { halign: 'left'   } },
+            { content: 'Available Size Range',  styles: { halign: 'left'   } },
+            { content: 'Selling Price (LKR)',   styles: { halign: 'right'  } },
+          ]],
+          body: bodyRows,
+          theme: 'grid',
+          columnStyles: {
+            0: { cellWidth: 24, halign: 'center', valign: 'middle' },
+            1: { cellWidth: 36, halign: 'left',   valign: 'middle', fontStyle: 'bold',   fontSize: 10 },
+            2: { cellWidth: 42, halign: 'left',   valign: 'middle', fontStyle: 'italic', fontSize: 9, textColor: [50, 80, 150] },
+            3: { cellWidth: 38, halign: 'left',   valign: 'middle', fontSize: 10 },
+            4: { halign: 'right', valign: 'middle', fontSize: 10, fontStyle: 'bold' },
+          },
+          headStyles: {
+            fillColor: TEAL_DARK,
+            textColor: WHITE,
+            fontStyle: 'bold',
+            fontSize: 9,
+            cellPadding: { top: 3, bottom: 3, left: 3, right: 3 },
+          },
+          bodyStyles: {
+            fontSize: 10,
+            cellPadding: { top: 4, bottom: 4, left: 3, right: 3 },
+            minCellHeight: 14,
+            textColor: DARK,
+            lineColor: GREY_LINE,
+            lineWidth: 0.3,
+          },
+          willDrawCell: (data) => {
+            if (data.section !== 'body') return;
+            const ri = data.row.index;
+
+            // Continuation rows: hide top border on cols 0-2 to fake merged cell look
+            if (!firstRowSet.has(ri) && data.column.index <= 2) {
+              data.cell.styles.lineWidth = { top: 0, bottom: 0.3, left: 0.3, right: 0.3 };
+            }
+          },
+          didDrawCell: (data) => {
+            if (data.section !== 'body') return;
+            if (data.column.index === 0 && firstRowSet.has(data.row.index)) {
+              // Fixed image size: 16x16mm, centered in the cell
+              const imgW = 16, imgH = 16;
+              const x = data.cell.x + (data.cell.width  - imgW) / 2;
+              const y = data.cell.y + (data.cell.height - imgH) / 2;
+              const prod   = tableBody[data.row.index]?.prod;
+              const imgSrc = prod?.image ? imageCache[prod.image] : null;
+              if (imgSrc) {
+                const fmt = imgSrc.includes('image/png') ? 'PNG' : 'JPEG';
+                try {
+                  doc.addImage(imgSrc, fmt, x, y, imgW, imgH, undefined, 'FAST');
+                } catch { drawImgPlaceholder(x, y, imgW, imgH); }
+              } else {
+                drawImgPlaceholder(x, y, imgW, imgH);
+              }
+            }
+          },
+        });
+
+        startY = doc.lastAutoTable.finalY + 10;
+      });
+
+      // ══════════════════════════════════════════════════════════════
+      //  FOOTER on every page
+      // ══════════════════════════════════════════════════════════════
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFillColor(...TEAL);
+        doc.rect(0, pageH - 10, pageW, 10, 'F');
+        doc.setTextColor(...WHITE);
+        doc.setFontSize(7);
+        doc.setFont(undefined, 'normal');
+        doc.text(
+          'Tropical Shellfish (Pvt) Ltd  |  All prices in LKR  |  Prices subject to change without prior notice',
+          pageW / 2, pageH - 4, { align: 'center' }
+        );
+        doc.text(`Page ${i} of ${totalPages}`, pageW - margin, pageH - 4, { align: 'right' });
+      }
+
+      // ── Save ──────────────────────────────────────────────────────
+      const safeName = (customer?.cus_name || 'Customer').replace(/[^a-z0-9_\- ]/gi, '_');
+      doc.save(`${safeName}_Price_List_${new Date().toISOString().split('T')[0]}.pdf`);
+
+    } catch (err) {
+      console.error(err);
+      alert('Error generating PDF. Ensure jspdf and jspdf-autotable are installed.');
+    }
+  };
+
+  /* ══════════════════════════ RENDER ══════════════════════════════════ */
   return (
     <div className="pricelist-container">
 
@@ -181,6 +483,9 @@ const CustomerDetail = () => {
       <div className="add-section">
         <button className="apf-btn" onClick={() => setShowForm(!showForm)}>
           {showForm ? '✕ Cancel' : '+ Add Custom Price'}
+        </button>
+        <button className="apf-btn" onClick={handleDownloadPDF} disabled={prices.length === 0}>
+          📄 Download PDF
         </button>
       </div>
 
@@ -198,6 +503,28 @@ const CustomerDetail = () => {
 
             <label className="apf-label">Common Name</label>
             <input className="apf-input" value={formData.common_name} readOnly placeholder="Auto-filled from product" />
+
+            <label className="apf-label">Scientific Name</label>
+            <input className="apf-input" value={formData.scientific_name} readOnly placeholder="Auto-filled from product" />
+
+            <label className="apf-label">Product Image</label>
+            {formData.image ? (
+              <div className="apf-image-preview">
+                <img
+                  src={
+                    formData.image.startsWith('http')
+                      ? formData.image
+                      : `${API_URL}${formData.image.startsWith('/') ? '' : '/'}${formData.image}`
+                  }
+                  alt="Product"
+                  style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #d0d8ef' }}
+                  onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
+                />
+                <span style={{ display: 'none', fontSize: '12px', color: '#888' }}>Image not found</span>
+              </div>
+            ) : (
+              <div className="apf-image-empty">No image available</div>
+            )}
 
             <label className="apf-label">Category</label>
             <input className="apf-input" value={formatCategory(formData.category)} readOnly placeholder="Auto-filled from product" />
