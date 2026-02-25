@@ -1170,46 +1170,36 @@ const ExportCustomerDetail = () => {
 
   /* ── USD rate recalculation effect ── */
   useEffect(() => {
-    if (!formData.exfactoryprice || !currentUsdRate) return;
-    const exf = parseFloat(formData.exfactoryprice) || 0;
-    const totalUSD = [
-      "export_doc_usd",
-      "transport_cost_usd",
-      "loading_cost_usd",
-      "airway_cost_usd",
-      "forwardHandling_cost_usd",
-    ].reduce((s, k) => s + (parseFloat(formData[k]) || 0), 0);
-    const fobLKR = exf + totalUSD * parseFloat(currentUsdRate);
-    const updates = { fob_price: fobLKR.toFixed(2) };
-    if (formData.freight_type === "air") {
-      if (formData.freight_cost_45kg)
-        updates.cnf_45kg = calculateCNF(fobLKR, formData.freight_cost_45kg);
-      if (formData.freight_cost_100kg)
-        updates.cnf_100kg = calculateCNF(fobLKR, formData.freight_cost_100kg);
-      if (formData.freight_cost_300kg)
-        updates.cnf_300kg = calculateCNF(fobLKR, formData.freight_cost_300kg);
-      if (formData.freight_cost_500kg)
-        updates.cnf_500kg = calculateCNF(fobLKR, formData.freight_cost_500kg);
-    } else if (formData.freight_type === "sea" && formData.freight_cost_sea) {
-      updates.cnf_sea = calculateCNF(fobLKR, formData.freight_cost_sea);
-    }
-    setFormData((prev) => ({ ...prev, ...updates }));
-  }, [
-    formData.exfactoryprice,
-    formData.export_doc_usd,
-    formData.transport_cost_usd,
-    formData.loading_cost_usd,
-    formData.airway_cost_usd,
-    formData.forwardHandling_cost_usd,
-    formData.freight_cost_45kg,
-    formData.freight_cost_100kg,
-    formData.freight_cost_300kg,
-    formData.freight_cost_500kg,
-    formData.freight_cost_sea,
-    currentUsdRate,
-    calculateCNF,
-    formData.freight_type,
-  ]); // eslint-disable-line react-hooks/exhaustive-deps
+    setFormData((prev) => {
+      if (!prev.exfactoryprice || !currentUsdRate) return prev;
+
+      const exf = parseFloat(prev.exfactoryprice) || 0;
+      const totalUSD = [
+        "export_doc_usd",
+        "transport_cost_usd",
+        "loading_cost_usd",
+        "airway_cost_usd",
+        "forwardHandling_cost_usd",
+      ].reduce((s, k) => s + (parseFloat(prev[k]) || 0), 0);
+      const fobLKR = exf + totalUSD * parseFloat(currentUsdRate);
+      const updates = { fob_price: fobLKR.toFixed(2) };
+
+      if (prev.freight_type === "air") {
+        if (prev.freight_cost_45kg)
+          updates.cnf_45kg = calculateCNF(fobLKR, prev.freight_cost_45kg);
+        if (prev.freight_cost_100kg)
+          updates.cnf_100kg = calculateCNF(fobLKR, prev.freight_cost_100kg);
+        if (prev.freight_cost_300kg)
+          updates.cnf_300kg = calculateCNF(fobLKR, prev.freight_cost_300kg);
+        if (prev.freight_cost_500kg)
+          updates.cnf_500kg = calculateCNF(fobLKR, prev.freight_cost_500kg);
+      } else if (prev.freight_type === "sea" && prev.freight_cost_sea) {
+        updates.cnf_sea = calculateCNF(fobLKR, prev.freight_cost_sea);
+      }
+
+      return { ...prev, ...updates };
+    });
+  }, [currentUsdRate, calculateCNF]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ════════════════════════════════════════ RENDER ═══════════════════════════════════════ */
   return (
