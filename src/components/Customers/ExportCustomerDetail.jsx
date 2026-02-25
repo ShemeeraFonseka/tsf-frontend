@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+
 import "./CustomerDetail.css";
 import logoSrc from "./logo.png";
 
@@ -952,6 +953,7 @@ const ExportCustomerDetail = () => {
         });
 
         // Column widths depend on freight type
+        const isAir = extraCols.length === undefined; // duck-typed below via name
         autoTable(doc, {
           startY,
           margin: { left: margin, right: margin },
