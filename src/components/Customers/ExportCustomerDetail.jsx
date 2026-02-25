@@ -952,7 +952,6 @@ const ExportCustomerDetail = () => {
         });
 
         // Column widths depend on freight type
-        const isAir = extraCols.length === undefined; // duck-typed below via name
         autoTable(doc, {
           startY,
           margin: { left: margin, right: margin },
