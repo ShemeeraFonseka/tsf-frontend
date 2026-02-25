@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-
 import "./CustomerDetail.css";
-import logoSrc from "./logo.png";
 
 const ExportCustomerDetail = () => {
   const API_URL = process.env.REACT_APP_API_URL;
@@ -777,7 +775,23 @@ const ExportCustomerDetail = () => {
       doc.setFillColor(...NAVY);
       doc.rect(0, 0, pageW, 40, "F");
 
-      doc.addImage(logoSrc, "PNG", margin, 7, 36, 26);
+      // Logo placeholder
+      doc.setFillColor(...WHITE);
+      doc.roundedRect(margin, 7, 36, 26, 3, 3, "F");
+      doc.setDrawColor(...GREY_LINE);
+      doc.setLineWidth(0.4);
+      doc.roundedRect(margin, 7, 36, 26, 3, 3, "S");
+      const lx = margin + 18,
+        ly = 7 + 13;
+      doc.setDrawColor(25, 100, 200);
+      doc.setLineWidth(0.6);
+      doc.circle(lx, ly, 4, "S");
+      doc.setLineWidth(0.4);
+      doc.rect(lx - 6, ly - 5, 12, 9, "S");
+      doc.setFontSize(5.5);
+      doc.setTextColor(25, 100, 200);
+      doc.setFont(undefined, "bold");
+      doc.text("YOUR LOGO", lx, ly + 8.5, { align: "center" });
 
       // Company title
       doc.setTextColor(...WHITE);
@@ -909,7 +923,7 @@ const ExportCustomerDetail = () => {
       const renderTable = (
         items,
         startY,
-        headColor,
+        _headColor,
         headDark,
         headLabel,
         extraCols,
@@ -953,7 +967,6 @@ const ExportCustomerDetail = () => {
         });
 
         // Column widths depend on freight type
-        const isAir = extraCols.length === undefined; // duck-typed below via name
         autoTable(doc, {
           startY,
           margin: { left: margin, right: margin },
@@ -1057,7 +1070,7 @@ const ExportCustomerDetail = () => {
         doc.setTextColor(...WHITE);
         doc.setFontSize(9);
         doc.setFont(undefined, "bold");
-        doc.text("AIR FREIGHT PRODUCTS", margin + 4, startY + 5.5);
+        doc.text("✈  AIR FREIGHT PRODUCTS", margin + 4, startY + 5.5);
         startY += 10;
 
         const airHeadLabels = [
@@ -1096,7 +1109,7 @@ const ExportCustomerDetail = () => {
         doc.setTextColor(...WHITE);
         doc.setFontSize(9);
         doc.setFont(undefined, "bold");
-        doc.text("SEA FREIGHT PRODUCTS", margin + 4, startY + 5.5);
+        doc.text("🚢  SEA FREIGHT PRODUCTS", margin + 4, startY + 5.5);
         startY += 10;
 
         const seaHeadLabels = [
@@ -1672,7 +1685,7 @@ const ExportCustomerDetail = () => {
             <tbody>
               {prices.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="muted">
+                  <td colSpan={8} className="muted">
                     No custom prices set
                   </td>
                 </tr>

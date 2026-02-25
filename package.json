@@ -16,52 +16,13 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "lint": "eslint src/**/*.{js,jsx}",
-    "lint:fix": "eslint src/**/*.{js,jsx} --fix",
-    "format": "prettier --write src/**/*.{js,jsx,css,json}",
-    "format:check": "prettier --check src/**/*.{js,jsx,css,json}"
+    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
       "react-app",
-      "react-app/jest",
-      "plugin:import/recommended",
-      "plugin:prettier/recommended"
-    ],
-    "rules": {
-      "react/react-in-jsx-scope": "off",
-      "react/prop-types": "off",
-      "no-unused-vars": "warn",
-      "no-console": "warn",
-      "react-hooks/rules-of-hooks": "error",
-      "react-hooks/exhaustive-deps": "warn",
-      "import/order": [
-        "warn",
-        {
-          "groups": [
-            "builtin",
-            "external",
-            "internal"
-          ],
-          "newlines-between": "always"
-        }
-      ],
-      "prettier/prettier": "warn"
-    },
-    "settings": {
-      "react": {
-        "version": "detect"
-      },
-      "import/resolver": {
-        "node": {
-          "extensions": [
-            ".js",
-            ".jsx"
-          ]
-        }
-      }
-    }
+      "react-app/jest"
+    ]
   },
   "browserslist": {
     "production": [
@@ -77,14 +38,5 @@
   },
   "engines": {
     "node": "24.x"
-  },
-  "devDependencies": {
-    "eslint": "^8.57.1",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-prettier": "^5.5.5",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "prettier": "^3.8.1"
   }
 }
