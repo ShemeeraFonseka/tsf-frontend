@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./CustomerDetail.css";
+import logoSrc from "./logo.png";
 
 const ExportCustomerDetail = () => {
   const API_URL = process.env.REACT_APP_API_URL;
@@ -19,7 +20,7 @@ const ExportCustomerDetail = () => {
   const [seaFreightRates, setSeaFreightRates] = useState([]);
   const [currentUsdRate, setCurrentUsdRate] = useState(null);
 
-  const [formData, setFormData] = useState({
+  const initialFormData = {
     product_id: "",
     variant_id: "",
     common_name: "",
@@ -38,10 +39,10 @@ const ExportCustomerDetail = () => {
     forwardHandling_cost_usd: "",
     forwardHandling_cost_lkr: "",
     freight_type: "air",
-    container_type: "",
     multiplier: "",
     divisor: "",
-    freight_cost_sea: "",
+    fob_price: "",
+    // Air freight tiers
     freight_cost_45kg: "",
     freight_cost_100kg: "",
     freight_cost_300kg: "",
@@ -50,11 +51,16 @@ const ExportCustomerDetail = () => {
     cnf_100kg: "",
     cnf_300kg: "",
     cnf_500kg: "",
-    fob_price: "",
-    cnf_sea: "",
+    // Sea freight — both containers
+    freight_cost_20ft: "",
+    cnf_20ft: "",
+    freight_cost_40ft: "",
+    cnf_40ft: "",
     image: "",
     scientific_name: "",
-  });
+  };
+
+  const [formData, setFormData] = useState(initialFormData);
 
   /* ── Fetch helpers ── */
   const fetchCustomer = async () => {
@@ -66,6 +72,7 @@ const ExportCustomerDetail = () => {
       setError(e.message);
     }
   };
+
   const fetchPrices = async () => {
     try {
       const r = await fetch(`${API_URL}/api/exportcustomer-products/${cus_id}`);
@@ -77,6 +84,7 @@ const ExportCustomerDetail = () => {
       setLoading(false);
     }
   };
+
   const fetchProducts = async () => {
     try {
       const r = await fetch(`${API_URL}/api/exportproductlist`);
@@ -86,6 +94,7 @@ const ExportCustomerDetail = () => {
       console.error(e);
     }
   };
+
   const fetchFreightRates = async () => {
     try {
       const r = await fetch(`${API_URL}/api/freight-rates`);
@@ -95,6 +104,7 @@ const ExportCustomerDetail = () => {
       console.error(e);
     }
   };
+
   const fetchSeaFreightRates = async () => {
     try {
       const r = await fetch(`${API_URL}/api/sea-freight-rates`);
@@ -104,6 +114,7 @@ const ExportCustomerDetail = () => {
       console.error(e);
     }
   };
+
   const fetchUsdRate = async () => {
     try {
       const r = await fetch(`${API_URL}/api/usd-rate`);
@@ -184,6 +195,7 @@ const ExportCustomerDetail = () => {
     !currentUsdRate || !lkr
       ? 0
       : (parseFloat(lkr) / parseFloat(currentUsdRate)).toFixed(2);
+
   const convertToLKR = (usd) =>
     !currentUsdRate || !usd
       ? 0
@@ -227,6 +239,20 @@ const ExportCustomerDetail = () => {
         (m * parseFloat(airRateData.rate_500kg)) /
         d
       ).toFixed(2),
+    };
+  };
+
+  /* ── Calculate both sea freight containers ── */
+  const calculateBothSeaContainers = (fobLKR, cust) => {
+    const seaRate = getSeaFreightRateForCustomer(cust);
+    if (!seaRate) return {};
+    const cd20 = getSeaFreightRateByContainer("20ft", seaRate);
+    const cd40 = getSeaFreightRateByContainer("40ft", seaRate);
+    return {
+      freight_cost_20ft: cd20.perKilo.toFixed(4),
+      cnf_20ft: calculateCNF(fobLKR, cd20.perKilo),
+      freight_cost_40ft: cd40.perKilo.toFixed(4),
+      cnf_40ft: calculateCNF(fobLKR, cd40.perKilo),
     };
   };
 
@@ -285,6 +311,10 @@ const ExportCustomerDetail = () => {
         cnf_100kg: "",
         cnf_300kg: "",
         cnf_500kg: "",
+        freight_cost_20ft: "",
+        cnf_20ft: "",
+        freight_cost_40ft: "",
+        cnf_40ft: "",
       }));
       return;
     }
@@ -302,6 +332,7 @@ const ExportCustomerDetail = () => {
       multiplier: variant.multiplier || "",
       divisor: variant.divisor || "1",
     };
+
     const exf = parseFloat(variant.exfactoryprice) || 0;
     const totalUSD = [
       "export_doc_usd",
@@ -332,12 +363,17 @@ const ExportCustomerDetail = () => {
         updatedData.cnf_300kg = calculateCNF(fobLKR, tiers.freight_cost_300kg);
         updatedData.cnf_500kg = calculateCNF(fobLKR, tiers.freight_cost_500kg);
       }
+    } else if (updatedData.freight_type === "sea") {
+      const seaCosts = calculateBothSeaContainers(fobLKR, customer);
+      Object.assign(updatedData, seaCosts);
     }
+
     setFormData(updatedData);
   };
 
   const calculatePrices = (field, value) => {
     const data = { ...formData, [field]: value };
+
     if (field === "export_doc_usd") data.export_doc_lkr = convertToLKR(value);
     else if (field === "export_doc_lkr")
       data.export_doc_usd = convertToUSD(value);
@@ -359,8 +395,7 @@ const ExportCustomerDetail = () => {
       data.forwardHandling_cost_usd = convertToUSD(value);
 
     if (field === "freight_type") {
-      data.container_type = "";
-      data.freight_cost_sea = "";
+      // Reset all freight outputs
       data.freight_cost_45kg = "";
       data.freight_cost_100kg = "";
       data.freight_cost_300kg = "";
@@ -369,7 +404,10 @@ const ExportCustomerDetail = () => {
       data.cnf_100kg = "";
       data.cnf_300kg = "";
       data.cnf_500kg = "";
-      data.cnf_sea = "";
+      data.freight_cost_20ft = "";
+      data.cnf_20ft = "";
+      data.freight_cost_40ft = "";
+      data.cnf_40ft = "";
       if (value === "sea") {
         data.multiplier = "";
         data.divisor = "";
@@ -403,17 +441,11 @@ const ExportCustomerDetail = () => {
         data.cnf_500kg = calculateCNF(fobLKR, tiers.freight_cost_500kg);
       }
     } else if (data.freight_type === "sea") {
-      if (field === "container_type") {
-        const seaRate = getSeaFreightRateForCustomer(customer);
-        if (seaRate && data.container_type) {
-          const cd = getSeaFreightRateByContainer(data.container_type, seaRate);
-          data.freight_cost_sea = cd.perKilo.toFixed(4);
-          data.cnf_sea = calculateCNF(fobLKR, data.freight_cost_sea);
-        }
-      } else if (data.freight_cost_sea) {
-        data.cnf_sea = calculateCNF(fobLKR, data.freight_cost_sea);
-      }
+      // Always calculate both containers
+      const seaCosts = calculateBothSeaContainers(fobLKR, customer);
+      Object.assign(data, seaCosts);
     }
+
     setFormData(data);
   };
 
@@ -424,6 +456,7 @@ const ExportCustomerDetail = () => {
         ? `${API_URL}/api/exportcustomer-products/${editingPrice.id}`
         : `${API_URL}/api/exportcustomer-products`;
       const method = editingPrice ? "PUT" : "POST";
+
       const payload = {
         cus_id: parseInt(cus_id),
         product_id: formData.product_id ? parseInt(formData.product_id) : null,
@@ -442,6 +475,8 @@ const ExportCustomerDetail = () => {
         forwardHandling_cost:
           parseFloat(formData.forwardHandling_cost_usd) || 0,
         freight_type: formData.freight_type,
+        fob_price: parseFloat(formData.fob_price),
+        // Air freight
         multiplier:
           formData.freight_type === "air"
             ? parseFloat(formData.multiplier) || 0
@@ -450,7 +485,6 @@ const ExportCustomerDetail = () => {
           formData.freight_type === "air"
             ? parseFloat(formData.divisor) || 1
             : 1,
-        fob_price: parseFloat(formData.fob_price),
         freight_cost_45kg:
           formData.freight_type === "air"
             ? parseFloat(formData.freight_cost_45kg) || 0
@@ -483,26 +517,36 @@ const ExportCustomerDetail = () => {
           formData.freight_type === "air"
             ? parseFloat(formData.cnf_500kg) || 0
             : 0,
-        container_type:
-          formData.freight_type === "sea" ? formData.container_type : null,
-        freight_cost_sea:
+        // Sea freight — both containers
+        freight_cost_20ft:
           formData.freight_type === "sea"
-            ? parseFloat(formData.freight_cost_sea) || 0
+            ? parseFloat(formData.freight_cost_20ft) || 0
             : 0,
-        cnf_sea:
+        cnf_20ft:
           formData.freight_type === "sea"
-            ? parseFloat(formData.cnf_sea) || 0
+            ? parseFloat(formData.cnf_20ft) || 0
+            : 0,
+        freight_cost_40ft:
+          formData.freight_type === "sea"
+            ? parseFloat(formData.freight_cost_40ft) || 0
+            : 0,
+        cnf_40ft:
+          formData.freight_type === "sea"
+            ? parseFloat(formData.cnf_40ft) || 0
             : 0,
       };
+
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Failed to save");
       }
+
       await fetchPrices();
       resetForm();
       alert(
@@ -553,6 +597,7 @@ const ExportCustomerDetail = () => {
       multiplier: price.multiplier || "",
       divisor: price.divisor || "",
       fob_price: price.fob_price,
+      // Air
       freight_cost_45kg: price.freight_cost_45kg || "",
       freight_cost_100kg: price.freight_cost_100kg || "",
       freight_cost_300kg: price.freight_cost_300kg || "",
@@ -561,9 +606,11 @@ const ExportCustomerDetail = () => {
       cnf_100kg: price.cnf_100kg || "",
       cnf_300kg: price.cnf_300kg || "",
       cnf_500kg: price.cnf_500kg || "",
-      container_type: price.container_type || "",
-      freight_cost_sea: price.freight_cost_sea || "",
-      cnf_sea: price.cnf_sea || "",
+      // Sea — both containers
+      freight_cost_20ft: price.freight_cost_20ft || "",
+      cnf_20ft: price.cnf_20ft || "",
+      freight_cost_40ft: price.freight_cost_40ft || "",
+      cnf_40ft: price.cnf_40ft || "",
     });
   };
 
@@ -585,42 +632,7 @@ const ExportCustomerDetail = () => {
   };
 
   const resetForm = () => {
-    setFormData({
-      product_id: "",
-      variant_id: "",
-      common_name: "",
-      category: "",
-      size_range: "",
-      purchasing_price: "",
-      exfactoryprice: "",
-      export_doc_usd: "",
-      export_doc_lkr: "",
-      transport_cost_usd: "",
-      transport_cost_lkr: "",
-      loading_cost_usd: "",
-      loading_cost_lkr: "",
-      airway_cost_usd: "",
-      airway_cost_lkr: "",
-      forwardHandling_cost_usd: "",
-      forwardHandling_cost_lkr: "",
-      freight_type: "air",
-      container_type: "",
-      multiplier: "",
-      divisor: "",
-      freight_cost_45kg: "",
-      freight_cost_100kg: "",
-      freight_cost_300kg: "",
-      freight_cost_500kg: "",
-      cnf_45kg: "",
-      cnf_100kg: "",
-      cnf_300kg: "",
-      cnf_500kg: "",
-      freight_cost_sea: "",
-      cnf_sea: "",
-      fob_price: "",
-      image: "",
-      scientific_name: "",
-    });
+    setFormData(initialFormData);
     setSelectedProduct(null);
     setEditingPrice(null);
     setShowForm(false);
@@ -628,6 +640,7 @@ const ExportCustomerDetail = () => {
 
   const formatCategory = (cat) =>
     cat ? cat.charAt(0).toUpperCase() + cat.slice(1) : "—";
+
   const getProductDisplayName = (p) =>
     `${p.common_name || "Unnamed"} - ${formatCategory(p.category)}`;
 
@@ -740,11 +753,9 @@ const ExportCustomerDetail = () => {
     { key: "forwardHandling_cost", label: "Forward Handling Cost" },
   ];
 
-  /* ════════════════════════════════════════════════════════════════════
-     PDF DOWNLOAD — Tropical Shellfish Export catalog style
-     Air freight: Picture | Common Name | Scientific Name | Size | FOB | CNF tiers
-     Sea freight: Picture | Common Name | Scientific Name | Size | FOB | Container | CNF
-  ════════════════════════════════════════════════════════════════════ */
+  /* ══════════════════════════════════════════════════════════════════
+     PDF DOWNLOAD
+  ══════════════════════════════════════════════════════════════════ */
   const handleDownloadPDF = async () => {
     if (prices.length === 0) {
       alert("No products to download");
@@ -756,12 +767,11 @@ const ExportCustomerDetail = () => {
       const autoTableModule = await import("jspdf-autotable");
       const autoTable = autoTableModule.default;
 
-      const doc = new jsPDF("l", "mm", "a4"); // Landscape A4 (more columns)
+      const doc = new jsPDF("l", "mm", "a4");
       const pageW = doc.internal.pageSize.getWidth();
       const pageH = doc.internal.pageSize.getHeight();
       const margin = 14;
 
-      // ── Colour palette ─────────────────────────────────────────────
       const NAVY = [13, 71, 161];
       const NAVY_DARK = [8, 47, 114];
       const NAVY_LIGHT = [224, 232, 247];
@@ -769,31 +779,15 @@ const ExportCustomerDetail = () => {
       const DARK = [20, 20, 40];
       const GREY_LINE = [180, 200, 230];
 
-      // ══════════════════════════════════════════════════════════════
-      //  HEADER BAND
-      // ══════════════════════════════════════════════════════════════
+      // HEADER BAND
       doc.setFillColor(...NAVY);
       doc.rect(0, 0, pageW, 40, "F");
 
-      // Logo placeholder
-      doc.setFillColor(...WHITE);
-      doc.roundedRect(margin, 7, 36, 26, 3, 3, "F");
-      doc.setDrawColor(...GREY_LINE);
-      doc.setLineWidth(0.4);
-      doc.roundedRect(margin, 7, 36, 26, 3, 3, "S");
-      const lx = margin + 18,
-        ly = 7 + 13;
-      doc.setDrawColor(25, 100, 200);
-      doc.setLineWidth(0.6);
-      doc.circle(lx, ly, 4, "S");
-      doc.setLineWidth(0.4);
-      doc.rect(lx - 6, ly - 5, 12, 9, "S");
-      doc.setFontSize(5.5);
-      doc.setTextColor(25, 100, 200);
-      doc.setFont(undefined, "bold");
-      doc.text("YOUR LOGO", lx, ly + 8.5, { align: "center" });
-
-      // Company title
+      try {
+        doc.addImage(logoSrc, "PNG", margin, 6, 36, 28);
+      } catch {
+        // fallback: blank space if image fails
+      }
       doc.setTextColor(...WHITE);
       doc.setFontSize(16);
       doc.setFont(undefined, "bold");
@@ -806,7 +800,6 @@ const ExportCustomerDetail = () => {
         26,
       );
 
-      // "EXPORT PRICE LIST" badge
       doc.setFillColor(...WHITE);
       doc.roundedRect(pageW - margin - 40, 9, 40, 11, 2, 2, "F");
       doc.setTextColor(...NAVY_DARK);
@@ -816,7 +809,7 @@ const ExportCustomerDetail = () => {
         align: "center",
       });
 
-      // ── Sub-header strip ──────────────────────────────────────────
+      // Sub-header strip
       doc.setFillColor(...NAVY_LIGHT);
       doc.rect(0, 40, pageW, 16, "F");
       doc.setDrawColor(...GREY_LINE);
@@ -837,18 +830,9 @@ const ExportCustomerDetail = () => {
       doc.text("Country:", margin, 53);
       doc.setFont(undefined, "normal");
       let destText = customer?.country || "N/A";
-      if (customer?.airport_code) destText += `  ✈ ${customer.airport_code}`;
-      if (customer?.port_code) destText += `  🚢 ${customer.port_code}`;
+      if (customer?.airport_code) destText += `   ${customer.airport_code}`;
+      if (customer?.port_code) destText += `   ${customer.port_code}`;
       doc.text(destText, margin + 18, 53);
-
-      doc.setFont(undefined, "bold");
-      doc.text("USD Rate:", col2, 46);
-      doc.setFont(undefined, "normal");
-      doc.text(
-        currentUsdRate ? `Rs. ${parseFloat(currentUsdRate).toFixed(2)}` : "N/A",
-        col2 + 20,
-        46,
-      );
 
       const genDate = new Date().toLocaleDateString("en-US", {
         year: "numeric",
@@ -860,9 +844,7 @@ const ExportCustomerDetail = () => {
       doc.setFont(undefined, "normal");
       doc.text(genDate, col2 + 12, 53);
 
-      // ══════════════════════════════════════════════════════════════
-      //  IMAGE FETCH HELPER
-      // ══════════════════════════════════════════════════════════════
+      // Image fetch helper
       const imageCache = {};
       const fetchImageAsBase64 = async (imagePath) => {
         if (!imagePath) return null;
@@ -888,7 +870,6 @@ const ExportCustomerDetail = () => {
         }
       };
 
-      // Pre-fetch all unique images
       const uniqueImgPaths = [
         ...new Set(
           [
@@ -899,7 +880,6 @@ const ExportCustomerDetail = () => {
       ];
       await Promise.all(uniqueImgPaths.map((img) => fetchImageAsBase64(img)));
 
-      // ── Image placeholder helper ───────────────────────────────────
       const drawImgPlaceholder = (x, y, w, h) => {
         doc.setFillColor(232, 238, 252);
         doc.roundedRect(x, y, w, h, 2, 2, "F");
@@ -919,16 +899,68 @@ const ExportCustomerDetail = () => {
         doc.text("No Image", cx, cy + h * 0.28, { align: "center" });
       };
 
-      // ── Shared table renderer ─────────────────────────────────────
-      const renderTable = (
-        items,
-        startY,
-        _headColor,
-        headDark,
-        headLabel,
-        extraCols,
-      ) => {
-        // Group by product (common_name + scientific_name)
+      const renderTable = (items, startY, headDark, headLabel, extraCols) => {
+        // Define the custom order for common names only
+        const commonNameOrder = [
+          "Freshwater Scampi Cryogenic Frozen With Claw Grade A quality",
+          "Mud Crabs Cryogenic Frozen",
+          "Flowery Cryogenic Frozen",
+          "Vannamei Cryogenic Frozen",
+          "White Prawns White Prawns Cryogenic Frozen",
+          "Tilapia Cryogenic Frozen",
+          "Oyster Cryogenic Frozen",
+          "Green mussles Cryogenic Frozen",
+          "Short Neck Clams Cryogenic Frozen",
+          "Mangrove Clams Cryogenic Frozen",
+          "Tuna H&G",
+          "Tuna H&G AS",
+          "Tuna Loin AAA Skin on",
+          "Tuna Loin AAA Skin off",
+          "Tuna Loin AA Skin on",
+          "Tuna Loin AA Skin off",
+          "Tuna AA steak (200/400g)",
+          "Tuna Loin A Skin on",
+          "Tuna Loin A Skin off",
+          "Tuna A steak (200/400g)",
+          "Tuna loin B+ skin on",
+          "Tuna loin B+ skin off",
+          "Sword halfmoon skin on",
+          "Sword fish halfmoon skin off",
+          "Sword QM skin on",
+          "Barracuda",
+          "Barramundi",
+          "Bonito",
+          "Cobia",
+          "Indian mackeral",
+          "King fish 1-2kg",
+          "Red snapper",
+          "Black spotted snapper",
+          "Pearl spot",
+          "Ribbon fish",
+          "Sole fish",
+          "Threadfin bream",
+          "Travelly whole",
+          "parrot",
+          "Sea bram",
+          "Spotted grouper",
+          "Blubberlip",
+          "Yellowtail fusilier",
+          "Emporer",
+          "Red spot emporer",
+          "Red mullet",
+          "Mahi mahi",
+          "Indian salmon",
+          "Blue spotted large eye bream",
+          "Pinjalo",
+          "Job fish",
+          "Red snapper skin on fillet",
+          "Grouper skin on fillet",
+          "Barramundi skin on fillet",
+          "Mahi mahi skin on fillet",
+          "Marlin loin",
+        ];
+
+        // Group products by common name
         const productMap = {};
         items.forEach((p) => {
           const key = `${p.common_name}__${p.scientific_name || ""}`;
@@ -944,10 +976,49 @@ const ExportCustomerDetail = () => {
           productMap[key].variants.push({ size: p.size_range || "—", p });
         });
 
+        // Sort variants within each product by size (numeric/alphabetical)
+        Object.values(productMap).forEach((prod) => {
+          prod.variants.sort((a, b) => {
+            // Extract numbers for natural sorting
+            const extractNumber = (str) => {
+              const match = str.match(/\d+/g);
+              return match ? parseInt(match[0]) : Infinity;
+            };
+
+            const numA = extractNumber(a.size);
+            const numB = extractNumber(b.size);
+
+            if (numA !== numB) {
+              return numA - numB;
+            }
+
+            // If numbers are the same or no numbers, sort alphabetically
+            return a.size.localeCompare(b.size);
+          });
+        });
+
+        // Sort products by custom common name order
+        const sortedProducts = Object.values(productMap).sort((a, b) => {
+          const indexA = commonNameOrder.indexOf(a.common_name);
+          const indexB = commonNameOrder.indexOf(b.common_name);
+
+          // If both are in the custom order, sort by that order
+          if (indexA !== -1 && indexB !== -1) {
+            return indexA - indexB;
+          }
+          // If only A is in custom order, A comes first
+          if (indexA !== -1) return -1;
+          // If only B is in custom order, B comes first
+          if (indexB !== -1) return 1;
+          // If neither is in custom order, sort alphabetically
+          return a.common_name.localeCompare(b.common_name);
+        });
+
+        // Build table body with proper grouping
         const tableBody = [];
         const firstRowSet = new Set();
 
-        Object.values(productMap).forEach((prod) => {
+        sortedProducts.forEach((prod) => {
           prod.variants.forEach((v, vi) => {
             const ri = tableBody.length;
             if (vi === 0) firstRowSet.add(ri);
@@ -958,15 +1029,15 @@ const ExportCustomerDetail = () => {
         const bodyRows = tableBody.map(({ prod, v, vi }) => {
           const p = v.p;
           const base = [
-            "", // col 0: image
-            vi === 0 ? prod.common_name : "", // col 1
-            vi === 0 ? prod.scientific_name : "", // col 2
-            v.size, // col 3
+            "",
+            vi === 0 ? prod.common_name : "",
+            vi === 0 ? prod.scientific_name : "",
+            v.size,
           ];
           return [...base, ...extraCols(p)];
         });
 
-        // Column widths depend on freight type
+        // Rest of the autoTable configuration remains the same...
         autoTable(doc, {
           startY,
           margin: { left: margin, right: margin },
@@ -982,9 +1053,9 @@ const ExportCustomerDetail = () => {
           body: bodyRows,
           theme: "grid",
           columnStyles: {
-            0: { cellWidth: 20, halign: "center", valign: "middle" },
+            0: { cellWidth: 30, halign: "center", valign: "middle" },
             1: {
-              cellWidth: 38,
+              cellWidth: 60,
               halign: "left",
               valign: "middle",
               fontStyle: "bold",
@@ -999,11 +1070,13 @@ const ExportCustomerDetail = () => {
               textColor: [50, 80, 150],
             },
             3: {
-              cellWidth: 24,
+              cellWidth: 35,
               halign: "left",
               valign: "middle",
               fontSize: 11,
             },
+            4: { halign: "right", valign: "middle" },
+            5: { halign: "right", valign: "middle" },
           },
           headStyles: {
             fillColor: headDark,
@@ -1015,7 +1088,7 @@ const ExportCustomerDetail = () => {
           bodyStyles: {
             fontSize: 10,
             cellPadding: { top: 4, bottom: 4, left: 2, right: 2 },
-            minCellHeight: 16,
+            minCellHeight: 20,
             textColor: DARK,
             lineColor: GREY_LINE,
             lineWidth: 0.3,
@@ -1034,8 +1107,8 @@ const ExportCustomerDetail = () => {
           didDrawCell: (data) => {
             if (data.section !== "body" || data.column.index !== 0) return;
             if (!firstRowSet.has(data.row.index)) return;
-            const imgW = 14,
-              imgH = 14;
+            const imgW = 18,
+              imgH = 18;
             const x = data.cell.x + (data.cell.width - imgW) / 2;
             const y = data.cell.y + (data.cell.height - imgH) / 2;
             const prod = tableBody[data.row.index]?.prod;
@@ -1052,25 +1125,22 @@ const ExportCustomerDetail = () => {
             }
           },
         });
+
         return doc.lastAutoTable.finalY;
       };
 
-      // ══════════════════════════════════════════════════════════════
-      //  GROUP & RENDER
-      // ══════════════════════════════════════════════════════════════
       const airProducts = prices.filter((p) => p.freight_type === "air");
       const seaProducts = prices.filter((p) => p.freight_type === "sea");
 
       let startY = 62;
 
       if (airProducts.length > 0) {
-        // Section banner
         doc.setFillColor(...NAVY);
         doc.rect(margin, startY, pageW - margin * 2, 8, "F");
         doc.setTextColor(...WHITE);
         doc.setFontSize(9);
         doc.setFont(undefined, "bold");
-        doc.text("✈  AIR FREIGHT PRODUCTS", margin + 4, startY + 5.5);
+        doc.text("AIR FREIGHT PRODUCTS", margin + 4, startY + 5.5);
         startY += 10;
 
         const airHeadLabels = [
@@ -1086,12 +1156,10 @@ const ExportCustomerDetail = () => {
           `$${parseFloat(p.cnf_500kg || 0).toFixed(2)}`,
         ];
 
-        // Override columnStyles for air (4 extra cols)
         startY =
           renderTable(
             airProducts,
             startY,
-            NAVY,
             NAVY_DARK,
             airHeadLabels,
             airExtraCols,
@@ -1109,31 +1177,29 @@ const ExportCustomerDetail = () => {
         doc.setTextColor(...WHITE);
         doc.setFontSize(9);
         doc.setFont(undefined, "bold");
-        doc.text("🚢  SEA FREIGHT PRODUCTS", margin + 4, startY + 5.5);
+        doc.text("SEA FREIGHT PRODUCTS", margin + 4, startY + 5.5);
         startY += 10;
 
+        // Sea: 2 CNF columns — 20ft and 40ft
         const seaHeadLabels = [
-          { content: "Container", styles: { halign: "center" } },
-          { content: "CNF (USD)", styles: { halign: "right" } },
+          { content: "CNF 20ft (USD)", styles: { halign: "right" } },
+          { content: "CNF 40ft (USD)", styles: { halign: "right" } },
         ];
         const seaExtraCols = (p) => [
-          p.container_type || "—",
-          `$${parseFloat(p.cnf_sea || 0).toFixed(2)}`,
+          `$${parseFloat(p.cnf_20ft || 0).toFixed(2)}`,
+          `$${parseFloat(p.cnf_40ft || 0).toFixed(2)}`,
         ];
 
         renderTable(
           seaProducts,
           startY,
-          NAVY,
           NAVY_DARK,
           seaHeadLabels,
           seaExtraCols,
         );
       }
 
-      // ══════════════════════════════════════════════════════════════
-      //  FOOTER on every page
-      // ══════════════════════════════════════════════════════════════
+      // Footer on every page
       const totalPages = doc.internal.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
@@ -1193,8 +1259,11 @@ const ExportCustomerDetail = () => {
           updates.cnf_300kg = calculateCNF(fobLKR, prev.freight_cost_300kg);
         if (prev.freight_cost_500kg)
           updates.cnf_500kg = calculateCNF(fobLKR, prev.freight_cost_500kg);
-      } else if (prev.freight_type === "sea" && prev.freight_cost_sea) {
-        updates.cnf_sea = calculateCNF(fobLKR, prev.freight_cost_sea);
+      } else if (prev.freight_type === "sea") {
+        if (prev.freight_cost_20ft)
+          updates.cnf_20ft = calculateCNF(fobLKR, prev.freight_cost_20ft);
+        if (prev.freight_cost_40ft)
+          updates.cnf_40ft = calculateCNF(fobLKR, prev.freight_cost_40ft);
       }
 
       return { ...prev, ...updates };
@@ -1232,6 +1301,7 @@ const ExportCustomerDetail = () => {
         </div>
       )}
       <br />
+
       <div className="add-section">
         <button className="apf-btn" onClick={() => setShowForm(!showForm)}>
           {showForm ? "✕ Cancel" : "+ Add Custom Price"}
@@ -1507,7 +1577,7 @@ const ExportCustomerDetail = () => {
                 <span>
                   {formData.freight_type === "air"
                     ? "All weight tiers calculated automatically"
-                    : "Configure sea freight rate"}
+                    : "Both container sizes calculated automatically"}
                 </span>
               </div>
               <div className="freight-type-selector">
@@ -1535,7 +1605,7 @@ const ExportCustomerDetail = () => {
                         calculatePrices("freight_type", e.target.value)
                       }
                     />
-                    🚢 Sea Freight
+                    🚢 Sea Freight (20ft &amp; 40ft)
                   </label>
                 </div>
               </div>
@@ -1599,44 +1669,24 @@ const ExportCustomerDetail = () => {
               )}
 
               {formData.freight_type === "sea" && (
-                <div className="sea-freight-grid">
-                  <div>
-                    <label className="apf-label">Container Type</label>
-                    <select
-                      className="apf-input"
-                      value={formData.container_type}
-                      onChange={(e) =>
-                        calculatePrices("container_type", e.target.value)
-                      }
-                    >
-                      <option value="">— Select Container —</option>
-                      <option value="20ft">20ft Container</option>
-                      <option value="40ft">40ft Container</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="apf-label">Freight Cost (USD/kg)</label>
-                    <input
-                      className="apf-input is-usd"
-                      type="number"
-                      step="0.0001"
-                      value={formData.freight_cost_sea}
-                      disabled
-                      placeholder="0.0000"
-                    />
-                  </div>
-                  <div style={{ gridColumn: "1 / -1" }}>
-                    <label className="apf-label">
-                      CNF — Cost and Freight (USD)
-                    </label>
-                    <input
-                      className="apf-input is-cnf"
-                      type="number"
-                      step="0.01"
-                      value={formData.cnf_sea}
-                      disabled
-                      placeholder="0.00"
-                    />
+                <div className="freight-tiers-panel">
+                  <h4>Calculated Freight &amp; CNF — Sea Containers</h4>
+                  <div className="freight-tiers-grid">
+                    {[
+                      ["20ft", "freight_cost_20ft", "cnf_20ft"],
+                      ["40ft", "freight_cost_40ft", "cnf_40ft"],
+                    ].map(([container, fk, ck]) => (
+                      <div className="freight-tier-card" key={container}>
+                        <div className="tier-label">{container} Container</div>
+                        <div className="tier-freight">
+                          Freight:{" "}
+                          <strong>${formData[fk] || "0.0000"}/kg</strong>
+                        </div>
+                        <div className="tier-cnf">
+                          CNF: <strong>${formData[ck] || "0.00"}</strong>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -1704,11 +1754,6 @@ const ExportCustomerDetail = () => {
                   </td>
                   <td data-label="Freight">
                     {price.freight_type === "sea" ? "🚢 Sea" : "✈️ Air"}
-                    {price.freight_type === "sea" && price.container_type && (
-                      <span className="td-freight-sub">
-                        {price.container_type} Container
-                      </span>
-                    )}
                   </td>
                   <td data-label="CNF Details">
                     {price.freight_type === "air" ? (
@@ -1739,9 +1784,20 @@ const ExportCustomerDetail = () => {
                         </div>
                       </div>
                     ) : (
-                      <span className="td-cnf-sea">
-                        ${parseFloat(price.cnf_sea || 0).toFixed(2)}
-                      </span>
+                      <div className="td-cnf-air">
+                        <div>
+                          20ft{" "}
+                          <strong>
+                            ${parseFloat(price.cnf_20ft || 0).toFixed(2)}
+                          </strong>
+                        </div>
+                        <div>
+                          40ft{" "}
+                          <strong>
+                            ${parseFloat(price.cnf_40ft || 0).toFixed(2)}
+                          </strong>
+                        </div>
+                      </div>
                     )}
                   </td>
                   <td data-label="Actions" className="actions-cell">
