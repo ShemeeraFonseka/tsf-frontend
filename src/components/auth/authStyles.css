@@ -1,0 +1,86 @@
+/* page background */
+
+.authPageWrapper {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #020617;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* form card */
+
+.authFormContainer {
+  width: 380px;
+  padding: 40px;
+  border-radius: 14px;
+  background: #0f172a;
+  box-shadow: 0px 10px 35px rgba(0, 0, 0, 0.6);
+}
+
+/* title */
+
+.authTitle {
+  text-align: center;
+  margin-bottom: 25px;
+  font-size: 26px;
+  font-weight: 600;
+  color: white;
+}
+
+/* input fields */
+
+.authInputField {
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  border: 1px solid #1e293b;
+  background: #020617;
+  color: white;
+  outline: none;
+  transition: 0.2s;
+}
+
+.authInputField:focus {
+  border: 1px solid #2563eb;
+}
+
+/* button */
+
+.authPrimaryButton {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.authPrimaryButton:hover {
+  background: #1d4ed8;
+}
+
+/* switch text */
+
+.authSwitchText {
+  text-align: center;
+  margin-top: 18px;
+  color: #94a3b8;
+}
+
+/* switch link */
+
+.authSwitchLink {
+  margin-left: 5px;
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.authSwitchLink:hover {
+  text-decoration: underline;
+}

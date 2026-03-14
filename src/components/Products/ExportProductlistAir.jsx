@@ -41,7 +41,7 @@ const getCategoryBadgeIcon = (category) => {
 };
 /* ──────────────────────────────────────────────────────────────── */
 
-const Productlist = () => {
+const ExportProductlistAir = () => {
   const API_URL = process.env.REACT_APP_API_URL;
 
   const [items, setItems] = useState([]);
@@ -52,59 +52,78 @@ const Productlist = () => {
 
   // Define the section categories for grouping
   const sectionCategories = [
-    { name: "Oyster", keywords: ["oyster", "depurated oyster"] },
-    {
-      name: "Clams",
-      keywords: [
-        "clam",
-        "clams",
-        "pen clams",
-        "short neck clams",
-        "blood clams",
-        "sea clams",
-        "mangrove clams",
-      ],
-    },
-    { name: "Mussel", keywords: ["mussel", "brown mussel", "green mussel"] },
-    { name: "Crab", keywords: ["crab", "sea crab", "mud crab", "cut crab"] },
-    {
-      name: "Prawn",
-      keywords: [
-        "prawn",
-        "flowery prawn",
-        "black tiger",
-        "white prawn",
-        "lobster",
-      ],
-    },
-    { name: "Scampi", keywords: ["scampi"] },
-    { name: "Cuttlefish", keywords: ["cuttlefish", "squid"] },
-    { name: "Octopus", keywords: ["octopus", "baby octopus"] },
     {
       name: "Fish",
       keywords: [
         "fish",
-        "jack",
-        "eel",
-        "tuna",
         "tilapia",
-        "mackerel",
-        "rohu",
-        "sardine",
-        "mullet",
-        "barramundi",
-        "catla",
-        "parrot",
+        "pearl spot",
+        "job fish",
+        "rabbit fish",
+        "sole fish",
         "red mullet",
-        "scad",
-        "mahi mahi",
-        "anchovy",
-        "snapper",
+        "sea bass",
+        "tuna",
+        "parrot fish",
+        "grey mullet",
+        "red snapper",
+        "emperor fish",
         "grouper",
-        "seer",
-        "salmon",
+        "brown grouper",
+        "gray grouper",
+        "red grouper",
+        "red spot grouper",
+        "king fish",
+        "sword fish",
+        "silver pomfret",
+        "barramundi",
+        "barracuda",
+        "black spotted snapper",
+        "blubber",
+        "yellowtail fusilier",
+        "blue spotted large eye bream",
+        "pinjalo",
+        "indian salmon",
+        "mahi mahi",
+        "marlin loin",
+        "bonito",
+        "cobia",
+        "indian mackerel",
+        "indian mackeral",
+        "emperor",
+        "sea bream",
+        "travelly whole",
+        "threadfin bream",
+        "sword",
+        "leather jacket",
+        "indo-pacific",
+        "chinese pomfret",
+        "eel",
       ],
     },
+    { name: "Crab", keywords: ["crab", "blue swimming crab", "lagoon crab"] },
+    {
+      name: "Prawn",
+      keywords: [
+        "prawn",
+        "tiger prawn",
+        "green tiger prawn",
+        "white prawn",
+        "pacific white shrimp",
+        "shrimp",
+        "flowery",
+        "vannamei",
+      ],
+    },
+    {
+      name: "Scampi/Lobster",
+      keywords: ["lobster", "bamboo lobster", "tiger lobster", "scampi"],
+    },
+    { name: "Octopus", keywords: ["octopus"] },
+    { name: "Clams", keywords: ["clam", "clams"] },
+    { name: "Oysters", keywords: ["oyster", "depurated oyster"] },
+    { name: "Mussles", keywords: ["mussle", "brown mussle", "green mussle"] },
+    { name: "Giant Freshwater Prawn", keywords: ["giant freshwater prawn"] },
   ];
 
   const speciesTypes = [
@@ -132,7 +151,7 @@ const Productlist = () => {
   }, [selectedSpeciesType, items]);
 
   const fetchProducts = () => {
-    fetch(`${API_URL}/api/productlist`)
+    fetch(`${API_URL}/api/exportproductlistair`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch");
         return res.json();
@@ -156,9 +175,12 @@ const Productlist = () => {
     )
       return;
     try {
-      const res = await fetch(`${API_URL}/api/productlist/${productId}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `${API_URL}/api/exportproductlistair/${productId}`,
+        {
+          method: "DELETE",
+        },
+      );
       if (!res.ok) throw new Error("Failed to delete");
       fetchProducts();
     } catch (err) {
@@ -175,8 +197,9 @@ const Productlist = () => {
   };
 
   const navigate = useNavigate();
-  const navigateForm = () => navigate("/productform");
-  const navigateEdit = (productId) => navigate(`/productform/${productId}`);
+  const navigateForm = () => navigate("/exportproductformair");
+  const navigateEdit = (productId) =>
+    navigate(`/exportproductformair/${productId}`);
 
   const getImageUrl = (imageUrl) => {
     if (!imageUrl) return "/images/placeholder-seafood.png";
@@ -258,11 +281,12 @@ const Productlist = () => {
       return;
     }
     try {
-      const doc = new jsPDF({
-        orientation: "landscape",
-        unit: "mm",
-        format: "a4",
-      });
+      const jsPDFModule = await import("jspdf");
+      const jsPDF = jsPDFModule.default || jsPDFModule.jsPDF;
+      const autoTableModule = await import("jspdf-autotable");
+      const autoTable = autoTableModule.default;
+
+      const doc = new jsPDF("l", "mm", "a4");
       const pageW = doc.internal.pageSize.getWidth();
       const pageH = doc.internal.pageSize.getHeight();
       const margin = 14;
@@ -274,14 +298,16 @@ const Productlist = () => {
       const DARK = [20, 20, 40];
       const GREY_LINE = [180, 200, 230];
 
-      // Header band
+      // ── HEADER BAND ──
       doc.setFillColor(...NAVY);
       doc.rect(0, 0, pageW, 40, "F");
+
       try {
         doc.addImage(logoSrc, "PNG", margin, 6, 36, 28);
       } catch {
         /* no logo */
       }
+
       doc.setTextColor(...WHITE);
       doc.setFontSize(16);
       doc.setFont(undefined, "bold");
@@ -294,13 +320,14 @@ const Productlist = () => {
         26,
       );
 
-      // Sub-header strip
+      // ── SUB-HEADER STRIP ──
       doc.setFillColor(...NAVY_LIGHT);
       doc.rect(0, 40, pageW, 16, "F");
       doc.setDrawColor(...GREY_LINE);
       doc.setLineWidth(0.3);
       doc.line(0, 40, pageW, 40);
       doc.line(0, 56, pageW, 56);
+
       doc.setTextColor(...DARK);
       doc.setFontSize(10);
       doc.setFont(undefined, "bold");
@@ -315,6 +342,7 @@ const Productlist = () => {
         margin + 22,
         50,
       );
+
       const filterLabel =
         selectedSpeciesType === "all"
           ? "All Species"
@@ -324,7 +352,7 @@ const Productlist = () => {
       doc.setFont(undefined, "normal");
       doc.text(filterLabel, margin + 102, 50);
 
-      // Image cache
+      // ── IMAGE CACHE ──
       const imageCache = {};
       const fetchImageAsBase64 = async (imagePath) => {
         if (!imagePath) return null;
@@ -349,6 +377,7 @@ const Productlist = () => {
           return null;
         }
       };
+
       const allImagePaths = [
         ...new Set(filteredItems.map((p) => p.image_url).filter(Boolean)),
       ];
@@ -365,91 +394,103 @@ const Productlist = () => {
         doc.setDrawColor(25, 100, 200);
         doc.setLineWidth(0.5);
         doc.circle(cx, cy - 1, Math.min(w, h) * 0.2, "S");
+        doc.setLineWidth(0.3);
+        doc.rect(cx - w * 0.2, cy - h * 0.22, w * 0.4, h * 0.35, "S");
         doc.setFontSize(5);
         doc.setTextColor(25, 100, 200);
         doc.setFont(undefined, "normal");
         doc.text("No Image", cx, cy + h * 0.28, { align: "center" });
       };
 
+      // ── BUILD TABLE DATA ──
+      const tableBody = [];
+      const firstRowSet = new Set();
+
       const PRODUCT_ORDER = [
-        "white prawn",
-        "black tiger frozen",
-        "black tiger",
-        "flowery prawn",
-        "lobster frozen",
-        "lobster",
-        "sea crab fresh",
-        "sea crab frozen",
-        "sea crab",
-        "cut crab fresh",
-        "cut crab frozen",
-        "cut crab",
-        "scampi headless",
-        "scampi claw",
-        "scampi",
-        "cuttlefish fresh whole",
-        "cuttlefish whole cleaned",
-        "cuttlefish fresh corn",
-        "cuttlefish cleaned corn",
-        "squid fresh cleaned",
-        "squid",
-        "baby octopus frozen",
-        "baby octopus",
-        "octopus frozen",
-        "octopus",
-        "yellow fin tuna",
-        "seer fish",
-        "barramundi",
-        "scad",
-        "trevally",
-        "trevalley",
-        "indian mackerel",
-        "tenched sardine",
-        "anchovy",
-        "jack trevally",
-        "red mullet",
-        "grey mullet",
-        "tiger grouper",
-        "red grouper",
-        "red snapper",
-        "mahi mahi",
-        "salmon fish",
-        "parrot fish",
-        "premium norweigian salmon fillet",
-        "premium norwegion smoke salmon",
-        "salmon tail",
-        "salmon ground",
-        "tuna shashimi loins",
-        "tuna loin grade a",
-        "tuna loin grade b",
-        "tuna shashimi cut",
-        "tuna off cut",
-        "tuna trimming",
-        "tuna belly",
-        "tuna",
-        "catla",
-        "rohu",
-        "tilapia",
-        "seafood mix",
-        "claw meat packet",
-        "clean prawns packet",
-        "half shell mussel",
-        "pen clam",
-        "oyster can",
-        "sea crab meat",
-        "mud crab body",
-        "mud crab claw",
-        "mud crab lump",
-        "mud crab jambo",
         "mud crab",
-        "oyster meat",
+        "freshwater scampi",
+        "thilapia",
+        "tilapia",
+        "tuna h&g",
+        "tuna loin aaa skin on",
+        "tuna loin aaa skin off",
+        "tuna loin aa skin on",
+        "tuna loin aa skin off",
+        "tuna aa steak",
+        "tuna loin a skin on",
+        "tuna loin a skin off",
+        "tuna a steak",
+        "tuna loin b+ skin on",
+        "tuna loin b+ skin off",
+        "sword halfmoon skin on",
+        "sword fish halfmoon skin off",
+        "sword qm skin on",
+        "barracuda",
+        "barramundi",
+        "bonito",
+        "cobia",
+        "indian mackerel",
+        "indian maceral",
+        "king fish",
+        "red snapper",
+        "black spotted snapper",
+        "pearl spot",
+        "ribbon fish",
+        "sole fish",
+        "threadfin bream",
+        "travelly whole",
+        "parrot",
+        "sea bream",
+        "sea bram",
+        "spotted grouper",
+        "blubber lip",
+        "blubber",
+        "yellowtail fusilier",
+        "emporer",
+        "emperor",
+        "red spot emporer",
+        "red mullet",
+        "mahi mahi",
+        "indian salmon",
+        "blue spotted",
+        "pinjalo",
+        "job fish",
+        "red snapper skin on fillet",
+        "grouper skin on fillet",
+        "barramundi skin on fillet",
+        "mahi mahi skin on fillet",
+        "marlin loin",
+        "sand borer",
+        "lady fish",
+        "silver pomfret",
+        "chinese pomfret",
+        "glass eye snapper",
+        "golden thread",
+        "big eye snapper",
+        "black spot snapper",
+        "star snapper",
+        "pinjalo snapper",
+        "grouper brown",
+        "red mouth grouper",
+        "tomato hind",
+        "brown spotted grouper",
+        "coral hind",
+        "longfin grouper",
+        "flathead grouper",
+        "indo-pacific tarpon",
+        "godaya",
+        "fourfinger threadfin",
+        "hairtails",
+        "leather jacket",
+        "flowery",
+        "vannamei",
+        "vannami",
+        "white prawn",
         "oyster",
         "green mussel",
+        "green mussle",
         "short neck clam",
         "mangrove clam",
-        "blood clam",
-        "brown mussel",
-        "mussel",
       ];
 
       const getSortIndex = (commonName) => {
@@ -458,45 +499,49 @@ const Productlist = () => {
         return idx === -1 ? 9999 : idx;
       };
 
-      // Build table data — flat, sorted by PRODUCT_ORDER
-      const tableBody = [];
-
+      // Flatten ALL products from ALL sections into one list, group by common_name
       const allProductsMap = {};
       filteredItems.forEach((product) => {
         const key = product.common_name;
         if (!allProductsMap[key])
           allProductsMap[key] = { product, variants: [] };
-        if (product.variants?.length > 0)
+        if (product.variants?.length > 0) {
           allProductsMap[key].variants.push(...product.variants);
+        }
       });
 
-      const sortedProducts = Object.values(allProductsMap).sort(
-        (a, b) =>
-          getSortIndex(a.product.common_name) -
-          getSortIndex(b.product.common_name),
+      // Sort by PRODUCT_ORDER
+      const sortedProducts = Object.entries(allProductsMap).sort(
+        ([nameA], [nameB]) => getSortIndex(nameA) - getSortIndex(nameB),
       );
 
-      sortedProducts.forEach(({ product, variants }) => {
-        const commonName = product.common_name;
+      sortedProducts.forEach(([commonName, { product, variants }]) => {
         if (variants.length > 0) {
           variants.forEach((variant, vIdx) => {
+            const rowIdx = tableBody.length;
+            if (vIdx === 0) firstRowSet.add(rowIdx);
             tableBody.push({
               isFirstOfGroup: vIdx === 0,
               commonName,
               scientificName: product.scientific_name || "—",
               image: product.image_url || null,
-              type: formatCategory(variant.category),
               size: variant.size || "—",
+              fobUSD:
+                parseFloat(variant.usdrate) > 0
+                  ? `$${(parseFloat(variant.exfactoryprice) / parseFloat(variant.usdrate)).toFixed(2)}`
+                  : "—",
             });
           });
         } else {
+          const rowIdx = tableBody.length;
+          firstRowSet.add(rowIdx);
           tableBody.push({
             isFirstOfGroup: true,
             commonName,
             scientificName: product.scientific_name || "—",
             image: product.image_url || null,
-            type: formatCategory(product.category),
             size: "—",
+            fobUSD: "—",
           });
         }
       });
@@ -505,8 +550,8 @@ const Productlist = () => {
         "",
         row.isFirstOfGroup ? row.commonName : "",
         row.isFirstOfGroup ? row.scientificName : "",
-        row.isFirstOfGroup ? row.type : "",
         row.size,
+        row.fobUSD,
       ]);
 
       autoTable(doc, {
@@ -517,14 +562,14 @@ const Productlist = () => {
             { content: "Picture", styles: { halign: "center" } },
             { content: "Common Name", styles: { halign: "left" } },
             { content: "Scientific Name", styles: { halign: "left" } },
-            { content: "Type", styles: { halign: "left" } },
             { content: "Size", styles: { halign: "left" } },
+            { content: "FOB (USD)", styles: { halign: "right" } },
           ],
         ],
         body: bodyRows,
         theme: "grid",
         columnStyles: {
-          0: { cellWidth: 28, halign: "center", valign: "middle" },
+          0: { cellWidth: 32, halign: "center", valign: "middle" },
           1: {
             cellWidth: 80,
             halign: "left",
@@ -540,8 +585,8 @@ const Productlist = () => {
             fontSize: 9,
             textColor: [50, 80, 150],
           },
-          3: { cellWidth: 35, halign: "left", valign: "middle", fontSize: 10 },
-          4: { cellWidth: 55, halign: "left", valign: "middle", fontSize: 10 },
+          3: { cellWidth: 45, halign: "left", valign: "middle", fontSize: 10 },
+          4: { cellWidth: 40, halign: "right", valign: "middle" },
         },
         headStyles: {
           fillColor: NAVY_DARK,
@@ -561,8 +606,8 @@ const Productlist = () => {
         willDrawCell: (data) => {
           if (data.section !== "body") return;
           const row = tableBody[data.row.index];
-          if (!row) return;
-          if (!row.isFirstOfGroup && data.column.index <= 3) {
+          if (!row || row.isSectionHeader) return;
+          if (!row.isFirstOfGroup && data.column.index <= 2) {
             data.cell.styles.lineWidth = {
               top: 0,
               bottom: 0.3,
@@ -574,7 +619,7 @@ const Productlist = () => {
         didDrawCell: (data) => {
           if (data.section !== "body" || data.column.index !== 0) return;
           const row = tableBody[data.row.index];
-          if (!row || !row.isFirstOfGroup) return;
+          if (!row || row.isSectionHeader || !row.isFirstOfGroup) return;
           const imgW = 18,
             imgH = 18;
           const x = data.cell.x + (data.cell.width - imgW) / 2;
@@ -593,7 +638,7 @@ const Productlist = () => {
         },
       });
 
-      // Footer
+      // ── FOOTER ON EVERY PAGE ──
       const totalPages = doc.internal.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
@@ -603,7 +648,7 @@ const Productlist = () => {
         doc.setFontSize(7);
         doc.setFont(undefined, "normal");
         doc.text(
-          "Tropical Shellfish (Pvt) Ltd  |  Prices subject to change without prior notice",
+          "Tropical Shellfish (Pvt) Ltd  |  All prices in USD unless stated  |  Prices subject to change without prior notice",
           pageW / 2,
           pageH - 4,
           { align: "center" },
@@ -614,286 +659,19 @@ const Productlist = () => {
       }
 
       doc.save(
-        `Local_Product_List_${new Date().toISOString().split("T")[0]}.pdf`,
+        `Export_Product_List_Air_${new Date().toISOString().split("T")[0]}.pdf`,
       );
     } catch (err) {
       console.error(err);
-      alert("Error generating PDF.");
-    }
-  };
-
-  // New function to download simplified price list PDF
-  // New function to download simplified price list PDF with grouped variants
-  const handleDownloadPriceListPDF = async () => {
-    if (filteredItems.length === 0) {
-      alert("No products to download");
-      return;
-    }
-
-    try {
-      const doc = new jsPDF({
-        orientation: "landscape",
-        unit: "mm",
-        format: "a4",
-      });
-      const pageW = doc.internal.pageSize.getWidth();
-      const pageH = doc.internal.pageSize.getHeight();
-      const margin = 14;
-
-      const NAVY = [13, 71, 161];
-      const NAVY_DARK = [8, 47, 114];
-      const NAVY_LIGHT = [224, 232, 247];
-      const WHITE = [255, 255, 255];
-      const DARK = [20, 20, 40];
-      const GREY_LINE = [180, 200, 230];
-
-      // Header band
-      doc.setFillColor(...NAVY);
-      doc.rect(0, 0, pageW, 40, "F");
-      try {
-        doc.addImage(logoSrc, "PNG", margin, 6, 36, 28);
-      } catch {
-        /* no logo */
-      }
-      doc.setTextColor(...WHITE);
-      doc.setFontSize(16);
-      doc.setFont(undefined, "bold");
-      doc.text("Tropical Shellfish (Pvt) Ltd", margin + 42, 19);
-      doc.setFontSize(10);
-      doc.setFont(undefined, "normal");
-      doc.text(
-        "Fresh & Frozen Seafood Exporters  |  Quality You Can Trust",
-        margin + 42,
-        26,
+      alert(
+        "Error generating PDF. Ensure jspdf and jspdf-autotable are installed.",
       );
-
-      // Sub-header strip
-      doc.setFillColor(...NAVY_LIGHT);
-      doc.rect(0, 40, pageW, 16, "F");
-      doc.setDrawColor(...GREY_LINE);
-      doc.setLineWidth(0.3);
-      doc.line(0, 40, pageW, 40);
-      doc.line(0, 56, pageW, 56);
-      doc.setTextColor(...DARK);
-      doc.setFontSize(10);
-      doc.setFont(undefined, "bold");
-      doc.text("Price List - Selling Prices", margin, 50);
-      doc.setFont(undefined, "normal");
-      doc.text(
-        new Date().toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        }),
-        margin + 42,
-        50,
-      );
-      const filterLabel =
-        selectedSpeciesType === "all"
-          ? "All Species"
-          : formatSpeciesType(selectedSpeciesType);
-      doc.setFont(undefined, "bold");
-      doc.text("Filter:", margin + 120, 50);
-      doc.setFont(undefined, "normal");
-      doc.text(filterLabel, margin + 132, 50);
-
-      // Group products by common name first (similar to the table display)
-      const groupedByName = {};
-      filteredItems.forEach((product) => {
-        const key = product.common_name;
-        if (!groupedByName[key]) {
-          groupedByName[key] = {
-            commonName: product.common_name,
-            scientificName: product.scientific_name || "—",
-            category: product.category,
-            variants: [],
-          };
-        }
-        if (product.variants && product.variants.length > 0) {
-          // Add variants from this product
-          groupedByName[key].variants.push(...product.variants);
-        }
-      });
-
-      // Sort by common name
-      const sortedProductNames = Object.keys(groupedByName).sort((a, b) =>
-        a.localeCompare(b),
-      );
-
-      // Build table body with grouped variants
-      const tableBody = [];
-
-      sortedProductNames.forEach((commonName) => {
-        const product = groupedByName[commonName];
-
-        if (product.variants.length > 0) {
-          // Sort variants by size if needed
-          const sortedVariants = [...product.variants].sort((a, b) => {
-            // Try to sort numerically if possible
-            const sizeA = parseFloat(a.size) || 0;
-            const sizeB = parseFloat(b.size) || 0;
-            return sizeA - sizeB;
-          });
-
-          sortedVariants.forEach((variant, index) => {
-            tableBody.push({
-              isFirstOfGroup: index === 0,
-              commonName: product.commonName,
-              scientificName: product.scientificName,
-              category: product.category,
-              size: variant.size || "—",
-              sellingPrice: variant.selling_price || variant.purchasing_price,
-            });
-          });
-        } else {
-          // Product with no variants
-          tableBody.push({
-            isFirstOfGroup: true,
-            commonName: product.commonName,
-            scientificName: product.scientificName,
-            category: product.category,
-            size: "—",
-            sellingPrice: null,
-          });
-        }
-      });
-
-      // Prepare rows for autoTable
-      const bodyRows = tableBody.map((row) => [
-        row.isFirstOfGroup ? row.commonName : "",
-        row.isFirstOfGroup ? row.scientificName : "",
-        row.isFirstOfGroup ? formatCategory(row.category) : "",
-        row.size,
-        row.sellingPrice
-          ? `Rs. ${parseFloat(row.sellingPrice).toFixed(2)}`
-          : "—",
-      ]);
-
-      autoTable(doc, {
-        startY: 62,
-        margin: { left: margin, right: margin },
-        head: [
-          [
-            { content: "Common Name", styles: { halign: "left" } },
-            { content: "Scientific Name", styles: { halign: "left" } },
-            { content: "Condition", styles: { halign: "left" } },
-            { content: "Size", styles: { halign: "left" } },
-            { content: "Selling Price (Rs)", styles: { halign: "right" } },
-          ],
-        ],
-        body: bodyRows,
-        theme: "grid",
-        columnStyles: {
-          0: {
-            cellWidth: 70,
-            halign: "left",
-            fontStyle: "bold",
-            fontSize: 10,
-            textColor: DARK,
-          },
-          1: {
-            cellWidth: 60,
-            halign: "left",
-            fontStyle: "italic",
-            fontSize: 9,
-            textColor: [50, 80, 150],
-          },
-          2: {
-            cellWidth: 35,
-            halign: "left",
-            fontSize: 10,
-          },
-          3: {
-            cellWidth: 50,
-            halign: "left",
-            fontSize: 10,
-          },
-          4: {
-            cellWidth: 45,
-            halign: "right",
-            fontSize: 10,
-            fontStyle: "bold",
-            textColor: [0, 100, 0],
-          },
-        },
-        headStyles: {
-          fillColor: NAVY_DARK,
-          textColor: WHITE,
-          fontStyle: "bold",
-          fontSize: 10,
-          cellPadding: { top: 3, bottom: 3, left: 2, right: 2 },
-        },
-        bodyStyles: {
-          fontSize: 10,
-          cellPadding: { top: 4, bottom: 4, left: 2, right: 2 },
-          textColor: DARK,
-          lineColor: GREY_LINE,
-          lineWidth: 0.3,
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 250],
-        },
-        // Handle merging of cells for grouped products
-        didParseCell: (data) => {
-          if (data.section === "body") {
-            const row = tableBody[data.row.index];
-            if (row && !row.isFirstOfGroup) {
-              // For non-first rows of a group, clear the first three columns
-              if (
-                data.column.index === 0 ||
-                data.column.index === 1 ||
-                data.column.index === 2
-              ) {
-                data.cell.text = "";
-                // Add left border for these cells to maintain grid appearance
-                data.cell.styles.lineWidth = {
-                  left: 0.3,
-                  right: 0.3,
-                  bottom: 0.3,
-                };
-                if (
-                  data.row.index === tableBody.length - 1 ||
-                  (tableBody[data.row.index + 1] &&
-                    tableBody[data.row.index + 1].isFirstOfGroup)
-                ) {
-                  data.cell.styles.lineWidth.bottom = 0.3;
-                }
-              }
-            }
-          }
-        },
-      });
-
-      // Footer
-      const totalPages = doc.internal.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        doc.setFillColor(...NAVY);
-        doc.rect(0, pageH - 10, pageW, 10, "F");
-        doc.setTextColor(...WHITE);
-        doc.setFontSize(7);
-        doc.setFont(undefined, "normal");
-        doc.text(
-          "Tropical Shellfish (Pvt) Ltd  |  Prices subject to change without prior notice",
-          pageW / 2,
-          pageH - 4,
-          { align: "center" },
-        );
-        doc.text(`Page ${i} of ${totalPages}`, pageW - margin, pageH - 4, {
-          align: "right",
-        });
-      }
-
-      doc.save(`Price_List_${new Date().toISOString().split("T")[0]}.pdf`);
-    } catch (err) {
-      console.error(err);
-      alert("Error generating price list PDF.");
     }
   };
 
   return (
     <div className="pricelist-container">
-      <h2>Local Product List</h2>
+      <h2>Export Product List - Air</h2>
 
       <div className="add-section">
         <button className="apf-btn" onClick={navigateForm}>
@@ -907,17 +685,7 @@ const Productlist = () => {
             background: "var(--accent-cyan, #0ea5e9)",
           }}
         >
-          ⬇ Download Full PDF
-        </button>
-        <button
-          className="apf-btn"
-          onClick={handleDownloadPriceListPDF}
-          style={{
-            marginLeft: "10px",
-            background: "var(--accent-green, #10b981)",
-          }}
-        >
-          💰 Download Price List
+          ⬇ Download PDF
         </button>
       </div>
 
@@ -959,11 +727,13 @@ const Productlist = () => {
                   <th>Picture</th>
                   <th>Common Name</th>
                   <th>Scientific Name</th>
+
                   <th>Type</th>
                   <th>Size</th>
                   <th>Purchase Price</th>
-                  <th>Profit</th>
-                  <th>Selling Price</th>
+                  <th>JC FOB Price</th>
+
+                  <th>FOB (USD)</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -978,17 +748,17 @@ const Productlist = () => {
                     <React.Fragment key={section}>
                       {/* Section Header Row */}
                       <tr className="section-header">
-                        <td colSpan={10} className="section-title">
+                        <td colSpan={11} className="section-title">
                           <span className="section-icon">
-                            {section === "Oyster" && "🦪"}
-                            {section === "Clams" && "🐚"}
-                            {section === "Mussel" && "🦪"}
+                            {section === "Fish" && "🐟"}
                             {section === "Crab" && "🦀"}
                             {section === "Prawn" && "🦐"}
-                            {section === "Scampi" && "🦞"}
-                            {section === "Cuttlefish" && "🐙"}
+                            {section === "Scampi/Lobster" && "🦞"}
                             {section === "Octopus" && "🐙"}
-                            {section === "Fish" && "🐟"}
+                            {section === "Clams" && "🐚"}
+                            {section === "Oysters" && "🦪"}
+                            {section === "Mussels" && "🐚"}
+                            {section === "Giant Freshwater Prawn" && "🦐"}
                             {section === "Other" && "📦"}
                           </span>
                           {section}
@@ -1065,22 +835,20 @@ const Productlist = () => {
 
                                     <td>{variant.size || "—"}</td>
                                     <td className="price-cell">
-                                      Rs.&nbsp;
-                                      {parseFloat(
-                                        variant.purchasing_price,
-                                      ).toFixed(2)}
+                                      {parseFloat(variant.purchasing_price) > 0
+                                        ? `Rs. ${parseFloat(variant.purchasing_price).toFixed(2)}`
+                                        : "—"}
+                                    </td>
+                                    <td className="price-cell">
+                                      {parseFloat(variant.jc_fob) > 0
+                                        ? `$${parseFloat(variant.jc_fob).toFixed(2)}`
+                                        : "—"}
                                     </td>
 
                                     <td className="price-cell">
-                                      Rs.&nbsp;
-                                      {parseFloat(variant.profit).toFixed(2)}
-                                    </td>
-
-                                    <td className="price-cell">
-                                      Rs.&nbsp;
-                                      {parseFloat(
-                                        variant.selling_price,
-                                      ).toFixed(2)}
+                                      {parseFloat(variant.usdrate) > 0
+                                        ? `$${(parseFloat(variant.exfactoryprice) / parseFloat(variant.usdrate)).toFixed(2)}`
+                                        : "—"}
                                     </td>
 
                                     {isFirstOfProduct && (
@@ -1173,10 +941,11 @@ const Productlist = () => {
                                     {formatCategory(product.category)}
                                   </span>
                                 </td>
-                                <td className="muted">—</td>
-                                <td className="muted">—</td>
-                                <td className="muted">—</td>
-                                <td className="muted">—</td>
+                                <td className="muted">—</td> {/* size */}
+                                <td className="muted">—</td> {/* purchase */}
+                                <td className="muted">—</td> {/* jc_fob */}
+                                <td className="muted">—</td> {/* exfactory */}
+                                <td className="muted">—</td> {/* fob usd */}
                                 <td className="actions-cell">
                                   <div className="actions-wrapper">
                                     <button
@@ -1212,7 +981,7 @@ const Productlist = () => {
                 ).length === 0 && (
                   <tr>
                     <td
-                      colSpan={10}
+                      colSpan={11}
                       className="muted"
                       style={{ textAlign: "center", padding: "3rem" }}
                     >
@@ -1231,4 +1000,4 @@ const Productlist = () => {
   );
 };
 
-export default Productlist;
+export default ExportProductlistAir;

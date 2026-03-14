@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./AddProductForm.css";
 import { useParams, useNavigate } from "react-router-dom";
 
-const ExportAddProductForm = () => {
+const ExportAddProductFormAir = () => {
   const API_URL = process.env.REACT_APP_API_URL;
   const { id } = useParams();
   const navigate = useNavigate();
@@ -153,7 +153,7 @@ const ExportAddProductForm = () => {
   useEffect(() => {
     if (isEditMode) {
       setLoading(true);
-      fetch(`${API_URL}/api/exportproductlist/${id}`)
+      fetch(`${API_URL}/api/exportproductlistair/${id}`)
         .then((res) => {
           if (!res.ok) throw new Error("Failed to fetch product");
           return res.json();
@@ -169,6 +169,7 @@ const ExportAddProductForm = () => {
             existing_image_url: product.image_url,
           });
           if (product.image_url) setPreview(getImageUrl(product.image_url));
+          // ✅ FIX: safely handle null/undefined variants
           if (product.variants && Array.isArray(product.variants)) {
             setVariants(product.variants);
           } else {
@@ -261,12 +262,13 @@ const ExportAddProductForm = () => {
     setter(updated);
   };
 
+  // ✅ FIX: consistent reset — unit matches initial state ''
   const resetNewVariant = () =>
     setNewVariant({
       size: "",
       unit: "",
       purchasing_price: "",
-      jc_fob: "",
+      jc_fob: "", // ← add this
       usdrate: currentUsdRate ? currentUsdRate.toFixed(2) : "",
       packing_cost: "",
       labour_overhead: "",
@@ -310,14 +312,14 @@ const ExportAddProductForm = () => {
     }
     try {
       const res = await fetch(
-        `${API_URL}/api/exportproductlist/${id}/variants`,
+        `${API_URL}/api/exportproductlistair/${id}/variants`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             size: newVariant.size,
             unit: newVariant.unit,
-            purchasing_price: newVariant.purchasing_price || 0,
+            purchasing_price: newVariant.purchasing_price,
             jc_fob: newVariant.jc_fob || 0,
             usdrate: newVariant.usdrate,
             packing_cost: newVariant.packing_cost || 0,
@@ -342,40 +344,15 @@ const ExportAddProductForm = () => {
     }
   };
 
-  const handleEditVariant = (variant) => {
-    const usdrate = currentUsdRate
-      ? currentUsdRate
-      : parseFloat(variant.usdrate) || 1;
-
-    // Recalculate exfactoryprice fresh on edit open
-    const recalcExFactory = calculateExFactoryPrice(
-      variant.purchasing_price,
-      variant.jc_fob,
-      variant.packing_cost,
-      variant.labour_overhead,
-      variant.profit,
-      usdrate,
-    );
-
-    // Recalculate margin too so it stays consistent
-    const recalcMargin = calculateMarginFromProfit(
-      variant.purchasing_price,
-      variant.jc_fob,
-      variant.profit,
-      usdrate,
-    );
-
+  const handleEditVariant = (variant) =>
     setEditingVariant({
       ...variant,
-      usdrate: parseFloat(usdrate).toFixed(2),
-      jc_fob: variant.jc_fob || "",
+      usdrate: currentUsdRate ? currentUsdRate.toFixed(2) : variant.usdrate,
       profit: variant.profit || "",
-      profit_margin: recalcMargin,
-      exfactoryprice: recalcExFactory,
+      profit_margin: variant.profit_margin || "",
       multiplier: variant.multiplier || "",
       divisor: variant.divisor || "1",
     });
-  };
 
   const handleUpdateVariant = async () => {
     if (
@@ -392,8 +369,7 @@ const ExportAddProductForm = () => {
           v.id === editingVariant.id
             ? {
                 ...editingVariant,
-                purchasing_price:
-                  parseFloat(editingVariant.purchasing_price) || 0,
+                purchasing_price: parseFloat(editingVariant.purchasing_price),
                 jc_fob: parseFloat(editingVariant.jc_fob) || 0,
                 usdrate: parseFloat(editingVariant.usdrate),
                 packing_cost: parseFloat(editingVariant.packing_cost) || 0,
@@ -415,14 +391,14 @@ const ExportAddProductForm = () => {
     }
     try {
       const res = await fetch(
-        `${API_URL}/api/exportproductlist/${id}/variants/${editingVariant.id}`,
+        `${API_URL}/api/exportproductlistair/${id}/variants/${editingVariant.id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             size: editingVariant.size,
             unit: editingVariant.unit,
-            purchasing_price: editingVariant.purchasing_price || 0,
+            purchasing_price: editingVariant.purchasing_price,
             jc_fob: editingVariant.jc_fob || 0,
             usdrate: editingVariant.usdrate,
             packing_cost: editingVariant.packing_cost || 0,
@@ -460,7 +436,7 @@ const ExportAddProductForm = () => {
     }
     try {
       const res = await fetch(
-        `${API_URL}/api/exportproductlist/${id}/variants/${variantId}`,
+        `${API_URL}/api/exportproductlistair/${id}/variants/${variantId}`,
         { method: "DELETE" },
       );
       if (!res.ok) throw new Error("Failed to delete variant");
@@ -473,6 +449,7 @@ const ExportAddProductForm = () => {
     }
   };
 
+  // ✅ FIX: submit allowed even with zero variants
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -484,21 +461,21 @@ const ExportAddProductForm = () => {
       data.append("description", form.description);
       data.append("category", form.category);
       data.append("species_type", form.species_type);
-      data.append("variants", JSON.stringify(variants));
+      data.append("variants", JSON.stringify(variants)); // sends [] if no variants — that's fine
       if (form.image) data.append("image", form.image);
       else if (form.existing_image_url)
         data.append("existing_image_url", form.existing_image_url);
 
       const res = await fetch(
         isEditMode
-          ? `${API_URL}/api/exportproductlist/upload/${id}`
-          : `${API_URL}/api/exportproductlist/upload`,
+          ? `${API_URL}/api/exportproductlistair/upload/${id}`
+          : `${API_URL}/api/exportproductlistair/upload`,
         { method: isEditMode ? "PUT" : "POST", body: data },
       );
       if (!res.ok)
         throw new Error(`Failed to ${isEditMode ? "update" : "add"} product`);
       setSuccess(`Product ${isEditMode ? "updated" : "added"} successfully!`);
-      setTimeout(() => navigate("/exportproductlist"), 1500);
+      setTimeout(() => navigate("/exportproductlistair"), 1500);
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -615,6 +592,7 @@ const ExportAddProductForm = () => {
           Product Variants (Size &amp; Pricing)
         </h3>
 
+        {/* ✅ FIX: show info message when no variants — product can still be saved */}
         {variants.length === 0 && (
           <div
             style={{
@@ -643,7 +621,6 @@ const ExportAddProductForm = () => {
                   <th>Purchase (LKR)</th>
                   <th>JC FOB (USD)</th>
                   <th>Ex-Factory (LKR)</th>
-                  <th>FOB (USD)</th>
                   <th>Multiplier</th>
                   <th>Divisor</th>
                   <th>Actions</th>
@@ -655,23 +632,15 @@ const ExportAddProductForm = () => {
                     <td>{variant.size}</td>
                     <td>{variant.unit}</td>
                     <td className="td-price">
-                      {parseFloat(variant.purchasing_price) > 0
-                        ? `Rs. ${parseFloat(variant.purchasing_price).toFixed(2)}`
-                        : "—"}
+                      Rs.&nbsp;{parseFloat(variant.purchasing_price).toFixed(2)}
                     </td>
                     <td>
-                      {parseFloat(variant.jc_fob) > 0
+                      {variant.jc_fob
                         ? `$${parseFloat(variant.jc_fob).toFixed(2)}`
                         : "—"}
                     </td>
                     <td className="td-exfactory">
                       Rs.&nbsp;{parseFloat(variant.exfactoryprice).toFixed(2)}
-                    </td>
-                    <td className="td-price">
-                      {parseFloat(variant.exfactoryprice) > 0 &&
-                      parseFloat(variant.usdrate) > 0
-                        ? `$${(parseFloat(variant.exfactoryprice) / parseFloat(variant.usdrate)).toFixed(2)}`
-                        : "—"}
                     </td>
                     <td className="td-multiplier">
                       {variant.multiplier || "—"}
@@ -704,6 +673,7 @@ const ExportAddProductForm = () => {
         <div className="variant-form">
           <h4>{editingVariant ? "Edit Variant" : "Add New Variant"}</h4>
           <div>
+            {/* Row 1 */}
             <div>
               <label className="apf-label">Size</label>
               <input
@@ -884,9 +854,9 @@ const ExportAddProductForm = () => {
               />
             </div>
 
-            {/* Sea freight sub-panel */}
+            {/* Air freight sub-panel */}
             <div className="air-freight-panel">
-              <h4>🚢 Sea Freight Parameters</h4>
+              <h4>✈️ Air Freight Parameters</h4>
               <div className="inner-grid">
                 <div>
                   <label className="apf-label">
@@ -968,7 +938,7 @@ const ExportAddProductForm = () => {
           <button
             type="button"
             className="cancel-btn"
-            onClick={() => navigate("/exportproductlist")}
+            onClick={() => navigate("/exportproductlistair")}
           >
             Cancel
           </button>
@@ -981,4 +951,4 @@ const ExportAddProductForm = () => {
   );
 };
 
-export default ExportAddProductForm;
+export default ExportAddProductFormAir;
