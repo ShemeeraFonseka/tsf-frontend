@@ -13,7 +13,6 @@ const getSpeciesBadgeClass = (speciesType) => {
   if (val === "crustacean") return "badge-crustacean";
   return "badge-default";
 };
-
 const getSpeciesBadgeIcon = (speciesType) => {
   if (!speciesType) return "🌊";
   const val = speciesType.toLowerCase();
@@ -21,7 +20,6 @@ const getSpeciesBadgeIcon = (speciesType) => {
   if (val === "crustacean") return "🦞";
   return "🌊";
 };
-
 const getCategoryBadgeClass = (category) => {
   if (!category) return "badge-default-cat";
   const val = category.toLowerCase();
@@ -30,7 +28,6 @@ const getCategoryBadgeClass = (category) => {
   if (val === "frozen") return "badge-frozen";
   return "badge-default-cat";
 };
-
 const getCategoryBadgeIcon = (category) => {
   if (!category) return "";
   const val = category.toLowerCase();
@@ -39,10 +36,10 @@ const getCategoryBadgeIcon = (category) => {
   if (val === "frozen") return "❄️";
   return "";
 };
-/* ──────────────────────────────────────────────────────────────── */
 
 const ExportProductlistAir = () => {
   const API_URL = process.env.REACT_APP_API_URL;
+  const navigate = useNavigate();
 
   const [items, setItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
@@ -50,7 +47,16 @@ const ExportProductlistAir = () => {
   const [error, setError] = useState(null);
   const [selectedSpeciesType, setSelectedSpeciesType] = useState("all");
 
-  // Define the section categories for grouping
+  /* ── Bulk-add state ──────────────────────────────────────────── */
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState(new Set());
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [bulkCustomerId, setBulkCustomerId] = useState("");
+  const [bulkItems, setBulkItems] = useState([]);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  /* ──────────────────────────────────────────────────────────────── */
+
   const sectionCategories = [
     {
       name: "Fish",
@@ -137,9 +143,8 @@ const ExportProductlistAir = () => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (selectedSpeciesType === "all") {
-      setFilteredItems(items);
-    } else {
+    if (selectedSpeciesType === "all") setFilteredItems(items);
+    else
       setFilteredItems(
         items.filter(
           (item) =>
@@ -147,7 +152,6 @@ const ExportProductlistAir = () => {
             selectedSpeciesType.toLowerCase(),
         ),
       );
-    }
   }, [selectedSpeciesType, items]);
 
   const fetchProducts = () => {
@@ -167,6 +171,17 @@ const ExportProductlistAir = () => {
       });
   };
 
+  const fetchCustomers = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/exportcustomerlistair`);
+      if (!res.ok) throw new Error("Failed to fetch customers");
+      const data = await res.json();
+      setCustomers(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleDelete = async (productId, productName) => {
     if (
       !window.confirm(
@@ -177,9 +192,7 @@ const ExportProductlistAir = () => {
     try {
       const res = await fetch(
         `${API_URL}/api/exportproductlistair/${productId}`,
-        {
-          method: "DELETE",
-        },
+        { method: "DELETE" },
       );
       if (!res.ok) throw new Error("Failed to delete");
       fetchProducts();
@@ -196,7 +209,6 @@ const ExportProductlistAir = () => {
     return t ? t.label : s.charAt(0).toUpperCase() + s.slice(1);
   };
 
-  const navigate = useNavigate();
   const navigateForm = () => navigate("/exportproductformair");
   const navigateEdit = (productId) =>
     navigate(`/exportproductformair/${productId}`);
@@ -215,42 +227,28 @@ const ExportProductlistAir = () => {
     ).length;
   };
 
-  // Function to determine which section a product belongs to
   const getProductSection = (product) => {
     const commonName = product.common_name?.toLowerCase() || "";
-
     for (const section of sectionCategories) {
-      if (section.keywords.some((keyword) => commonName.includes(keyword))) {
+      if (section.keywords.some((keyword) => commonName.includes(keyword)))
         return section.name;
-      }
     }
-
-    // Default to 'Other' if no section matches
     return "Other";
   };
 
-  // Group products by section
   const groupProductsBySection = (products) => {
     const grouped = {};
-
-    // Initialize all sections with empty arrays
     sectionCategories.forEach((section) => {
       grouped[section.name] = [];
     });
-    grouped["Other"] = []; // Add Other section for uncategorized items
-
+    grouped["Other"] = [];
     products.forEach((product) => {
-      const section = getProductSection(product);
-      grouped[section].push(product);
+      grouped[getProductSection(product)].push(product);
     });
-
     return grouped;
   };
 
-  // Group filteredItems by common_name within each section
   const groupedBySection = groupProductsBySection(filteredItems);
-
-  // Further group by common_name within each section
   const groupedProductsBySection = {};
   Object.keys(groupedBySection).forEach((section) => {
     groupedProductsBySection[section] = groupedBySection[section].reduce(
@@ -270,9 +268,316 @@ const ExportProductlistAir = () => {
       return sum + (variants.length > 0 ? variants.length : 1);
     }, 0);
 
-  // Check if a section has any products
-  const sectionHasProducts = (section) => {
-    return Object.keys(groupedProductsBySection[section] || {}).length > 0;
+  const sectionHasProducts = (section) =>
+    Object.keys(groupedProductsBySection[section] || {}).length > 0;
+
+  /* ── Bulk-add handlers ───────────────────────────────────────── */
+  const toggleBulkMode = () => {
+    setBulkMode((prev) => !prev);
+    setSelectedProductIds(new Set());
+  };
+
+  const toggleProductSelection = (productId) => {
+    setSelectedProductIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  };
+
+  const openBulkModal = async () => {
+    if (selectedProductIds.size === 0) {
+      alert("Please select at least one product.");
+      return;
+    }
+    await fetchCustomers();
+
+    const rows = [];
+    filteredItems.forEach((product) => {
+      if (!selectedProductIds.has(product.id)) return;
+      const variants = product.variants || [];
+      if (variants.length > 0) {
+        variants.forEach((variant) => {
+          const exfactory = parseFloat(variant.exfactoryprice) || 0;
+          const usdrate = parseFloat(variant.usdrate) || 0;
+          const fobUSD = usdrate > 0 ? exfactory / usdrate : 0;
+          rows.push({
+            key: `${product.id}-${variant.id}`,
+            product_id: product.id,
+            variant_id: variant.id,
+            common_name: product.common_name,
+            scientific_name: product.scientific_name || "",
+            category: product.category,
+            image_url: product.image_url || "",
+            size_range: `${variant.size}`,
+            purchasing_price: parseFloat(variant.purchasing_price) || 0,
+            exfactoryprice: exfactory,
+            usdrate: usdrate,
+            fob_usd_display: parseFloat(fobUSD.toFixed(4)),
+            // export cost fields default to 0 — customer can set later
+            export_doc: 0,
+            transport_cost: 0,
+            loading_cost: 0,
+            airway_cost: 0,
+            forwardHandling_cost: 0,
+            multiplier: parseFloat(variant.multiplier) || 0,
+            divisor: parseFloat(variant.divisor) || 1,
+            freight_type: "air",
+            fob_price:
+              usdrate > 0 ? parseFloat((exfactory / usdrate).toFixed(4)) : 0,
+            freight_cost_45kg: 0,
+            freight_cost_100kg: 0,
+            freight_cost_300kg: 0,
+            freight_cost_500kg: 0,
+            cnf_45kg: 0,
+            cnf_100kg: 0,
+            cnf_300kg: 0,
+            cnf_500kg: 0,
+            freight_cost_20ft: 0,
+            cnf_20ft: 0,
+            freight_cost_40ft: 0,
+            cnf_40ft: 0,
+          });
+        });
+      } else {
+        rows.push({
+          key: `${product.id}-none`,
+          product_id: product.id,
+          variant_id: null,
+          common_name: product.common_name,
+          scientific_name: product.scientific_name || "",
+          category: product.category,
+          image_url: product.image_url || "",
+          size_range: "",
+          purchasing_price: 0,
+          exfactoryprice: 0,
+          usdrate: 0,
+          fob_usd_display: 0,
+          export_doc: 0,
+          transport_cost: 0,
+          loading_cost: 0,
+          airway_cost: 0,
+          forwardHandling_cost: 0,
+          multiplier: 0,
+          divisor: 1,
+          freight_type: "air",
+          fob_price: 0,
+          freight_cost_45kg: 0,
+          freight_cost_100kg: 0,
+          freight_cost_300kg: 0,
+          freight_cost_500kg: 0,
+          cnf_45kg: 0,
+          cnf_100kg: 0,
+          cnf_300kg: 0,
+          cnf_500kg: 0,
+          freight_cost_20ft: 0,
+          cnf_20ft: 0,
+          freight_cost_40ft: 0,
+          cnf_40ft: 0,
+        });
+      }
+    });
+
+    setBulkItems(rows);
+    setBulkCustomerId("");
+    setShowBulkModal(true);
+  };
+
+  const handleBulkSubmit = async () => {
+    if (!bulkCustomerId) {
+      alert("Please select a customer.");
+      return;
+    }
+    setBulkSubmitting(true);
+    let successCount = 0;
+    let skipCount = 0;
+    let errorCount = 0;
+
+    try {
+      const existingRes = await fetch(
+        `${API_URL}/api/exportcustomer-productsair/${bulkCustomerId}`,
+      );
+      const existingData = existingRes.ok ? await existingRes.json() : [];
+      const existingKeys = new Set(
+        existingData.map((e) => `${e.product_id}-${e.variant_id ?? "null"}`),
+      );
+
+      for (const item of bulkItems) {
+        const dupKey = `${item.product_id}-${item.variant_id ?? "null"}`;
+        if (existingKeys.has(dupKey)) {
+          skipCount++;
+          continue;
+        }
+
+        const payload = {
+          cus_id: parseInt(bulkCustomerId),
+          product_id: item.product_id,
+          variant_id: item.variant_id ?? null,
+          common_name: item.common_name,
+          scientific_name: item.scientific_name || null,
+          category: item.category,
+          image_url: item.image_url || null,
+          size_range: item.size_range,
+          purchasing_price: item.purchasing_price,
+          exfactoryprice: item.exfactoryprice,
+          export_doc: item.export_doc,
+          transport_cost: item.transport_cost,
+          loading_cost: item.loading_cost,
+          airway_cost: item.airway_cost,
+          forwardHandling_cost: item.forwardHandling_cost,
+          multiplier: item.multiplier,
+          divisor: item.divisor,
+          freight_type: item.freight_type,
+          fob_price: item.fob_price,
+          freight_cost_45kg: item.freight_cost_45kg,
+          freight_cost_100kg: item.freight_cost_100kg,
+          freight_cost_300kg: item.freight_cost_300kg,
+          freight_cost_500kg: item.freight_cost_500kg,
+          cnf_45kg: item.cnf_45kg,
+          cnf_100kg: item.cnf_100kg,
+          cnf_300kg: item.cnf_300kg,
+          cnf_500kg: item.cnf_500kg,
+          freight_cost_20ft: item.freight_cost_20ft,
+          cnf_20ft: item.cnf_20ft,
+          freight_cost_40ft: item.freight_cost_40ft,
+          cnf_40ft: item.cnf_40ft,
+        };
+
+        const res = await fetch(`${API_URL}/api/exportcustomer-productsair`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          const inserted = await res.json();
+          successCount++;
+
+          // Trigger CNF recalculation using customer's freight rates
+          try {
+            await fetch(
+              `${API_URL}/api/exportcustomer-productsair/recalculate/${inserted.id}`,
+              { method: "POST" },
+            );
+          } catch (recalcErr) {
+            console.warn("Recalculate failed for row", inserted.id, recalcErr);
+          }
+        } else {
+          const errData = await res.json();
+          console.error("Failed to insert:", errData);
+          errorCount++;
+        }
+      }
+
+      let msg = `✅ Added ${successCount} item(s) successfully.`;
+      if (skipCount > 0)
+        msg += `\n⚠️ ${skipCount} item(s) skipped (already exist).`;
+      if (errorCount > 0)
+        msg += `\n❌ ${errorCount} item(s) failed — check console.`;
+      alert(msg);
+      setShowBulkModal(false);
+      setBulkMode(false);
+      setSelectedProductIds(new Set());
+    } catch (err) {
+      alert("Error: " + err.message);
+    } finally {
+      setBulkSubmitting(false);
+    }
+  };
+  /* ──────────────────────────────────────────────────────────────── */
+
+  const PRODUCT_ORDER = [
+    "mud crab",
+    "freshwater scampi",
+    "thilapia",
+    "tilapia",
+    "tuna h&g",
+    "tuna loin aaa skin on",
+    "tuna loin aaa skin off",
+    "tuna loin aa skin on",
+    "tuna loin aa skin off",
+    "tuna aa steak",
+    "tuna loin a skin on",
+    "tuna loin a skin off",
+    "tuna a steak",
+    "tuna loin b+ skin on",
+    "tuna loin b+ skin off",
+    "sword halfmoon skin on",
+    "sword fish halfmoon skin off",
+    "sword qm skin on",
+    "barracuda",
+    "barramundi",
+    "bonito",
+    "cobia",
+    "indian mackerel",
+    "indian maceral",
+    "king fish",
+    "red snapper",
+    "black spotted snapper",
+    "pearl spot",
+    "ribbon fish",
+    "sole fish",
+    "threadfin bream",
+    "travelly whole",
+    "parrot",
+    "sea bream",
+    "sea bram",
+    "spotted grouper",
+    "blubber lip",
+    "blubber",
+    "yellowtail fusilier",
+    "emporer",
+    "emperor",
+    "red spot emporer",
+    "red mullet",
+    "mahi mahi",
+    "indian salmon",
+    "blue spotted",
+    "pinjalo",
+    "job fish",
+    "red snapper skin on fillet",
+    "grouper skin on fillet",
+    "barramundi skin on fillet",
+    "mahi mahi skin on fillet",
+    "marlin loin",
+    "sand borer",
+    "lady fish",
+    "silver pomfret",
+    "chinese pomfret",
+    "glass eye snapper",
+    "golden thread",
+    "big eye snapper",
+    "black spot snapper",
+    "star snapper",
+    "pinjalo snapper",
+    "grouper brown",
+    "red mouth grouper",
+    "tomato hind",
+    "brown spotted grouper",
+    "coral hind",
+    "longfin grouper",
+    "flathead grouper",
+    "indo-pacific tarpon",
+    "godaya",
+    "fourfinger threadfin",
+    "hairtails",
+    "leather jacket",
+    "flowery",
+    "vannamei",
+    "vannami",
+    "white prawn",
+    "oyster",
+    "green mussel",
+    "green mussle",
+    "short neck clam",
+    "mangrove clam",
+  ];
+
+  const getSortIndex = (commonName) => {
+    const lower = (commonName || "").toLowerCase();
+    const idx = PRODUCT_ORDER.findIndex((key) => lower.includes(key));
+    return idx === -1 ? 9999 : idx;
   };
 
   const handleDownloadPDF = async () => {
@@ -290,7 +595,6 @@ const ExportProductlistAir = () => {
       const pageW = doc.internal.pageSize.getWidth();
       const pageH = doc.internal.pageSize.getHeight();
       const margin = 14;
-
       const NAVY = [13, 71, 161];
       const NAVY_DARK = [8, 47, 114];
       const NAVY_LIGHT = [224, 232, 247];
@@ -298,16 +602,13 @@ const ExportProductlistAir = () => {
       const DARK = [20, 20, 40];
       const GREY_LINE = [180, 200, 230];
 
-      // ── HEADER BAND ──
       doc.setFillColor(...NAVY);
       doc.rect(0, 0, pageW, 40, "F");
-
       try {
         doc.addImage(logoSrc, "PNG", margin, 6, 36, 28);
       } catch {
         /* no logo */
       }
-
       doc.setTextColor(...WHITE);
       doc.setFontSize(16);
       doc.setFont(undefined, "bold");
@@ -320,14 +621,12 @@ const ExportProductlistAir = () => {
         26,
       );
 
-      // ── SUB-HEADER STRIP ──
       doc.setFillColor(...NAVY_LIGHT);
       doc.rect(0, 40, pageW, 16, "F");
       doc.setDrawColor(...GREY_LINE);
       doc.setLineWidth(0.3);
       doc.line(0, 40, pageW, 40);
       doc.line(0, 56, pageW, 56);
-
       doc.setTextColor(...DARK);
       doc.setFontSize(10);
       doc.setFont(undefined, "bold");
@@ -342,7 +641,6 @@ const ExportProductlistAir = () => {
         margin + 22,
         50,
       );
-
       const filterLabel =
         selectedSpeciesType === "all"
           ? "All Species"
@@ -352,7 +650,6 @@ const ExportProductlistAir = () => {
       doc.setFont(undefined, "normal");
       doc.text(filterLabel, margin + 102, 50);
 
-      // ── IMAGE CACHE ──
       const imageCache = {};
       const fetchImageAsBase64 = async (imagePath) => {
         if (!imagePath) return null;
@@ -377,7 +674,6 @@ const ExportProductlistAir = () => {
           return null;
         }
       };
-
       const allImagePaths = [
         ...new Set(filteredItems.map((p) => p.image_url).filter(Boolean)),
       ];
@@ -402,115 +698,17 @@ const ExportProductlistAir = () => {
         doc.text("No Image", cx, cy + h * 0.28, { align: "center" });
       };
 
-      // ── BUILD TABLE DATA ──
       const tableBody = [];
       const firstRowSet = new Set();
-
-      const PRODUCT_ORDER = [
-        "mud crab",
-        "freshwater scampi",
-        "thilapia",
-        "tilapia",
-        "tuna h&g",
-        "tuna loin aaa skin on",
-        "tuna loin aaa skin off",
-        "tuna loin aa skin on",
-        "tuna loin aa skin off",
-        "tuna aa steak",
-        "tuna loin a skin on",
-        "tuna loin a skin off",
-        "tuna a steak",
-        "tuna loin b+ skin on",
-        "tuna loin b+ skin off",
-        "sword halfmoon skin on",
-        "sword fish halfmoon skin off",
-        "sword qm skin on",
-        "barracuda",
-        "barramundi",
-        "bonito",
-        "cobia",
-        "indian mackerel",
-        "indian maceral",
-        "king fish",
-        "red snapper",
-        "black spotted snapper",
-        "pearl spot",
-        "ribbon fish",
-        "sole fish",
-        "threadfin bream",
-        "travelly whole",
-        "parrot",
-        "sea bream",
-        "sea bram",
-        "spotted grouper",
-        "blubber lip",
-        "blubber",
-        "yellowtail fusilier",
-        "emporer",
-        "emperor",
-        "red spot emporer",
-        "red mullet",
-        "mahi mahi",
-        "indian salmon",
-        "blue spotted",
-        "pinjalo",
-        "job fish",
-        "red snapper skin on fillet",
-        "grouper skin on fillet",
-        "barramundi skin on fillet",
-        "mahi mahi skin on fillet",
-        "marlin loin",
-        "sand borer",
-        "lady fish",
-        "silver pomfret",
-        "chinese pomfret",
-        "glass eye snapper",
-        "golden thread",
-        "big eye snapper",
-        "black spot snapper",
-        "star snapper",
-        "pinjalo snapper",
-        "grouper brown",
-        "red mouth grouper",
-        "tomato hind",
-        "brown spotted grouper",
-        "coral hind",
-        "longfin grouper",
-        "flathead grouper",
-        "indo-pacific tarpon",
-        "godaya",
-        "fourfinger threadfin",
-        "hairtails",
-        "leather jacket",
-        "flowery",
-        "vannamei",
-        "vannami",
-        "white prawn",
-        "oyster",
-        "green mussel",
-        "green mussle",
-        "short neck clam",
-        "mangrove clam",
-      ];
-
-      const getSortIndex = (commonName) => {
-        const lower = (commonName || "").toLowerCase();
-        const idx = PRODUCT_ORDER.findIndex((key) => lower.includes(key));
-        return idx === -1 ? 9999 : idx;
-      };
-
-      // Flatten ALL products from ALL sections into one list, group by common_name
       const allProductsMap = {};
       filteredItems.forEach((product) => {
         const key = product.common_name;
         if (!allProductsMap[key])
           allProductsMap[key] = { product, variants: [] };
-        if (product.variants?.length > 0) {
+        if (product.variants?.length > 0)
           allProductsMap[key].variants.push(...product.variants);
-        }
       });
 
-      // Sort by PRODUCT_ORDER
       const sortedProducts = Object.entries(allProductsMap).sort(
         ([nameA], [nameB]) => getSortIndex(nameA) - getSortIndex(nameB),
       );
@@ -607,14 +805,13 @@ const ExportProductlistAir = () => {
           if (data.section !== "body") return;
           const row = tableBody[data.row.index];
           if (!row || row.isSectionHeader) return;
-          if (!row.isFirstOfGroup && data.column.index <= 2) {
+          if (!row.isFirstOfGroup && data.column.index <= 2)
             data.cell.styles.lineWidth = {
               top: 0,
               bottom: 0.3,
               left: 0.3,
               right: 0.3,
             };
-          }
         },
         didDrawCell: (data) => {
           if (data.section !== "body" || data.column.index !== 0) return;
@@ -632,13 +829,10 @@ const ExportProductlistAir = () => {
             } catch {
               drawImgPlaceholder(x, y, imgW, imgH);
             }
-          } else {
-            drawImgPlaceholder(x, y, imgW, imgH);
-          }
+          } else drawImgPlaceholder(x, y, imgW, imgH);
         },
       });
 
-      // ── FOOTER ON EVERY PAGE ──
       const totalPages = doc.internal.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
@@ -657,7 +851,6 @@ const ExportProductlistAir = () => {
           align: "right",
         });
       }
-
       doc.save(
         `Export_Product_List_Air_${new Date().toISOString().split("T")[0]}.pdf`,
       );
@@ -669,6 +862,7 @@ const ExportProductlistAir = () => {
     }
   };
 
+  /* ══════════════════════════ RENDER ══════════════════════════════ */
   return (
     <div className="pricelist-container">
       <h2>Export Product List - Air</h2>
@@ -687,7 +881,51 @@ const ExportProductlistAir = () => {
         >
           ⬇ Download PDF
         </button>
+        <button
+          className="apf-btn"
+          onClick={bulkMode ? openBulkModal : toggleBulkMode}
+          style={{
+            marginLeft: "10px",
+            background: bulkMode ? "#f59e0b" : "#6366f1",
+          }}
+        >
+          {bulkMode
+            ? selectedProductIds.size > 0
+              ? `➕ Add ${selectedProductIds.size} to Customer`
+              : "✕ Cancel"
+            : "👥 Add to Customer"}
+        </button>
+        {bulkMode && selectedProductIds.size === 0 && (
+          <button
+            className="cancel-btn"
+            onClick={toggleBulkMode}
+            style={{ marginLeft: "8px" }}
+          >
+            Cancel
+          </button>
+        )}
       </div>
+
+      {bulkMode && (
+        <div
+          style={{
+            background: "#fffbeb",
+            border: "1px solid #f59e0b",
+            borderRadius: "8px",
+            padding: "10px 16px",
+            marginBottom: "12px",
+            fontSize: "14px",
+            color: "#92400e",
+          }}
+        >
+          ☑️ Select products to add to a customer.{" "}
+          {selectedProductIds.size > 0 ? (
+            <strong>{selectedProductIds.size} selected.</strong>
+          ) : (
+            "No products selected yet."
+          )}
+        </div>
+      )}
 
       {/* Species Filter Pills */}
       <div className="species-filter">
@@ -724,31 +962,30 @@ const ExportProductlistAir = () => {
             <table className="pricelist-table">
               <thead>
                 <tr>
+                  {bulkMode && <th style={{ width: "40px" }}>Select</th>}
                   <th>Picture</th>
                   <th>Common Name</th>
                   <th>Scientific Name</th>
-
                   <th>Type</th>
                   <th>Size</th>
                   <th>Purchase Price</th>
                   <th>JC FOB Price</th>
-
                   <th>FOB (USD)</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {Object.keys(groupedProductsBySection).map((section) => {
-                  // Skip sections with no products
                   if (!sectionHasProducts(section)) return null;
-
                   const sectionProducts = groupedProductsBySection[section];
 
                   return (
                     <React.Fragment key={section}>
-                      {/* Section Header Row */}
                       <tr className="section-header">
-                        <td colSpan={11} className="section-title">
+                        <td
+                          colSpan={bulkMode ? 11 : 10}
+                          className="section-title"
+                        >
                           <span className="section-icon">
                             {section === "Fish" && "🐟"}
                             {section === "Crab" && "🦀"}
@@ -765,18 +1002,19 @@ const ExportProductlistAir = () => {
                         </td>
                       </tr>
 
-                      {/* Products in this section */}
                       {Object.entries(sectionProducts).map(
                         ([commonName, products]) => {
                           const groupRowSpan = getTotalRowsForGroup(products);
                           const firstProduct = products[0];
                           const imgSrc = getImageUrl(firstProduct.image_url);
+                          const isSelected = selectedProductIds.has(
+                            firstProduct.id,
+                          );
                           let isFirstRowOfGroup = true;
 
                           return products.map((product) => {
                             const variants = product.variants || [];
 
-                            // ── Product HAS variants ──────────────────────
                             if (variants.length > 0) {
                               return variants.map((variant, variantIndex) => {
                                 const isVeryFirstRow =
@@ -793,6 +1031,30 @@ const ExportProductlistAir = () => {
                                         : ""
                                     }
                                   >
+                                    {bulkMode && isVeryFirstRow && (
+                                      <td
+                                        rowSpan={groupRowSpan}
+                                        style={{
+                                          textAlign: "center",
+                                          verticalAlign: "middle",
+                                        }}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          onChange={() =>
+                                            toggleProductSelection(
+                                              firstProduct.id,
+                                            )
+                                          }
+                                          style={{
+                                            width: "18px",
+                                            height: "18px",
+                                            cursor: "pointer",
+                                          }}
+                                        />
+                                      </td>
+                                    )}
                                     {isVeryFirstRow && (
                                       <>
                                         <td
@@ -819,7 +1081,6 @@ const ExportProductlistAir = () => {
                                         </td>
                                       </>
                                     )}
-
                                     {isFirstOfProduct && (
                                       <td rowSpan={variants.length}>
                                         <span
@@ -832,7 +1093,6 @@ const ExportProductlistAir = () => {
                                         </span>
                                       </td>
                                     )}
-
                                     <td>{variant.size || "—"}</td>
                                     <td className="price-cell">
                                       {parseFloat(variant.purchasing_price) > 0
@@ -844,13 +1104,11 @@ const ExportProductlistAir = () => {
                                         ? `$${parseFloat(variant.jc_fob).toFixed(2)}`
                                         : "—"}
                                     </td>
-
                                     <td className="price-cell">
                                       {parseFloat(variant.usdrate) > 0
                                         ? `$${(parseFloat(variant.exfactoryprice) / parseFloat(variant.usdrate)).toFixed(2)}`
                                         : "—"}
                                     </td>
-
                                     {isFirstOfProduct && (
                                       <td
                                         className="actions-cell"
@@ -884,10 +1142,9 @@ const ExportProductlistAir = () => {
                               });
                             }
 
-                            // ── Product has NO variants ───────────────────
+                            // No variants
                             const isVeryFirstRow = isFirstRowOfGroup;
                             if (isVeryFirstRow) isFirstRowOfGroup = false;
-
                             return (
                               <tr
                                 key={product.id}
@@ -895,6 +1152,28 @@ const ExportProductlistAir = () => {
                                   isVeryFirstRow ? "product-group-start" : ""
                                 }
                               >
+                                {bulkMode && isVeryFirstRow && (
+                                  <td
+                                    rowSpan={groupRowSpan}
+                                    style={{
+                                      textAlign: "center",
+                                      verticalAlign: "middle",
+                                    }}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() =>
+                                        toggleProductSelection(firstProduct.id)
+                                      }
+                                      style={{
+                                        width: "18px",
+                                        height: "18px",
+                                        cursor: "pointer",
+                                      }}
+                                    />
+                                  </td>
+                                )}
                                 {isVeryFirstRow && (
                                   <>
                                     <td
@@ -941,11 +1220,10 @@ const ExportProductlistAir = () => {
                                     {formatCategory(product.category)}
                                   </span>
                                 </td>
-                                <td className="muted">—</td> {/* size */}
-                                <td className="muted">—</td> {/* purchase */}
-                                <td className="muted">—</td> {/* jc_fob */}
-                                <td className="muted">—</td> {/* exfactory */}
-                                <td className="muted">—</td> {/* fob usd */}
+                                <td className="muted">—</td>
+                                <td className="muted">—</td>
+                                <td className="muted">—</td>
+                                <td className="muted">—</td>
                                 <td className="actions-cell">
                                   <div className="actions-wrapper">
                                     <button
@@ -976,12 +1254,12 @@ const ExportProductlistAir = () => {
                   );
                 })}
 
-                {Object.keys(groupedProductsBySection).filter((section) =>
-                  sectionHasProducts(section),
+                {Object.keys(groupedProductsBySection).filter((s) =>
+                  sectionHasProducts(s),
                 ).length === 0 && (
                   <tr>
                     <td
-                      colSpan={11}
+                      colSpan={bulkMode ? 11 : 10}
                       className="muted"
                       style={{ textAlign: "center", padding: "3rem" }}
                     >
@@ -995,6 +1273,262 @@ const ExportProductlistAir = () => {
             </table>
           </div>
         </>
+      )}
+
+      {/* ── Bulk Add Modal ─────────────────────────────────────────── */}
+      {showBulkModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px",
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: "12px",
+              width: "100%",
+              maxWidth: "780px",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: "20px 24px 16px",
+                borderBottom: "1px solid #e5e7eb",
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: "18px", color: "#1e3a5f" }}>
+                ✈️ Add Export Products to Customer
+              </h3>
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  fontSize: "13px",
+                  color: "#6b7280",
+                }}
+              >
+                {bulkItems.length} variant(s) from {selectedProductIds.size}{" "}
+                product(s) — freight costs can be configured in the customer
+                detail page
+              </p>
+            </div>
+
+            {/* Customer Selector */}
+            <div
+              style={{
+                padding: "16px 24px",
+                borderBottom: "1px solid #e5e7eb",
+              }}
+            >
+              <label
+                style={{
+                  fontWeight: 600,
+                  fontSize: "14px",
+                  color: "#374151",
+                  display: "block",
+                  marginBottom: "8px",
+                }}
+              >
+                Select Customer *
+              </label>
+              <select
+                value={bulkCustomerId}
+                onChange={(e) => setBulkCustomerId(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  fontSize: "14px",
+                }}
+              >
+                <option value="">— Choose a customer —</option>
+                {customers.map((c) => (
+                  <option key={c.cus_id} value={c.cus_id}>
+                    {c.cus_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Items Table */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "13px",
+                }}
+              >
+                <thead>
+                  <tr style={{ background: "#f1f5f9" }}>
+                    <th
+                      style={{
+                        padding: "8px 10px",
+                        textAlign: "left",
+                        color: "#475569",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Product
+                    </th>
+                    <th
+                      style={{
+                        padding: "8px 10px",
+                        textAlign: "left",
+                        color: "#475569",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Size
+                    </th>
+                    <th
+                      style={{
+                        padding: "8px 10px",
+                        textAlign: "right",
+                        color: "#475569",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Purchase (Rs)
+                    </th>
+                    <th
+                      style={{
+                        padding: "8px 10px",
+                        textAlign: "right",
+                        color: "#475569",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Ex-Factory (Rs)
+                    </th>
+                    <th
+                      style={{
+                        padding: "8px 10px",
+                        textAlign: "right",
+                        color: "#475569",
+                        fontWeight: 600,
+                      }}
+                    >
+                      FOB (USD)
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bulkItems.map((item) => (
+                    <tr
+                      key={item.key}
+                      style={{ borderBottom: "1px solid #e5e7eb" }}
+                    >
+                      <td
+                        style={{
+                          padding: "8px 10px",
+                          fontWeight: 500,
+                          color: "#1e3a5f",
+                        }}
+                      >
+                        {item.common_name}
+                      </td>
+                      <td style={{ padding: "8px 10px", color: "#6b7280" }}>
+                        {item.size_range || "—"}
+                      </td>
+                      <td
+                        style={{
+                          padding: "8px 10px",
+                          textAlign: "right",
+                          color: "#374151",
+                        }}
+                      >
+                        {item.purchasing_price > 0
+                          ? `Rs. ${item.purchasing_price.toFixed(2)}`
+                          : "—"}
+                      </td>
+                      <td
+                        style={{
+                          padding: "8px 10px",
+                          textAlign: "right",
+                          color: "#374151",
+                        }}
+                      >
+                        {item.exfactoryprice > 0
+                          ? `Rs. ${item.exfactoryprice.toFixed(2)}`
+                          : "—"}
+                      </td>
+                      <td
+                        style={{
+                          padding: "8px 10px",
+                          textAlign: "right",
+                          fontWeight: 600,
+                          color: "#0d47a1",
+                        }}
+                      >
+                        {item.fob_usd_display > 0
+                          ? `$${item.fob_usd_display.toFixed(4)}`
+                          : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: "16px 24px",
+                borderTop: "1px solid #e5e7eb",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "12px",
+              }}
+            >
+              <button
+                onClick={() => setShowBulkModal(false)}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  background: "#fff",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkSubmit}
+                disabled={bulkSubmitting || !bulkCustomerId}
+                style={{
+                  padding: "10px 24px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background:
+                    bulkSubmitting || !bulkCustomerId ? "#9ca3af" : "#0d47a1",
+                  color: "#fff",
+                  cursor:
+                    bulkSubmitting || !bulkCustomerId
+                      ? "not-allowed"
+                      : "pointer",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                }}
+              >
+                {bulkSubmitting ? "Adding…" : "Add to Customer"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

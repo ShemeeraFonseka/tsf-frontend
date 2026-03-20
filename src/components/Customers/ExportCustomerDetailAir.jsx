@@ -201,17 +201,11 @@ const ExportCustomerDetailAir = () => {
       ? 0
       : (parseFloat(usd) * parseFloat(currentUsdRate)).toFixed(2);
 
-  const calculateCNF = useCallback(
-    (fobLKR, freightUSD) => {
-      const rate = parseFloat(currentUsdRate);
-      if (!rate || isNaN(rate)) return "0.00";
-      return (
-        (parseFloat(fobLKR) || 0) / rate +
-        (parseFloat(freightUSD) || 0)
-      ).toFixed(2);
-    },
-    [currentUsdRate],
-  );
+  const calculateCNF = useCallback((fobUSD, freightUSD) => {
+    return ((parseFloat(fobUSD) || 0) + (parseFloat(freightUSD) || 0)).toFixed(
+      2,
+    );
+  }, []);
 
   const calculateAllAirFreightTiers = (multiplier, divisor, airRateData) => {
     if (!airRateData || !multiplier || !divisor || divisor === 0)
@@ -242,16 +236,16 @@ const ExportCustomerDetailAir = () => {
     };
   };
 
-  const calculateBothSeaContainers = (fobLKR, cust) => {
+  const calculateBothSeaContainers = (fobUSD, cust) => {
     const seaRate = getSeaFreightRateForCustomer(cust);
     if (!seaRate) return {};
     const cd20 = getSeaFreightRateByContainer("20ft", seaRate);
     const cd40 = getSeaFreightRateByContainer("40ft", seaRate);
     return {
       freight_cost_20ft: cd20.perKilo.toFixed(4),
-      cnf_20ft: calculateCNF(fobLKR, cd20.perKilo),
+      cnf_20ft: calculateCNF(fobUSD, cd20.perKilo),
       freight_cost_40ft: cd40.perKilo.toFixed(4),
-      cnf_40ft: calculateCNF(fobLKR, cd40.perKilo),
+      cnf_40ft: calculateCNF(fobUSD, cd40.perKilo),
     };
   };
 
@@ -333,6 +327,7 @@ const ExportCustomerDetailAir = () => {
     };
 
     const exf = parseFloat(variant.exfactoryprice) || 0;
+    const usdRate = parseFloat(currentUsdRate) || 1;
     const totalUSD = [
       "export_doc_usd",
       "transport_cost_usd",
@@ -340,9 +335,10 @@ const ExportCustomerDetailAir = () => {
       "airway_cost_usd",
       "forwardHandling_cost_usd",
     ].reduce((s, k) => s + (parseFloat(updatedData[k]) || 0), 0);
-    const fobLKR =
-      exf + (currentUsdRate ? totalUSD * parseFloat(currentUsdRate) : 0);
-    updatedData.fob_price = fobLKR.toFixed(2);
+
+    // FOB stored as USD
+    const fobUSD = exf / usdRate + totalUSD;
+    updatedData.fob_price = fobUSD.toFixed(4);
 
     if (
       updatedData.freight_type === "air" &&
@@ -357,13 +353,13 @@ const ExportCustomerDetailAir = () => {
           airRate,
         );
         Object.assign(updatedData, tiers);
-        updatedData.cnf_45kg = calculateCNF(fobLKR, tiers.freight_cost_45kg);
-        updatedData.cnf_100kg = calculateCNF(fobLKR, tiers.freight_cost_100kg);
-        updatedData.cnf_300kg = calculateCNF(fobLKR, tiers.freight_cost_300kg);
-        updatedData.cnf_500kg = calculateCNF(fobLKR, tiers.freight_cost_500kg);
+        updatedData.cnf_45kg = calculateCNF(fobUSD, tiers.freight_cost_45kg);
+        updatedData.cnf_100kg = calculateCNF(fobUSD, tiers.freight_cost_100kg);
+        updatedData.cnf_300kg = calculateCNF(fobUSD, tiers.freight_cost_300kg);
+        updatedData.cnf_500kg = calculateCNF(fobUSD, tiers.freight_cost_500kg);
       }
     } else if (updatedData.freight_type === "sea") {
-      const seaCosts = calculateBothSeaContainers(fobLKR, customer);
+      const seaCosts = calculateBothSeaContainers(fobUSD, customer);
       Object.assign(updatedData, seaCosts);
     }
 
@@ -413,6 +409,7 @@ const ExportCustomerDetailAir = () => {
     }
 
     const exf = parseFloat(data.exfactoryprice) || 0;
+    const usdRate = parseFloat(currentUsdRate) || 1;
     const totalUSD = [
       "export_doc_usd",
       "transport_cost_usd",
@@ -420,9 +417,10 @@ const ExportCustomerDetailAir = () => {
       "airway_cost_usd",
       "forwardHandling_cost_usd",
     ].reduce((s, k) => s + (parseFloat(data[k]) || 0), 0);
-    const fobLKR =
-      exf + (currentUsdRate ? totalUSD * parseFloat(currentUsdRate) : 0);
-    data.fob_price = fobLKR.toFixed(2);
+
+    // FOB stored as USD
+    const fobUSD = exf / usdRate + totalUSD;
+    data.fob_price = fobUSD.toFixed(4);
 
     if (data.freight_type === "air") {
       const airRate = getAirFreightRateForCustomer(customer);
@@ -433,13 +431,13 @@ const ExportCustomerDetailAir = () => {
           airRate,
         );
         Object.assign(data, tiers);
-        data.cnf_45kg = calculateCNF(fobLKR, tiers.freight_cost_45kg);
-        data.cnf_100kg = calculateCNF(fobLKR, tiers.freight_cost_100kg);
-        data.cnf_300kg = calculateCNF(fobLKR, tiers.freight_cost_300kg);
-        data.cnf_500kg = calculateCNF(fobLKR, tiers.freight_cost_500kg);
+        data.cnf_45kg = calculateCNF(fobUSD, tiers.freight_cost_45kg);
+        data.cnf_100kg = calculateCNF(fobUSD, tiers.freight_cost_100kg);
+        data.cnf_300kg = calculateCNF(fobUSD, tiers.freight_cost_300kg);
+        data.cnf_500kg = calculateCNF(fobUSD, tiers.freight_cost_500kg);
       }
     } else if (data.freight_type === "sea") {
-      const seaCosts = calculateBothSeaContainers(fobLKR, customer);
+      const seaCosts = calculateBothSeaContainers(fobUSD, customer);
       Object.assign(data, seaCosts);
     }
 
@@ -1224,9 +1222,11 @@ const ExportCustomerDetailAir = () => {
 
   /* ── USD rate recalculation effect ── */
   useEffect(() => {
+    if (!showForm || !formData.exfactoryprice || !currentUsdRate) return;
+
     setFormData((prev) => {
-      if (!prev.exfactoryprice || !currentUsdRate) return prev;
       const exf = parseFloat(prev.exfactoryprice) || 0;
+      const usdRate = parseFloat(currentUsdRate) || 1;
       const totalUSD = [
         "export_doc_usd",
         "transport_cost_usd",
@@ -1234,26 +1234,28 @@ const ExportCustomerDetailAir = () => {
         "airway_cost_usd",
         "forwardHandling_cost_usd",
       ].reduce((s, k) => s + (parseFloat(prev[k]) || 0), 0);
-      const fobLKR = exf + totalUSD * parseFloat(currentUsdRate);
-      const updates = { fob_price: fobLKR.toFixed(2) };
+
+      const fobUSD = exf / usdRate + totalUSD;
+      const updates = { fob_price: fobUSD.toFixed(4) };
+
       if (prev.freight_type === "air") {
         if (prev.freight_cost_45kg)
-          updates.cnf_45kg = calculateCNF(fobLKR, prev.freight_cost_45kg);
+          updates.cnf_45kg = calculateCNF(fobUSD, prev.freight_cost_45kg);
         if (prev.freight_cost_100kg)
-          updates.cnf_100kg = calculateCNF(fobLKR, prev.freight_cost_100kg);
+          updates.cnf_100kg = calculateCNF(fobUSD, prev.freight_cost_100kg);
         if (prev.freight_cost_300kg)
-          updates.cnf_300kg = calculateCNF(fobLKR, prev.freight_cost_300kg);
+          updates.cnf_300kg = calculateCNF(fobUSD, prev.freight_cost_300kg);
         if (prev.freight_cost_500kg)
-          updates.cnf_500kg = calculateCNF(fobLKR, prev.freight_cost_500kg);
+          updates.cnf_500kg = calculateCNF(fobUSD, prev.freight_cost_500kg);
       } else if (prev.freight_type === "sea") {
         if (prev.freight_cost_20ft)
-          updates.cnf_20ft = calculateCNF(fobLKR, prev.freight_cost_20ft);
+          updates.cnf_20ft = calculateCNF(fobUSD, prev.freight_cost_20ft);
         if (prev.freight_cost_40ft)
-          updates.cnf_40ft = calculateCNF(fobLKR, prev.freight_cost_40ft);
+          updates.cnf_40ft = calculateCNF(fobUSD, prev.freight_cost_40ft);
       }
       return { ...prev, ...updates };
     });
-  }, [currentUsdRate, calculateCNF]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentUsdRate, calculateCNF, showForm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ════════════════════════════════════════ RENDER ═══════════════════════════════════════ */
   return (
@@ -1545,14 +1547,10 @@ const ExportCustomerDetailAir = () => {
             <input
               className="apf-input is-usd"
               type="number"
-              step="0.01"
-              value={
-                formData.fob_price && currentUsdRate
-                  ? convertToUSD(formData.fob_price)
-                  : "0.00"
-              }
+              step="0.0001"
+              value={formData.fob_price || "0.0000"}
               disabled
-              placeholder="0.00"
+              placeholder="0.0000"
             />
 
             <div className="freight-section-panel">

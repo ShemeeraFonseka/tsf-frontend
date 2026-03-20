@@ -122,6 +122,9 @@ const CustomerDetail = () => {
         variant_id: "",
         size_range: "",
         purchasing_price: "",
+        margin: "",
+        margin_percentage: "",
+        selling_price: "",
       }));
       return;
     }
@@ -129,11 +132,20 @@ const CustomerDetail = () => {
       (v) => String(v.id) === String(variantId),
     );
     if (variant) {
+      const purchasingPrice = parseFloat(variant.purchasing_price) || 0;
+      const sellingPrice = parseFloat(variant.selling_price) || 0;
+      const margin = sellingPrice - purchasingPrice;
+      const marginPercentage =
+        sellingPrice > 0 ? (margin / sellingPrice) * 100 : 0;
+
       setFormData((prev) => ({
         ...prev,
         variant_id: String(variantId),
-        size_range: `${variant.size} ${variant.unit}`,
+        size_range: `${variant.size}`,
         purchasing_price: variant.purchasing_price,
+        selling_price: sellingPrice.toFixed(2),
+        margin: margin.toFixed(2),
+        margin_percentage: marginPercentage.toFixed(2),
       }));
     }
   };
@@ -230,7 +242,7 @@ const CustomerDetail = () => {
     let variantId = "";
     if (product?.variants?.length > 0 && price.size_range) {
       const match = product.variants.find(
-        (v) => `${v.size} ${v.unit}` === price.size_range,
+        (v) => `${v.size} ` === price.size_range,
       );
       if (match) variantId = String(match.id);
     }
@@ -353,30 +365,60 @@ const CustomerDetail = () => {
       doc.setFont(undefined, "bold");
       doc.text("PRICE LIST", pageW - margin - 15, 16.5, { align: "center" });
 
-      // ── Sub-header strip ──────────────────────────────────────────
-      doc.setFillColor(...NAVY_LIGHT);
-      doc.rect(0, 40, pageW, 11, "F");
-      doc.setDrawColor(...GREY_LINE);
-      doc.setLineWidth(0.3);
-      doc.line(0, 40, pageW, 40);
-      doc.line(0, 51, pageW, 51);
+      // ── Image cache ───────────────────────────────────────────────
+      const imageCache = {};
+      const fetchImageAsBase64 = async (imagePath) => {
+        if (!imagePath) return null;
+        if (imageCache[imagePath]) return imageCache[imagePath];
+        try {
+          const url = imagePath.startsWith("http")
+            ? imagePath
+            : `${API_URL}${imagePath}`;
+          const res = await fetch(url);
+          if (!res.ok) return null;
+          const blob = await res.blob();
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              imageCache[imagePath] = reader.result;
+              resolve(reader.result);
+            };
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        } catch {
+          return null;
+        }
+      };
 
-      doc.setTextColor(...DARK);
-      doc.setFontSize(8);
-      doc.setFont(undefined, "bold");
-      doc.text("Customer:", margin, 47);
-      doc.setFont(undefined, "normal");
-      doc.text(customer?.cus_name || "N/A", margin + 19, 47);
+      // Pre-fetch all unique images
+      const uniqueImgPaths = [
+        ...new Set(
+          [
+            ...prices.map((p) => p.image_url),
+            ...products.map((pr) => pr.image_url),
+          ].filter(Boolean),
+        ),
+      ];
+      await Promise.all(uniqueImgPaths.map((img) => fetchImageAsBase64(img)));
 
-      const genDate = new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-      doc.setFont(undefined, "bold");
-      doc.text("Date:", pageW - margin - 50, 47);
-      doc.setFont(undefined, "normal");
-      doc.text(genDate, pageW - margin - 43, 47);
+      // ── Image placeholder helper ──────────────────────────────────
+      const drawImgPlaceholder = (x, y, w, h) => {
+        doc.setFillColor(232, 238, 252);
+        doc.roundedRect(x, y, w, h, 2, 2, "F");
+        doc.setDrawColor(...GREY_LINE);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(x, y, w, h, 2, 2, "S");
+        const cx = x + w / 2,
+          cy = y + h / 2;
+        doc.setDrawColor(25, 100, 200);
+        doc.setLineWidth(0.5);
+        doc.circle(cx, cy - 1, Math.min(w, h) * 0.2, "S");
+        doc.setFontSize(5);
+        doc.setTextColor(25, 100, 200);
+        doc.setFont(undefined, "normal");
+        doc.text("No Image", cx, cy + h * 0.28, { align: "center" });
+      };
 
       // ── Group prices by category ──────────────────────────────────
       const grouped = prices.reduce((acc, p) => {
@@ -395,20 +437,13 @@ const CustomerDetail = () => {
           startY = 20;
         }
 
-        // Category header bar
-        doc.setFillColor(...NAVY);
-        doc.rect(margin, startY, pageW - margin * 2, 8, "F");
-        doc.setTextColor(...WHITE);
-        doc.setFontSize(9);
-        doc.setFont(undefined, "bold");
-        doc.text(category.toUpperCase(), margin + 4, startY + 5.5);
-        startY += 10;
-
         // Group by common_name within category
         const productMap = {};
         items.forEach((p) => {
           const key = `${p.common_name}__${p.scientific_name || ""}`;
           if (!productMap[key]) {
+            const productData = products.find((pr) => pr.id === p.product_id);
+            const imgPath = p.image_url || productData?.image_url || null;
             productMap[key] = {
               common_name: String(p.common_name || "—"),
               scientific_name:
@@ -416,12 +451,13 @@ const CustomerDetail = () => {
                   ? String(p.scientific_name).trim()
                   : "—",
               category: p.category,
+              image: imgPath,
               variants: [],
             };
           }
           productMap[key].variants.push({
             size: String(p.size_range || "—"),
-            price: `Rs. ${parseFloat(p.selling_price).toFixed(2)}`,
+            price: `Rs. ${parseFloat(p.selling_price || 0).toFixed(2)}`,
           });
         });
 
@@ -438,11 +474,12 @@ const CustomerDetail = () => {
         });
 
         const bodyRows = tableBody.map(({ prod, v, vi }) => [
-          vi === 0 ? prod.common_name : "",
-          vi === 0 ? prod.scientific_name : "",
-          vi === 0 ? formatCategory(prod.category || "") : "",
-          v.size,
-          v.price,
+          "", // col 0: image
+          vi === 0 ? prod.common_name : "", // col 1: common name
+          vi === 0 ? prod.scientific_name : "", // col 2: scientific name
+          vi === 0 ? formatCategory(prod.category || "") : "", // col 3: condition
+          v.size, // col 4: size
+          v.price, // col 5: selling price
         ]);
 
         autoTable(doc, {
@@ -450,6 +487,7 @@ const CustomerDetail = () => {
           margin: { left: margin, right: margin },
           head: [
             [
+              { content: "Picture", styles: { halign: "center" } },
               { content: "Common Name", styles: { halign: "left" } },
               { content: "Scientific Name", styles: { halign: "left" } },
               { content: "Condition", styles: { halign: "left" } },
@@ -461,33 +499,39 @@ const CustomerDetail = () => {
           theme: "grid",
           columnStyles: {
             0: {
-              cellWidth: 45,
+              cellWidth: 20,
+              halign: "center",
+              valign: "middle",
+              minCellHeight: 22,
+            },
+            1: {
+              cellWidth: 42,
               halign: "left",
               valign: "middle",
               fontStyle: "bold",
               fontSize: 10,
             },
-            1: {
-              cellWidth: 40,
+            2: {
+              cellWidth: 36,
               halign: "left",
               valign: "middle",
               fontStyle: "italic",
               fontSize: 9,
               textColor: [50, 80, 150],
             },
-            2: {
-              cellWidth: 28,
-              halign: "left",
-              valign: "middle",
-              fontSize: 10,
-            },
             3: {
-              cellWidth: 35,
+              cellWidth: 25,
               halign: "left",
               valign: "middle",
               fontSize: 10,
             },
             4: {
+              cellWidth: 30,
+              halign: "left",
+              valign: "middle",
+              fontSize: 10,
+            },
+            5: {
               halign: "right",
               valign: "middle",
               fontSize: 10,
@@ -505,24 +549,44 @@ const CustomerDetail = () => {
           bodyStyles: {
             fontSize: 10,
             cellPadding: { top: 4, bottom: 4, left: 3, right: 3 },
-            minCellHeight: 14,
+            minCellHeight: 22,
             textColor: DARK,
             lineColor: GREY_LINE,
             lineWidth: 0.3,
           },
           alternateRowStyles: {
-            fillColor: [245, 248, 255],
+            fillColor: [255, 255, 255],
           },
           willDrawCell: (data) => {
             if (data.section !== "body") return;
             const ri = data.row.index;
-            if (!firstRowSet.has(ri) && data.column.index <= 2) {
+            if (!firstRowSet.has(ri) && data.column.index <= 3) {
               data.cell.styles.lineWidth = {
                 top: 0,
                 bottom: 0.3,
                 left: 0.3,
                 right: 0.3,
               };
+            }
+          },
+          didDrawCell: (data) => {
+            if (data.section !== "body" || data.column.index !== 0) return;
+            if (!firstRowSet.has(data.row.index)) return;
+            const imgW = 16,
+              imgH = 16;
+            const x = data.cell.x + (data.cell.width - imgW) / 2;
+            const y = data.cell.y + (data.cell.height - imgH) / 2;
+            const prod = tableBody[data.row.index]?.prod;
+            const imgSrc = prod?.image ? imageCache[prod.image] : null;
+            if (imgSrc) {
+              const fmt = imgSrc.includes("image/png") ? "PNG" : "JPEG";
+              try {
+                doc.addImage(imgSrc, fmt, x, y, imgW, imgH, undefined, "FAST");
+              } catch {
+                drawImgPlaceholder(x, y, imgW, imgH);
+              }
+            } else {
+              drawImgPlaceholder(x, y, imgW, imgH);
             }
           },
         });
@@ -685,7 +749,7 @@ const CustomerDetail = () => {
                 <option value="">— Select Size —</option>
                 {selectedProduct.variants.map((v) => (
                   <option key={v.id} value={String(v.id)}>
-                    {v.size} {v.unit}
+                    {v.size}
                   </option>
                 ))}
               </select>
