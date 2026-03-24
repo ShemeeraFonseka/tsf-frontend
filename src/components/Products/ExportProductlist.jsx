@@ -51,6 +51,16 @@ const ExportProductlist = () => {
   const [selectedSpeciesType, setSelectedSpeciesType] = useState("all");
   const [currentUsdRate, setCurrentUsdRate] = useState(null);
 
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState(new Set());
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkItems, setBulkItems] = useState([]);
+  const bulkFreightType = "sea";
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+
+  const [customers, setCustomers] = useState([]);
+  const [bulkCustomerId, setBulkCustomerId] = useState("");
+
   const sectionCategories = [
     {
       name: "Fish",
@@ -262,6 +272,300 @@ const ExportProductlist = () => {
 
   const sectionHasProducts = (section) =>
     Object.keys(groupedProductsBySection[section] || {}).length > 0;
+
+  const toggleBulkMode = () => {
+    setBulkMode((prev) => !prev);
+    setSelectedProductIds(new Set());
+  };
+
+  const toggleProductSelection = (productId) => {
+    setSelectedProductIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  };
+
+  const openBulkModal = async () => {
+    if (selectedProductIds.size === 0) {
+      alert("Please select at least one product.");
+      return;
+    }
+
+    // Fetch customers for selector
+    try {
+      const res = await fetch(`${API_URL}/api/exportcustomerlist`);
+      if (res.ok) setCustomers(await res.json());
+    } catch (err) {
+      console.error(err);
+    }
+
+    const rows = [];
+    filteredItems.forEach((product) => {
+      if (!selectedProductIds.has(product.id)) return;
+      const variants = product.variants || [];
+      if (variants.length > 0) {
+        variants.forEach((variant) => {
+          const exf = parseFloat(variant.exfactoryprice) || 0;
+          const usdrate = parseFloat(variant.usdrate) || 0;
+          const fobUSD = usdrate > 0 ? exf / usdrate : 0;
+          rows.push({
+            key: `${product.id}-${variant.id}`,
+            product_id: product.id,
+            variant_id: variant.id,
+            common_name: product.common_name,
+            scientific_name: product.scientific_name || "",
+            category: product.category,
+            image_url: product.image_url || "",
+            size_range: `${variant.size}`,
+            purchasing_price: parseFloat(variant.purchasing_price) || 0,
+            exfactoryprice: exf,
+            usdrate,
+            fob_usd_display: parseFloat(fobUSD.toFixed(4)),
+            multiplier: parseFloat(variant.multiplier) || 0,
+            divisor: parseFloat(variant.divisor) || 1,
+          });
+        });
+      } else {
+        rows.push({
+          key: `${product.id}-none`,
+          product_id: product.id,
+          variant_id: null,
+          common_name: product.common_name,
+          scientific_name: product.scientific_name || "",
+          category: product.category,
+          image_url: product.image_url || "",
+          size_range: "",
+          purchasing_price: 0,
+          exfactoryprice: 0,
+          usdrate: 0,
+          fob_usd_display: 0,
+          multiplier: 0,
+          divisor: 1,
+        });
+      }
+    });
+
+    setBulkItems(rows);
+    setBulkCustomerId("");
+    setShowBulkModal(true);
+  };
+
+  const handleBulkSubmit = async () => {
+    if (!bulkCustomerId) {
+      alert("Please select a customer.");
+      return;
+    }
+    if (bulkItems.length === 0) return;
+    setBulkSubmitting(true);
+    let successCount = 0;
+    let skipCount = 0;
+    let errorCount = 0;
+
+    try {
+      // Fetch existing records to avoid duplicates
+      const existingRes = await fetch(
+        `${API_URL}/api/exportcustomer-products/${bulkCustomerId}`,
+      );
+      const existingData = existingRes.ok ? await existingRes.json() : [];
+      const existingKeys = new Set(
+        existingData.map((e) => `${e.product_id}-${e.variant_id ?? "null"}`),
+      );
+
+      // Fetch customer details to get country/airport/port for freight lookup
+      const customerRes = await fetch(
+        `${API_URL}/api/exportcustomerlist/${bulkCustomerId}`,
+      );
+      const customerData = customerRes.ok ? await customerRes.json() : null;
+
+      // Fetch freight rates
+      let airRateData = null;
+      let seaRateData = null;
+
+      if (bulkFreightType === "air" && customerData?.country) {
+        const frRes = await fetch(`${API_URL}/api/freight-rates`);
+        if (frRes.ok) {
+          const allRates = await frRes.json();
+          // Match by airport_code first, then country
+          const matches = allRates.filter(
+            (r) =>
+              r.country.toLowerCase() === customerData.country.toLowerCase(),
+          );
+          if (customerData.airport_code) {
+            const exact = matches.filter(
+              (r) =>
+                r.airport_code?.toUpperCase() ===
+                customerData.airport_code.toUpperCase(),
+            );
+            airRateData = exact.length
+              ? exact.sort((a, b) => new Date(b.date) - new Date(a.date))[0]
+              : matches.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+          } else {
+            airRateData = matches.sort(
+              (a, b) => new Date(b.date) - new Date(a.date),
+            )[0];
+          }
+        }
+      }
+
+      if (bulkFreightType === "sea" && customerData?.country) {
+        const sfRes = await fetch(`${API_URL}/api/sea-freight-rates`);
+        if (sfRes.ok) {
+          const allSeaRates = await sfRes.json();
+          const matches = allSeaRates.filter(
+            (r) =>
+              r.country.toLowerCase() === customerData.country.toLowerCase(),
+          );
+          if (customerData.port_code) {
+            const exact = matches.filter(
+              (r) =>
+                r.port_code?.toUpperCase() ===
+                customerData.port_code.toUpperCase(),
+            );
+            seaRateData = exact.length
+              ? exact.sort((a, b) => new Date(b.date) - new Date(a.date))[0]
+              : matches.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+          } else {
+            seaRateData = matches.sort(
+              (a, b) => new Date(b.date) - new Date(a.date),
+            )[0];
+          }
+        }
+      }
+
+      const usdRate = parseFloat(currentUsdRate) || 300;
+
+      for (const item of bulkItems) {
+        const dupKey = `${item.product_id}-${item.variant_id ?? "null"}`;
+        if (existingKeys.has(dupKey)) {
+          skipCount++;
+          continue;
+        }
+
+        const exf = parseFloat(item.exfactoryprice) || 0;
+        const fobLKR = exf; // no additional costs on bulk add
+
+        let freightData = {
+          freight_cost_45kg: 0,
+          freight_cost_100kg: 0,
+          freight_cost_300kg: 0,
+          freight_cost_500kg: 0,
+          cnf_45kg: 0,
+          cnf_100kg: 0,
+          cnf_300kg: 0,
+          cnf_500kg: 0,
+          freight_cost_20ft: 0,
+          cnf_20ft: 0,
+          freight_cost_40ft: 0,
+          cnf_40ft: 0,
+          multiplier: item.multiplier || 0,
+          divisor: item.divisor || 1,
+        };
+
+        if (
+          bulkFreightType === "air" &&
+          airRateData &&
+          item.multiplier &&
+          item.divisor
+        ) {
+          const m = parseFloat(item.multiplier);
+          const d = parseFloat(item.divisor);
+          const fc45 = (m * parseFloat(airRateData.rate_45kg)) / d;
+          const fc100 = (m * parseFloat(airRateData.rate_100kg)) / d;
+          const fc300 = (m * parseFloat(airRateData.rate_300kg)) / d;
+          const fc500 = (m * parseFloat(airRateData.rate_500kg)) / d;
+
+          freightData = {
+            ...freightData,
+            freight_cost_45kg: parseFloat(fc45.toFixed(2)),
+            freight_cost_100kg: parseFloat(fc100.toFixed(2)),
+            freight_cost_300kg: parseFloat(fc300.toFixed(2)),
+            freight_cost_500kg: parseFloat(fc500.toFixed(2)),
+            cnf_45kg: parseFloat((fobLKR / usdRate + fc45).toFixed(2)),
+            cnf_100kg: parseFloat((fobLKR / usdRate + fc100).toFixed(2)),
+            cnf_300kg: parseFloat((fobLKR / usdRate + fc300).toFixed(2)),
+            cnf_500kg: parseFloat((fobLKR / usdRate + fc500).toFixed(2)),
+            multiplier: item.multiplier,
+            divisor: item.divisor,
+          };
+        }
+
+        if (bulkFreightType === "sea" && seaRateData) {
+          const perKilo20 = parseFloat(seaRateData.freight_per_kilo_20ft) || 0;
+          const perKilo40 = parseFloat(seaRateData.freight_per_kilo_40ft) || 0;
+
+          freightData = {
+            ...freightData,
+            freight_cost_20ft: parseFloat(perKilo20.toFixed(4)),
+            cnf_20ft: parseFloat((fobLKR / usdRate + perKilo20).toFixed(2)),
+            freight_cost_40ft: parseFloat(perKilo40.toFixed(4)),
+            cnf_40ft: parseFloat((fobLKR / usdRate + perKilo40).toFixed(2)),
+          };
+        }
+
+        const payload = {
+          cus_id: parseInt(bulkCustomerId),
+          product_id: item.product_id,
+          variant_id: item.variant_id ?? null,
+          common_name: item.common_name,
+          scientific_name: item.scientific_name || null,
+          image_url: item.image_url || null,
+          category: item.category,
+          size_range: item.size_range,
+          purchasing_price: item.purchasing_price,
+          exfactoryprice: exf,
+          export_doc: 0,
+          transport_cost: 0,
+          loading_cost: 0,
+          airway_cost: 0,
+          forwardHandling_cost: 0,
+          freight_type: bulkFreightType,
+          fob_price: fobLKR,
+          multiplier: freightData.multiplier,
+          divisor: freightData.divisor,
+          freight_cost_45kg: freightData.freight_cost_45kg,
+          freight_cost_100kg: freightData.freight_cost_100kg,
+          freight_cost_300kg: freightData.freight_cost_300kg,
+          freight_cost_500kg: freightData.freight_cost_500kg,
+          cnf_45kg: freightData.cnf_45kg,
+          cnf_100kg: freightData.cnf_100kg,
+          cnf_300kg: freightData.cnf_300kg,
+          cnf_500kg: freightData.cnf_500kg,
+          freight_cost_20ft: freightData.freight_cost_20ft,
+          cnf_20ft: freightData.cnf_20ft,
+          freight_cost_40ft: freightData.freight_cost_40ft,
+          cnf_40ft: freightData.cnf_40ft,
+        };
+
+        const res = await fetch(`${API_URL}/api/exportcustomer-products`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          successCount++;
+        } else {
+          errorCount++;
+        }
+      }
+
+      setShowBulkModal(false);
+      setBulkMode(false);
+      setSelectedProductIds(new Set());
+
+      let msg = `✅ Added ${successCount} item(s) successfully.`;
+      if (skipCount > 0)
+        msg += `\n⚠️ ${skipCount} item(s) skipped (already exist).`;
+      if (errorCount > 0) msg += `\n❌ ${errorCount} item(s) failed.`;
+      alert(msg);
+    } catch (err) {
+      alert("Error: " + err.message);
+    } finally {
+      setBulkSubmitting(false);
+    }
+  };
 
   /* ── PDF Download ── */
   const handleDownloadPDF = async () => {
@@ -659,7 +963,51 @@ const ExportProductlist = () => {
         >
           ⬇ Download PDF
         </button>
+        <button
+          className="apf-btn"
+          onClick={bulkMode ? openBulkModal : toggleBulkMode}
+          style={{
+            marginLeft: "10px",
+            background: bulkMode ? "#f59e0b" : "#6366f1",
+          }}
+        >
+          {bulkMode
+            ? selectedProductIds.size > 0
+              ? `➕ Add ${selectedProductIds.size} to Customer`
+              : "✕ Cancel"
+            : "👥 Add to Customer"}
+        </button>
+        {bulkMode && selectedProductIds.size === 0 && (
+          <button
+            className="cancel-btn"
+            onClick={toggleBulkMode}
+            style={{ marginLeft: "8px" }}
+          >
+            Cancel
+          </button>
+        )}
       </div>
+
+      {bulkMode && (
+        <div
+          style={{
+            background: "#fffbeb",
+            border: "1px solid #f59e0b",
+            borderRadius: "8px",
+            padding: "10px 16px",
+            marginBottom: "12px",
+            fontSize: "14px",
+            color: "#92400e",
+          }}
+        >
+          ☑️ Select products to add to a customer.{" "}
+          {selectedProductIds.size > 0 ? (
+            <strong>{selectedProductIds.size} selected.</strong>
+          ) : (
+            "No products selected yet."
+          )}
+        </div>
+      )}
 
       {/* Species Filter Pills */}
       <div className="species-filter">
@@ -696,10 +1044,10 @@ const ExportProductlist = () => {
             <table className="pricelist-table">
               <thead>
                 <tr>
+                  {bulkMode && <th style={{ width: "40px" }}>Select</th>}
                   <th>Picture</th>
                   <th>Common Name</th>
                   <th>Scientific Name</th>
-
                   <th>Type</th>
                   <th>Size</th>
                   <th>Purchase Price</th>
@@ -716,7 +1064,10 @@ const ExportProductlist = () => {
                   return (
                     <React.Fragment key={section}>
                       <tr className="section-header">
-                        <td colSpan={11} className="section-title">
+                        <td
+                          colSpan={bulkMode ? 11 : 10}
+                          className="section-title"
+                        >
                           <span className="section-icon">
                             {section === "Fish" && "🐟"}
                             {section === "Crab" && "🦀"}
@@ -738,12 +1089,14 @@ const ExportProductlist = () => {
                           const groupRowSpan = getTotalRowsForGroup(products);
                           const firstProduct = products[0];
                           const imgSrc = getImageUrl(firstProduct.image_url);
+                          const isSelected = selectedProductIds.has(
+                            firstProduct.id,
+                          );
                           let isFirstRowOfGroup = true;
 
                           return products.map((product) => {
                             const variants = product.variants || [];
 
-                            // ── Product HAS variants ──
                             if (variants.length > 0) {
                               return variants.map((variant, variantIndex) => {
                                 const isVeryFirstRow =
@@ -760,6 +1113,30 @@ const ExportProductlist = () => {
                                         : ""
                                     }
                                   >
+                                    {bulkMode && isVeryFirstRow && (
+                                      <td
+                                        rowSpan={groupRowSpan}
+                                        style={{
+                                          textAlign: "center",
+                                          verticalAlign: "middle",
+                                        }}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          onChange={() =>
+                                            toggleProductSelection(
+                                              firstProduct.id,
+                                            )
+                                          }
+                                          style={{
+                                            width: "18px",
+                                            height: "18px",
+                                            cursor: "pointer",
+                                          }}
+                                        />
+                                      </td>
+                                    )}
                                     {isVeryFirstRow && (
                                       <>
                                         <td
@@ -786,7 +1163,6 @@ const ExportProductlist = () => {
                                         </td>
                                       </>
                                     )}
-
                                     {isFirstOfProduct && (
                                       <td rowSpan={variants.length}>
                                         <span
@@ -799,24 +1175,17 @@ const ExportProductlist = () => {
                                         </span>
                                       </td>
                                     )}
-
                                     <td>{variant.size || "—"}</td>
-
-                                    {/* Purchase Price */}
                                     <td className="price-cell">
                                       {parseFloat(variant.purchasing_price) > 0
                                         ? `Rs. ${parseFloat(variant.purchasing_price).toFixed(2)}`
                                         : "—"}
                                     </td>
-
-                                    {/* JC FOB Price */}
                                     <td className="price-cell">
                                       {parseFloat(variant.jc_fob) > 0
                                         ? `$${parseFloat(variant.jc_fob).toFixed(2)}`
                                         : "—"}
                                     </td>
-
-                                    {/* FOB (USD) — live calculated */}
                                     <td className="price-cell">
                                       {(() => {
                                         const rate =
@@ -846,13 +1215,23 @@ const ExportProductlist = () => {
                                           : "—";
                                       })()}
                                     </td>
-
                                     {isFirstOfProduct && (
                                       <td
                                         className="actions-cell"
                                         rowSpan={variants.length}
                                       >
                                         <div className="actions-wrapper">
+                                          <button
+                                            className="btn-view"
+                                            onClick={() =>
+                                              navigate(
+                                                `/exportproductdetail/${product.id}`,
+                                              )
+                                            }
+                                          >
+                                            View
+                                          </button>
+
                                           <button
                                             className="btn-edit"
                                             onClick={() =>
@@ -880,10 +1259,9 @@ const ExportProductlist = () => {
                               });
                             }
 
-                            // ── Product has NO variants ──
+                            // No variants
                             const isVeryFirstRow = isFirstRowOfGroup;
                             if (isVeryFirstRow) isFirstRowOfGroup = false;
-
                             return (
                               <tr
                                 key={product.id}
@@ -891,6 +1269,28 @@ const ExportProductlist = () => {
                                   isVeryFirstRow ? "product-group-start" : ""
                                 }
                               >
+                                {bulkMode && isVeryFirstRow && (
+                                  <td
+                                    rowSpan={groupRowSpan}
+                                    style={{
+                                      textAlign: "center",
+                                      verticalAlign: "middle",
+                                    }}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() =>
+                                        toggleProductSelection(firstProduct.id)
+                                      }
+                                      style={{
+                                        width: "18px",
+                                        height: "18px",
+                                        cursor: "pointer",
+                                      }}
+                                    />
+                                  </td>
+                                )}
                                 {isVeryFirstRow && (
                                   <>
                                     <td
@@ -937,11 +1337,10 @@ const ExportProductlist = () => {
                                     {formatCategory(product.category)}
                                   </span>
                                 </td>
-                                <td className="muted">—</td> {/* size */}
-                                <td className="muted">—</td> {/* purchase */}
-                                <td className="muted">—</td> {/* jc_fob */}
-                                <td className="muted">—</td> {/* exfactory */}
-                                <td className="muted">—</td> {/* fob usd */}
+                                <td className="muted">—</td>
+                                <td className="muted">—</td>
+                                <td className="muted">—</td>
+                                <td className="muted">—</td>
                                 <td className="actions-cell">
                                   <div className="actions-wrapper">
                                     <button
@@ -977,7 +1376,7 @@ const ExportProductlist = () => {
                 ).length === 0 && (
                   <tr>
                     <td
-                      colSpan={11}
+                      colSpan={bulkMode ? 11 : 10}
                       className="muted"
                       style={{ textAlign: "center", padding: "3rem" }}
                     >
@@ -991,6 +1390,231 @@ const ExportProductlist = () => {
             </table>
           </div>
         </>
+      )}
+
+      {/* ── Bulk Add Modal ── */}
+      {showBulkModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px",
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: "12px",
+              width: "100%",
+              maxWidth: "780px",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: "20px 24px 16px",
+                borderBottom: "1px solid #e5e7eb",
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: "18px", color: "#1e3a5f" }}>
+                🚢 Add Export Products to Customer
+              </h3>
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  fontSize: "13px",
+                  color: "#6b7280",
+                }}
+              >
+                {bulkItems.length} variant(s) from {selectedProductIds.size}{" "}
+                product(s)
+              </p>
+            </div>
+
+            {/* Customer Selector */}
+            <div
+              style={{
+                padding: "16px 24px",
+                borderBottom: "1px solid #e5e7eb",
+              }}
+            >
+              <label
+                style={{
+                  fontWeight: 600,
+                  fontSize: "14px",
+                  color: "#374151",
+                  display: "block",
+                  marginBottom: "8px",
+                }}
+              >
+                Select Customer *
+              </label>
+              <select
+                value={bulkCustomerId}
+                onChange={(e) => setBulkCustomerId(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  fontSize: "14px",
+                }}
+              >
+                <option value="">— Choose a customer —</option>
+                {customers.map((c) => (
+                  <option key={c.cus_id} value={c.cus_id}>
+                    {c.cus_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Items Table */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "13px",
+                }}
+              >
+                <thead>
+                  <tr style={{ background: "#f1f5f9" }}>
+                    {[
+                      "Product",
+                      "Size",
+                      "Purchase (Rs)",
+                      "Ex-Factory (Rs)",
+                      "FOB (USD)",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        style={{
+                          padding: "8px 10px",
+                          textAlign: h.includes("(") ? "right" : "left",
+                          color: "#475569",
+                          fontWeight: 600,
+                          borderBottom: "1px solid #e2e8f0",
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {bulkItems.map((item) => (
+                    <tr
+                      key={item.key}
+                      style={{ borderBottom: "1px solid #e5e7eb" }}
+                    >
+                      <td
+                        style={{
+                          padding: "8px 10px",
+                          fontWeight: 500,
+                          color: "#1e3a5f",
+                        }}
+                      >
+                        {item.common_name}
+                      </td>
+                      <td style={{ padding: "8px 10px", color: "#6b7280" }}>
+                        {item.size_range || "—"}
+                      </td>
+                      <td
+                        style={{
+                          padding: "8px 10px",
+                          textAlign: "right",
+                          color: "#374151",
+                        }}
+                      >
+                        {item.purchasing_price > 0
+                          ? `Rs. ${item.purchasing_price.toFixed(2)}`
+                          : "—"}
+                      </td>
+                      <td
+                        style={{
+                          padding: "8px 10px",
+                          textAlign: "right",
+                          color: "#374151",
+                        }}
+                      >
+                        {item.exfactoryprice > 0
+                          ? `Rs. ${item.exfactoryprice.toFixed(2)}`
+                          : "—"}
+                      </td>
+                      <td
+                        style={{
+                          padding: "8px 10px",
+                          textAlign: "right",
+                          fontWeight: 600,
+                          color: "#0d47a1",
+                        }}
+                      >
+                        {item.fob_usd_display > 0
+                          ? `$${item.fob_usd_display.toFixed(4)}`
+                          : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Footer */}
+            <div
+              style={{
+                padding: "16px 24px",
+                borderTop: "1px solid #e5e7eb",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "12px",
+              }}
+            >
+              <button
+                onClick={() => setShowBulkModal(false)}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  background: "#fff",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkSubmit}
+                disabled={bulkSubmitting || !bulkCustomerId}
+                style={{
+                  padding: "10px 24px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background:
+                    bulkSubmitting || !bulkCustomerId ? "#9ca3af" : "#0d47a1",
+                  color: "#fff",
+                  cursor:
+                    bulkSubmitting || !bulkCustomerId
+                      ? "not-allowed"
+                      : "pointer",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                }}
+              >
+                {bulkSubmitting ? "Adding…" : "Add to Customer"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

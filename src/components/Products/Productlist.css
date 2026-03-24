@@ -477,7 +477,8 @@
 }
 
 .btn-edit,
-.btn-delete {
+.btn-delete,
+.btn-view {
   width: 80px;
   padding: 7px 0;
   border: none;
@@ -508,6 +509,17 @@
 .btn-delete:hover {
   background: rgba(239, 68, 68, 0.18);
   border-color: #f87171;
+  transform: translateY(-1px);
+}
+
+.btn-view {
+  background: rgba(166, 255, 139, 0.08);
+  color: #0fc919;
+  border: 1px solid rgba(11, 114, 8, 0.2);
+}
+.btn-view:hover {
+  background: rgba(28, 119, 0, 0.18);
+  border-color: #0fc919;
   transform: translateY(-1px);
 }
 

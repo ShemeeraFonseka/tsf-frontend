@@ -1367,6 +1367,16 @@ const Productlist = () => {
                                       >
                                         <div className="actions-wrapper">
                                           <button
+                                            className="btn-view"
+                                            onClick={() =>
+                                              navigate(
+                                                `/productdetail/${product.id}`,
+                                              )
+                                            }
+                                          >
+                                            View
+                                          </button>
+                                          <button
                                             className="btn-edit"
                                             onClick={() =>
                                               navigateEdit(product.id)
@@ -1477,6 +1487,15 @@ const Productlist = () => {
                                 <td className="muted">—</td>
                                 <td className="actions-cell">
                                   <div className="actions-wrapper">
+                                    <button
+                                      className="btn-view"
+                                      onClick={() =>
+                                        navigate(`/productdetail/${product.id}`)
+                                      }
+                                    >
+                                      View
+                                    </button>
+
                                     <button
                                       className="btn-edit"
                                       onClick={() => navigateEdit(product.id)}

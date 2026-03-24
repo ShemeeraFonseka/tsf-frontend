@@ -24,90 +24,252 @@ import ExportCustomersAir from "./components/Customers/ExportCustomersAir";
 import ExportCustomerDetailAir from "./components/Customers/ExportCustomerDetailAir";
 import ExportProductlistAir from "./components/Products/ExportProductlistAir";
 import ExportAddProductFormAir from "./components/pricelist/ExportAddProductFormAir";
+import ProductDetail from "./components/Products/ProductDetail";
+import ExportProductDetail from "./components/Products/ExportProductDetail";
+import ExportProductDetailAir from "./components/Products/ExportProductDetailAir";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 function App() {
   return (
     <Router>
       <Navbar />
       <Routes>
+        {/* ── Public ── */}
+        <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* ── Protected ── */}
         <Route
-          path="/"
+          path="/dashboard"
           element={
-            <>
-              <Login />
-            </>
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
           }
         />
 
-        <Route path="/dashboard" element={<Dashboard />} />
-
-        <Route path="/productform" element={<AddProductForm />} />
-        <Route path="/productform/:id" element={<AddProductForm />} />
-
-        <Route path="/customerlist" element={<Customers />} />
-        <Route path="/customerform" element={<AddCustomerForm />} />
-        <Route path="/customerform/:id" element={<AddCustomerForm />} />
-
-        <Route path="/customer/:cus_id" element={<CustomerDetail />} />
-
-        <Route path="/productlist" element={<Productlist />} />
-
-        <Route path="/exportproductform" element={<ExportAddProductForm />} />
         <Route
-          path="/exportproductform/:id"
-          element={<ExportAddProductForm />}
+          path="/productform"
+          element={
+            <ProtectedRoute>
+              <AddProductForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/productform/:id"
+          element={
+            <ProtectedRoute>
+              <AddProductForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/productlist"
+          element={
+            <ProtectedRoute>
+              <Productlist />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/productdetail/:id"
+          element={
+            <ProtectedRoute>
+              <ProductDetail />
+            </ProtectedRoute>
+          }
         />
 
         <Route
+          path="/customerlist"
+          element={
+            <ProtectedRoute>
+              <Customers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customerform"
+          element={
+            <ProtectedRoute>
+              <AddCustomerForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customerform/:id"
+          element={
+            <ProtectedRoute>
+              <AddCustomerForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer/:cus_id"
+          element={
+            <ProtectedRoute>
+              <CustomerDetail />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/exportproductform"
+          element={
+            <ProtectedRoute>
+              <ExportAddProductForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exportproductform/:id"
+          element={
+            <ProtectedRoute>
+              <ExportAddProductForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/exportproductformair"
-          element={<ExportAddProductFormAir />}
+          element={
+            <ProtectedRoute>
+              <ExportAddProductFormAir />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/exportproductformair/:id"
-          element={<ExportAddProductFormAir />}
+          element={
+            <ProtectedRoute>
+              <ExportAddProductFormAir />
+            </ProtectedRoute>
+          }
         />
 
-        <Route path="/exportcustomerlist" element={<ExportCustomers />} />
-        <Route path="/exportcustomerform" element={<ExportAddCustomerForm />} />
+        <Route
+          path="/exportcustomerlist"
+          element={
+            <ProtectedRoute>
+              <ExportCustomers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exportcustomerform"
+          element={
+            <ProtectedRoute>
+              <ExportAddCustomerForm />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/exportcustomerform/:id"
-          element={<ExportAddCustomerForm />}
+          element={
+            <ProtectedRoute>
+              <ExportAddCustomerForm />
+            </ProtectedRoute>
+          }
         />
-
-        <Route path="/exportcustomerlistair" element={<ExportCustomersAir />} />
+        <Route
+          path="/exportcustomerlistair"
+          element={
+            <ProtectedRoute>
+              <ExportCustomersAir />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/exportcustomerformair"
-          element={<ExportAddCustomerFormAir />}
+          element={
+            <ProtectedRoute>
+              <ExportAddCustomerFormAir />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/exportcustomerformair/:id"
-          element={<ExportAddCustomerFormAir />}
+          element={
+            <ProtectedRoute>
+              <ExportAddCustomerFormAir />
+            </ProtectedRoute>
+          }
         />
-
         <Route
           path="/exportcustomer/:cus_id"
-          element={<ExportCustomerDetail />}
+          element={
+            <ProtectedRoute>
+              <ExportCustomerDetail />
+            </ProtectedRoute>
+          }
         />
-
         <Route
           path="/exportcustomerair/:cus_id"
-          element={<ExportCustomerDetailAir />}
+          element={
+            <ProtectedRoute>
+              <ExportCustomerDetailAir />
+            </ProtectedRoute>
+          }
         />
-
-        <Route path="/exportproductlist" element={<ExportProductlist />} />
 
         <Route
+          path="/exportproductlist"
+          element={
+            <ProtectedRoute>
+              <ExportProductlist />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/exportproductlistair"
-          element={<ExportProductlistAir />}
+          element={
+            <ProtectedRoute>
+              <ExportProductlistAir />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exportproductdetailair/:id"
+          element={
+            <ProtectedRoute>
+              <ExportProductDetailAir />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exportproductdetail/:id"
+          element={
+            <ProtectedRoute>
+              <ExportProductDetail />
+            </ProtectedRoute>
+          }
         />
 
-        <Route path="/usdrate" element={<UsdRateForm />} />
-
-        <Route path="/freightrates" element={<FreightRatesForm />} />
-        <Route path="/seafreightrates" element={<SeaFreightRatesForm />} />
-
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route
+          path="/usdrate"
+          element={
+            <ProtectedRoute>
+              <UsdRateForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/freightrates"
+          element={
+            <ProtectedRoute>
+              <FreightRatesForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/seafreightrates"
+          element={
+            <ProtectedRoute>
+              <SeaFreightRatesForm />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </Router>
   );

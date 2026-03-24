@@ -1116,6 +1116,17 @@ const ExportProductlistAir = () => {
                                       >
                                         <div className="actions-wrapper">
                                           <button
+                                            className="btn-view"
+                                            onClick={() =>
+                                              navigate(
+                                                `/exportproductdetailair/${product.id}`,
+                                              )
+                                            }
+                                          >
+                                            View
+                                          </button>
+
+                                          <button
                                             className="btn-edit"
                                             onClick={() =>
                                               navigateEdit(product.id)
@@ -1226,6 +1237,16 @@ const ExportProductlistAir = () => {
                                 <td className="muted">—</td>
                                 <td className="actions-cell">
                                   <div className="actions-wrapper">
+                                    <button
+                                      className="btn-view"
+                                      onClick={() =>
+                                        navigate(
+                                          `/exportproductdetailair/${product.id}`,
+                                        )
+                                      }
+                                    >
+                                      View
+                                    </button>
                                     <button
                                       className="btn-edit"
                                       onClick={() => navigateEdit(product.id)}

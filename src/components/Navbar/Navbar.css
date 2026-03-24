@@ -22,7 +22,6 @@
   background: #000; /* solid black */
 }
 
-
 /* Logo */
 .navbar-logo {
   font-size: 25px;
@@ -40,7 +39,6 @@
   opacity: 0.9;
 }
 
-
 /* Navigation Links */
 .nav-links {
   list-style: none;
@@ -50,7 +48,7 @@
   transition: all 0.3s ease;
 }
 
-.nav-links li a{
+.nav-links li a {
   font-size: 18px;
   font-weight: 500;
   color: #ffffff;
@@ -63,21 +61,25 @@
   color: #09d7fc;
 }
 
-/* Book Now Button */
-.book-btn {
-  background:transparent;
-  color: white;
-  border: 1px solid #09d7fc;
-  padding: 1rem 2.5rem;
-  border-radius: 50px;
-  font-size: 1.1rem;
-  font-weight: 600;
+.nav-logout-btn {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, #00c4f4, #0080d4);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(0, 180, 255, 0.2);
 }
 
-.book-btn:hover {
-  background:linear-gradient(90deg, #09d7fc, #109ac4);
+.nav-logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 180, 255, 0.35);
 }
+
 /* Hamburger Menu Icon */
 .menu-icon {
   display: none;
