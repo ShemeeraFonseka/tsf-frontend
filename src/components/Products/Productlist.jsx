@@ -649,8 +649,13 @@ const Productlist = () => {
       const allProductsMap = {};
       filteredItems.forEach((product) => {
         const key = product.common_name;
-        if (!allProductsMap[key])
-          allProductsMap[key] = { product, variants: [] };
+        if (!allProductsMap[key]) {
+          allProductsMap[key] = {
+            product,
+            variants: [],
+            category: product.category, // ← store at map level
+          };
+        }
         if (product.variants?.length > 0)
           allProductsMap[key].variants.push(...product.variants);
       });
@@ -662,7 +667,7 @@ const Productlist = () => {
       );
 
       const tableBody = [];
-      sortedProducts.forEach(({ product, variants }) => {
+      sortedProducts.forEach(({ product, variants, category }) => {
         if (variants.length > 0) {
           variants.forEach((variant, vIdx) => {
             tableBody.push({
@@ -670,8 +675,8 @@ const Productlist = () => {
               commonName: product.common_name,
               scientificName: product.scientific_name || "—",
               image: product.image_url || null,
-              type: formatCategory(variant.category),
-              size: variant.size || "—",
+              type: formatCategory(category), // ← use map-level category
+              size: variant.size && variant.size !== "-" ? variant.size : "—",
             });
           });
         } else {
@@ -680,7 +685,7 @@ const Productlist = () => {
             commonName: product.common_name,
             scientificName: product.scientific_name || "—",
             image: product.image_url || null,
-            type: formatCategory(product.category),
+            type: formatCategory(category),
             size: "—",
           });
         }
