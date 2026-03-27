@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./UsdRateForm.css";
+import { isAdmin } from "../../hooks/useAuth";
 
 const UsdRateForm = () => {
   const API_URL = process.env.REACT_APP_API_URL;
@@ -200,6 +201,8 @@ const UsdRateForm = () => {
       minute: "2-digit",
     });
 
+  const adminUser = isAdmin();
+
   return (
     <div className="usd-page">
       <h2>💱 USD Exchange Rate</h2>
@@ -260,9 +263,11 @@ const UsdRateForm = () => {
           required
         />
 
-        <button type="submit" className="apf-btn" disabled={loading}>
-          {loading ? "⏳ Updating & Recalculating…" : "Update USD Rate"}
-        </button>
+        {adminUser && (
+          <button type="submit" className="apf-btn" disabled={loading}>
+            {loading ? "⏳ Updating & Recalculating…" : "Update USD Rate"}
+          </button>
+        )}
       </form>
 
       {/* ── Recalculation Info ── */}
@@ -327,13 +332,15 @@ const UsdRateForm = () => {
                       {index === 0 ? (
                         <span className="badge-current">Current</span>
                       ) : (
-                        <button
-                          type="button"
-                          className="tbl-btn-delete"
-                          onClick={() => handleDelete(entry.id)}
-                        >
-                          Delete
-                        </button>
+                        adminUser && (
+                          <button
+                            type="button"
+                            className="tbl-btn-delete"
+                            onClick={() => handleDelete(entry.id)}
+                          >
+                            Delete
+                          </button>
+                        )
                       )}
                     </td>
                   </tr>

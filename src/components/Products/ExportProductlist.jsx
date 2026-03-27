@@ -5,6 +5,8 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import logoSrc from "./logo.png";
 
+import { isAdmin } from "../../hooks/useAuth";
+
 /* ── Badge helpers ─────────────────────────────────────────────── */
 const getSpeciesBadgeClass = (speciesType) => {
   if (!speciesType) return "badge-default";
@@ -883,14 +885,18 @@ const ExportProductlist = () => {
     }
   };
 
+  const adminUser = isAdmin();
+
   return (
     <div className="pricelist-container">
       <h2>Export Product List - Sea</h2>
 
       <div className="add-section">
-        <button className="apf-btn" onClick={navigateForm}>
-          + Add Product
-        </button>
+        {adminUser && (
+          <button className="apf-btn" onClick={navigateForm}>
+            + Add Product
+          </button>
+        )}
         <button
           className="apf-btn"
           onClick={handleDownloadPDF}
@@ -901,20 +907,22 @@ const ExportProductlist = () => {
         >
           ⬇ Download PDF
         </button>
-        <button
-          className="apf-btn"
-          onClick={bulkMode ? openBulkModal : toggleBulkMode}
-          style={{
-            marginLeft: "10px",
-            background: bulkMode ? "#f59e0b" : "#6366f1",
-          }}
-        >
-          {bulkMode
-            ? selectedProductIds.size > 0
-              ? `➕ Add ${selectedProductIds.size} to Customer`
-              : "✕ Cancel"
-            : "👥 Add to Customer"}
-        </button>
+        {adminUser && (
+          <button
+            className="apf-btn"
+            onClick={bulkMode ? openBulkModal : toggleBulkMode}
+            style={{
+              marginLeft: "10px",
+              background: bulkMode ? "#f59e0b" : "#6366f1",
+            }}
+          >
+            {bulkMode
+              ? selectedProductIds.size > 0
+                ? `➕ Add ${selectedProductIds.size} to Customer`
+                : "✕ Cancel"
+              : "👥 Add to Customer"}
+          </button>
+        )}
         {bulkMode && selectedProductIds.size === 0 && (
           <button
             className="cancel-btn"
@@ -1150,25 +1158,29 @@ const ExportProductlist = () => {
                                           >
                                             View
                                           </button>
-                                          <button
-                                            className="btn-edit"
-                                            onClick={() =>
-                                              navigateEdit(product.id)
-                                            }
-                                          >
-                                            Edit
-                                          </button>
-                                          <button
-                                            className="btn-delete"
-                                            onClick={() =>
-                                              handleDelete(
-                                                product.id,
-                                                product.common_name,
-                                              )
-                                            }
-                                          >
-                                            Delete
-                                          </button>
+                                          {adminUser && (
+                                            <button
+                                              className="btn-edit"
+                                              onClick={() =>
+                                                navigateEdit(product.id)
+                                              }
+                                            >
+                                              Edit
+                                            </button>
+                                          )}
+                                          {adminUser && (
+                                            <button
+                                              className="btn-delete"
+                                              onClick={() =>
+                                                handleDelete(
+                                                  product.id,
+                                                  product.common_name,
+                                                )
+                                              }
+                                            >
+                                              Delete
+                                            </button>
+                                          )}
                                         </div>
                                       </td>
                                     )}

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import "../pricelist/AddProductForm.css";
 
+import { isAdmin } from "../../hooks/useAuth";
+
 const FreightRatesForm = () => {
   const API_URL = process.env.REACT_APP_API_URL;
 
@@ -371,6 +373,8 @@ const FreightRatesForm = () => {
     });
   };
 
+  const adminUser = isAdmin();
+
   return (
     <div className="form-container">
       <h2>{editingId ? "Update" : "Add"} Freight Rate</h2>
@@ -518,20 +522,22 @@ const FreightRatesForm = () => {
         />
 
         <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
-          <button
-            type="submit"
-            className="apf-btn"
-            disabled={loading}
-            style={{ opacity: loading ? 0.6 : 1, flex: 1 }}
-          >
-            {loading
-              ? editingId
-                ? "Updating..."
-                : "Adding..."
-              : editingId
-                ? "Update Rate"
-                : "Add Freight Rate"}
-          </button>
+          {adminUser && (
+            <button
+              type="submit"
+              className="apf-btn"
+              disabled={loading}
+              style={{ opacity: loading ? 0.6 : 1, flex: 1 }}
+            >
+              {loading
+                ? editingId
+                  ? "Updating..."
+                  : "Adding..."
+                : editingId
+                  ? "Update Rate"
+                  : "Add Freight Rate"}
+            </button>
+          )}
           {editingId && (
             <button
               type="button"
@@ -653,20 +659,24 @@ const FreightRatesForm = () => {
                       })}
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(rate)}
-                        className="tbl-btn-edit"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(rate.id)}
-                        className="tbl-btn-delete"
-                      >
-                        Delete
-                      </button>
+                      {adminUser && (
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(rate)}
+                          className="tbl-btn-edit"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {adminUser && (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(rate.id)}
+                          className="tbl-btn-delete"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -725,20 +735,24 @@ const FreightRatesForm = () => {
                       })}
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(rate)}
-                        className="tbl-btn-edit"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(rate.id)}
-                        className="tbl-btn-delete"
-                      >
-                        Delete
-                      </button>
+                      {adminUser && (
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(rate)}
+                          className="tbl-btn-edit"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {adminUser && (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(rate.id)}
+                          className="tbl-btn-delete"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
