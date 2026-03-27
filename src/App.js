@@ -28,6 +28,8 @@ import ProductDetail from "./components/Products/ProductDetail";
 import ExportProductDetail from "./components/Products/ExportProductDetail";
 import ExportProductDetailAir from "./components/Products/ExportProductDetailAir";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import ForgotPassword from "./components/auth/ForgotPassword";
+import ResetPassword from "./components/auth/ResetPassword";
 
 function App() {
   return (
@@ -38,6 +40,9 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* ── Protected ── */}
         <Route

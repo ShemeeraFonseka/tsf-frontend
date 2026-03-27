@@ -13,7 +13,6 @@ const getSpeciesBadgeClass = (speciesType) => {
   if (val === "crustacean") return "badge-crustacean";
   return "badge-default";
 };
-
 const getSpeciesBadgeIcon = (speciesType) => {
   if (!speciesType) return "🌊";
   const val = speciesType.toLowerCase();
@@ -21,7 +20,6 @@ const getSpeciesBadgeIcon = (speciesType) => {
   if (val === "crustacean") return "🦞";
   return "🌊";
 };
-
 const getCategoryBadgeClass = (category) => {
   if (!category) return "badge-default-cat";
   const val = category.toLowerCase();
@@ -30,7 +28,6 @@ const getCategoryBadgeClass = (category) => {
   if (val === "frozen") return "badge-frozen";
   return "badge-default-cat";
 };
-
 const getCategoryBadgeIcon = (category) => {
   if (!category) return "";
   const val = category.toLowerCase();
@@ -39,10 +36,27 @@ const getCategoryBadgeIcon = (category) => {
   if (val === "frozen") return "❄️";
   return "";
 };
-/* ──────────────────────────────────────────────────────────────── */
+
+/* ── Shared FOB calculator ── */
+const calcFobUSD = (variant, usdRate) => {
+  const rate = usdRate || parseFloat(variant.usdrate) || 1;
+  if (parseFloat(variant.jc_fob) > 0) {
+    // JC FOB model: FOB = jc_fob + profit + packing + labour
+    return (
+      (parseFloat(variant.jc_fob) || 0) +
+      (parseFloat(variant.profit) || 0) +
+      (parseFloat(variant.packing_cost) || 0) +
+      (parseFloat(variant.labour_overhead) || 0)
+    );
+  } else {
+    // Purchase price model: FOB = exfactoryprice / usdrate
+    return parseFloat(variant.exfactoryprice || 0) / rate;
+  }
+};
 
 const ExportProductlist = () => {
   const API_URL = process.env.REACT_APP_API_URL;
+  const navigate = useNavigate();
 
   const [items, setItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
@@ -57,7 +71,6 @@ const ExportProductlist = () => {
   const [bulkItems, setBulkItems] = useState([]);
   const bulkFreightType = "sea";
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
-
   const [customers, setCustomers] = useState([]);
   const [bulkCustomerId, setBulkCustomerId] = useState("");
 
@@ -140,7 +153,7 @@ const ExportProductlist = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line
 
   useEffect(() => {
     fetch(`${API_URL}/api/usd-rate`)
@@ -149,12 +162,11 @@ const ExportProductlist = () => {
         if (data.rate) setCurrentUsdRate(data.rate);
       })
       .catch(() => {});
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line
 
   useEffect(() => {
-    if (selectedSpeciesType === "all") {
-      setFilteredItems(items);
-    } else {
+    if (selectedSpeciesType === "all") setFilteredItems(items);
+    else
       setFilteredItems(
         items.filter(
           (item) =>
@@ -162,7 +174,6 @@ const ExportProductlist = () => {
             selectedSpeciesType.toLowerCase(),
         ),
       );
-    }
   }, [selectedSpeciesType, items]);
 
   const fetchProducts = () => {
@@ -208,7 +219,6 @@ const ExportProductlist = () => {
     return t ? t.label : s.charAt(0).toUpperCase() + s.slice(1);
   };
 
-  const navigate = useNavigate();
   const navigateForm = () => navigate("/exportproductform");
   const navigateEdit = (productId) =>
     navigate(`/exportproductform/${productId}`);
@@ -230,9 +240,8 @@ const ExportProductlist = () => {
   const getProductSection = (product) => {
     const commonName = product.common_name?.toLowerCase() || "";
     for (const section of sectionCategories) {
-      if (section.keywords.some((keyword) => commonName.includes(keyword))) {
+      if (section.keywords.some((keyword) => commonName.includes(keyword)))
         return section.name;
-      }
     }
     return "Other";
   };
@@ -244,8 +253,7 @@ const ExportProductlist = () => {
     });
     grouped["Other"] = [];
     products.forEach((product) => {
-      const section = getProductSection(product);
-      grouped[section].push(product);
+      grouped[getProductSection(product)].push(product);
     });
     return grouped;
   };
@@ -273,6 +281,7 @@ const ExportProductlist = () => {
   const sectionHasProducts = (section) =>
     Object.keys(groupedProductsBySection[section] || {}).length > 0;
 
+  /* ── Bulk-add handlers ── */
   const toggleBulkMode = () => {
     setBulkMode((prev) => !prev);
     setSelectedProductIds(new Set());
@@ -293,7 +302,6 @@ const ExportProductlist = () => {
       return;
     }
 
-    // Fetch customers for selector
     try {
       const res = await fetch(`${API_URL}/api/exportcustomerlist`);
       if (res.ok) setCustomers(await res.json());
@@ -301,15 +309,19 @@ const ExportProductlist = () => {
       console.error(err);
     }
 
+    const usdRate = parseFloat(currentUsdRate) || 304;
     const rows = [];
+
     filteredItems.forEach((product) => {
       if (!selectedProductIds.has(product.id)) return;
       const variants = product.variants || [];
       if (variants.length > 0) {
         variants.forEach((variant) => {
           const exf = parseFloat(variant.exfactoryprice) || 0;
-          const usdrate = parseFloat(variant.usdrate) || 0;
-          const fobUSD = usdrate > 0 ? exf / usdrate : 0;
+          const variantUsdRate = parseFloat(variant.usdrate) || usdRate;
+          // Use shared FOB calculator — handles both JC FOB and purchase price models
+          const fobInUSD = calcFobUSD(variant, variantUsdRate);
+
           rows.push({
             key: `${product.id}-${variant.id}`,
             product_id: product.id,
@@ -321,8 +333,14 @@ const ExportProductlist = () => {
             size_range: `${variant.size}`,
             purchasing_price: parseFloat(variant.purchasing_price) || 0,
             exfactoryprice: exf,
-            usdrate,
-            fob_usd_display: parseFloat(fobUSD.toFixed(4)),
+            usdrate: variantUsdRate,
+            // Store pricing fields needed for handleBulkSubmit
+            jc_fob: parseFloat(variant.jc_fob) || 0,
+            profit: parseFloat(variant.profit) || 0,
+            packing_cost: parseFloat(variant.packing_cost) || 0,
+            labour_overhead: parseFloat(variant.labour_overhead) || 0,
+            fob_usd_display: parseFloat(fobInUSD.toFixed(4)),
+            fob_price: parseFloat(fobInUSD.toFixed(4)), // stored as USD
             multiplier: parseFloat(variant.multiplier) || 0,
             divisor: parseFloat(variant.divisor) || 1,
           });
@@ -339,8 +357,13 @@ const ExportProductlist = () => {
           size_range: "",
           purchasing_price: 0,
           exfactoryprice: 0,
-          usdrate: 0,
+          usdrate: usdRate,
+          jc_fob: 0,
+          profit: 0,
+          packing_cost: 0,
+          labour_overhead: 0,
           fob_usd_display: 0,
+          fob_price: 0,
           multiplier: 0,
           divisor: 1,
         });
@@ -359,12 +382,11 @@ const ExportProductlist = () => {
     }
     if (bulkItems.length === 0) return;
     setBulkSubmitting(true);
-    let successCount = 0;
-    let skipCount = 0;
-    let errorCount = 0;
+    let successCount = 0,
+      skipCount = 0,
+      errorCount = 0;
 
     try {
-      // Fetch existing records to avoid duplicates
       const existingRes = await fetch(
         `${API_URL}/api/exportcustomer-products/${bulkCustomerId}`,
       );
@@ -373,43 +395,13 @@ const ExportProductlist = () => {
         existingData.map((e) => `${e.product_id}-${e.variant_id ?? "null"}`),
       );
 
-      // Fetch customer details to get country/airport/port for freight lookup
       const customerRes = await fetch(
         `${API_URL}/api/exportcustomerlist/${bulkCustomerId}`,
       );
       const customerData = customerRes.ok ? await customerRes.json() : null;
 
-      // Fetch freight rates
-      let airRateData = null;
       let seaRateData = null;
-
-      if (bulkFreightType === "air" && customerData?.country) {
-        const frRes = await fetch(`${API_URL}/api/freight-rates`);
-        if (frRes.ok) {
-          const allRates = await frRes.json();
-          // Match by airport_code first, then country
-          const matches = allRates.filter(
-            (r) =>
-              r.country.toLowerCase() === customerData.country.toLowerCase(),
-          );
-          if (customerData.airport_code) {
-            const exact = matches.filter(
-              (r) =>
-                r.airport_code?.toUpperCase() ===
-                customerData.airport_code.toUpperCase(),
-            );
-            airRateData = exact.length
-              ? exact.sort((a, b) => new Date(b.date) - new Date(a.date))[0]
-              : matches.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-          } else {
-            airRateData = matches.sort(
-              (a, b) => new Date(b.date) - new Date(a.date),
-            )[0];
-          }
-        }
-      }
-
-      if (bulkFreightType === "sea" && customerData?.country) {
+      if (customerData?.country) {
         const sfRes = await fetch(`${API_URL}/api/sea-freight-rates`);
         if (sfRes.ok) {
           const allSeaRates = await sfRes.json();
@@ -434,8 +426,6 @@ const ExportProductlist = () => {
         }
       }
 
-      const usdRate = parseFloat(currentUsdRate) || 300;
-
       for (const item of bulkItems) {
         const dupKey = `${item.product_id}-${item.variant_id ?? "null"}`;
         if (existingKeys.has(dupKey)) {
@@ -443,8 +433,16 @@ const ExportProductlist = () => {
           continue;
         }
 
-        const exf = parseFloat(item.exfactoryprice) || 0;
-        const fobLKR = exf; // no additional costs on bulk add
+        // Recalculate FOB using the same model-aware logic
+        const fobInUSD =
+          parseFloat(item.jc_fob) > 0
+            ? item.jc_fob +
+              item.profit +
+              item.packing_cost +
+              item.labour_overhead
+            : item.usdrate > 0
+              ? item.exfactoryprice / item.usdrate
+              : 0;
 
         let freightData = {
           freight_cost_45kg: 0,
@@ -463,44 +461,15 @@ const ExportProductlist = () => {
           divisor: item.divisor || 1,
         };
 
-        if (
-          bulkFreightType === "air" &&
-          airRateData &&
-          item.multiplier &&
-          item.divisor
-        ) {
-          const m = parseFloat(item.multiplier);
-          const d = parseFloat(item.divisor);
-          const fc45 = (m * parseFloat(airRateData.rate_45kg)) / d;
-          const fc100 = (m * parseFloat(airRateData.rate_100kg)) / d;
-          const fc300 = (m * parseFloat(airRateData.rate_300kg)) / d;
-          const fc500 = (m * parseFloat(airRateData.rate_500kg)) / d;
-
-          freightData = {
-            ...freightData,
-            freight_cost_45kg: parseFloat(fc45.toFixed(2)),
-            freight_cost_100kg: parseFloat(fc100.toFixed(2)),
-            freight_cost_300kg: parseFloat(fc300.toFixed(2)),
-            freight_cost_500kg: parseFloat(fc500.toFixed(2)),
-            cnf_45kg: parseFloat((fobLKR / usdRate + fc45).toFixed(2)),
-            cnf_100kg: parseFloat((fobLKR / usdRate + fc100).toFixed(2)),
-            cnf_300kg: parseFloat((fobLKR / usdRate + fc300).toFixed(2)),
-            cnf_500kg: parseFloat((fobLKR / usdRate + fc500).toFixed(2)),
-            multiplier: item.multiplier,
-            divisor: item.divisor,
-          };
-        }
-
         if (bulkFreightType === "sea" && seaRateData) {
           const perKilo20 = parseFloat(seaRateData.freight_per_kilo_20ft) || 0;
           const perKilo40 = parseFloat(seaRateData.freight_per_kilo_40ft) || 0;
-
           freightData = {
             ...freightData,
             freight_cost_20ft: parseFloat(perKilo20.toFixed(4)),
-            cnf_20ft: parseFloat((fobLKR / usdRate + perKilo20).toFixed(2)),
+            cnf_20ft: parseFloat((fobInUSD + perKilo20).toFixed(2)), // pure addition
             freight_cost_40ft: parseFloat(perKilo40.toFixed(4)),
-            cnf_40ft: parseFloat((fobLKR / usdRate + perKilo40).toFixed(2)),
+            cnf_40ft: parseFloat((fobInUSD + perKilo40).toFixed(2)),
           };
         }
 
@@ -514,14 +483,14 @@ const ExportProductlist = () => {
           category: item.category,
           size_range: item.size_range,
           purchasing_price: item.purchasing_price,
-          exfactoryprice: exf,
+          exfactoryprice: item.exfactoryprice,
           export_doc: 0,
           transport_cost: 0,
           loading_cost: 0,
           airway_cost: 0,
           forwardHandling_cost: 0,
           freight_type: bulkFreightType,
-          fob_price: fobLKR,
+          fob_price: parseFloat(fobInUSD.toFixed(4)), // stored as USD
           multiplier: freightData.multiplier,
           divisor: freightData.divisor,
           freight_cost_45kg: freightData.freight_cost_45kg,
@@ -544,9 +513,10 @@ const ExportProductlist = () => {
           body: JSON.stringify(payload),
         });
 
-        if (res.ok) {
-          successCount++;
-        } else {
+        if (res.ok) successCount++;
+        else {
+          const errData = await res.json();
+          console.error("Failed:", errData);
           errorCount++;
         }
       }
@@ -582,7 +552,6 @@ const ExportProductlist = () => {
       const pageW = doc.internal.pageSize.getWidth();
       const pageH = doc.internal.pageSize.getHeight();
       const margin = 14;
-
       const NAVY = [13, 71, 161];
       const NAVY_DARK = [8, 47, 114];
       const NAVY_LIGHT = [224, 232, 247];
@@ -590,16 +559,13 @@ const ExportProductlist = () => {
       const DARK = [20, 20, 40];
       const GREY_LINE = [180, 200, 230];
 
-      // Header band
       doc.setFillColor(...NAVY);
       doc.rect(0, 0, pageW, 40, "F");
-
       try {
         doc.addImage(logoSrc, "PNG", margin, 6, 36, 28);
       } catch {
         /* no logo */
       }
-
       doc.setTextColor(...WHITE);
       doc.setFontSize(16);
       doc.setFont(undefined, "bold");
@@ -612,14 +578,12 @@ const ExportProductlist = () => {
         26,
       );
 
-      // Sub-header strip
       doc.setFillColor(...NAVY_LIGHT);
       doc.rect(0, 40, pageW, 16, "F");
       doc.setDrawColor(...GREY_LINE);
       doc.setLineWidth(0.3);
       doc.line(0, 40, pageW, 40);
       doc.line(0, 56, pageW, 56);
-
       doc.setTextColor(...DARK);
       doc.setFontSize(10);
       doc.setFont(undefined, "bold");
@@ -634,7 +598,6 @@ const ExportProductlist = () => {
         margin + 22,
         50,
       );
-
       const filterLabel =
         selectedSpeciesType === "all"
           ? "All Species"
@@ -644,7 +607,6 @@ const ExportProductlist = () => {
       doc.setFont(undefined, "normal");
       doc.text(filterLabel, margin + 102, 50);
 
-      // Image cache
       const imageCache = {};
       const fetchImageAsBase64 = async (imagePath) => {
         if (!imagePath) return null;
@@ -669,7 +631,6 @@ const ExportProductlist = () => {
           return null;
         }
       };
-
       const allImagePaths = [
         ...new Set(filteredItems.map((p) => p.image_url).filter(Boolean)),
       ];
@@ -694,7 +655,6 @@ const ExportProductlist = () => {
         doc.text("No Image", cx, cy + h * 0.28, { align: "center" });
       };
 
-      // Build table data (flat, sorted by PRODUCT_ORDER)
       const PRODUCT_ORDER = [
         "freshwater scampi",
         "mud crab",
@@ -767,20 +727,15 @@ const ExportProductlist = () => {
       };
 
       const tableBody = [];
-
-      // Flatten ALL products, group by common_name
       const allProductsMap = {};
       filteredItems.forEach((product) => {
         const key = product.common_name;
-        if (!allProductsMap[key]) {
+        if (!allProductsMap[key])
           allProductsMap[key] = { product, variants: [] };
-        }
-        if (product.variants?.length > 0) {
+        if (product.variants?.length > 0)
           allProductsMap[key].variants.push(...product.variants);
-        }
       });
 
-      // Sort by PRODUCT_ORDER
       const sortedProducts = Object.entries(allProductsMap).sort(
         ([nameA], [nameB]) => getSortIndex(nameA) - getSortIndex(nameB),
       );
@@ -788,19 +743,7 @@ const ExportProductlist = () => {
       sortedProducts.forEach(([commonName, { product, variants }]) => {
         if (variants.length > 0) {
           variants.forEach((variant, vIdx) => {
-            const rate = currentUsdRate || parseFloat(variant.usdrate) || 1;
-            const base =
-              parseFloat(variant.purchasing_price) > 0
-                ? parseFloat(variant.purchasing_price)
-                : (parseFloat(variant.jc_fob) || 0) * rate;
-            const exFactory =
-              base +
-              ((parseFloat(variant.packing_cost) || 0) +
-                (parseFloat(variant.labour_overhead) || 0) +
-                (parseFloat(variant.profit) || 0)) *
-                rate;
-            const fob = exFactory / rate;
-
+            const fob = calcFobUSD(variant, currentUsdRate);
             tableBody.push({
               isFirstOfGroup: vIdx === 0,
               commonName,
@@ -823,11 +766,11 @@ const ExportProductlist = () => {
       });
 
       const bodyRows = tableBody.map((row) => [
-        "", // col 0: Picture
-        row.isFirstOfGroup ? row.commonName : "", // col 1: Common Name
-        row.isFirstOfGroup ? row.scientificName : "", // col 2: Scientific Name
-        row.size, // col 3: Size
-        row.fobUSD, // col 4: FOB (USD)
+        "",
+        row.isFirstOfGroup ? row.commonName : "",
+        row.isFirstOfGroup ? row.scientificName : "",
+        row.size,
+        row.fobUSD,
       ]);
 
       autoTable(doc, {
@@ -883,14 +826,13 @@ const ExportProductlist = () => {
           if (data.section !== "body") return;
           const row = tableBody[data.row.index];
           if (!row) return;
-          if (!row.isFirstOfGroup && data.column.index <= 2) {
+          if (!row.isFirstOfGroup && data.column.index <= 2)
             data.cell.styles.lineWidth = {
               top: 0,
               bottom: 0.3,
               left: 0.3,
               right: 0.3,
             };
-          }
         },
         didDrawCell: (data) => {
           if (data.section !== "body" || data.column.index !== 0) return;
@@ -908,13 +850,10 @@ const ExportProductlist = () => {
             } catch {
               drawImgPlaceholder(x, y, imgW, imgH);
             }
-          } else {
-            drawImgPlaceholder(x, y, imgW, imgH);
-          }
+          } else drawImgPlaceholder(x, y, imgW, imgH);
         },
       });
 
-      // Footer on every page
       const totalPages = doc.internal.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
@@ -933,7 +872,6 @@ const ExportProductlist = () => {
           align: "right",
         });
       }
-
       doc.save(
         `Export_Product_List_Sea_${new Date().toISOString().split("T")[0]}.pdf`,
       );
@@ -1009,7 +947,6 @@ const ExportProductlist = () => {
         </div>
       )}
 
-      {/* Species Filter Pills */}
       <div className="species-filter">
         {speciesTypes.map((type) => {
           const count = getSpeciesTypeCount(type.value);
@@ -1060,7 +997,6 @@ const ExportProductlist = () => {
                 {Object.keys(groupedProductsBySection).map((section) => {
                   if (!sectionHasProducts(section)) return null;
                   const sectionProducts = groupedProductsBySection[section];
-
                   return (
                     <React.Fragment key={section}>
                       <tr className="section-header">
@@ -1186,30 +1122,13 @@ const ExportProductlist = () => {
                                         ? `$${parseFloat(variant.jc_fob).toFixed(2)}`
                                         : "—"}
                                     </td>
+                                    {/* ── FOB column — model-aware ── */}
                                     <td className="price-cell">
                                       {(() => {
-                                        const rate =
-                                          currentUsdRate ||
-                                          parseFloat(variant.usdrate) ||
-                                          1;
-                                        const base =
-                                          parseFloat(variant.purchasing_price) >
-                                          0
-                                            ? parseFloat(
-                                                variant.purchasing_price,
-                                              )
-                                            : (parseFloat(variant.jc_fob) ||
-                                                0) * rate;
-                                        const exFactory =
-                                          base +
-                                          ((parseFloat(variant.packing_cost) ||
-                                            0) +
-                                            (parseFloat(
-                                              variant.labour_overhead,
-                                            ) || 0) +
-                                            (parseFloat(variant.profit) || 0)) *
-                                            rate;
-                                        const fob = exFactory / rate;
+                                        const fob = calcFobUSD(
+                                          variant,
+                                          currentUsdRate,
+                                        );
                                         return fob >= 0.01
                                           ? `$${fob.toFixed(2)}`
                                           : "—";
@@ -1231,7 +1150,6 @@ const ExportProductlist = () => {
                                           >
                                             View
                                           </button>
-
                                           <button
                                             className="btn-edit"
                                             onClick={() =>
@@ -1259,7 +1177,6 @@ const ExportProductlist = () => {
                               });
                             }
 
-                            // No variants
                             const isVeryFirstRow = isFirstRowOfGroup;
                             if (isVeryFirstRow) isFirstRowOfGroup = false;
                             return (
@@ -1344,6 +1261,16 @@ const ExportProductlist = () => {
                                 <td className="actions-cell">
                                   <div className="actions-wrapper">
                                     <button
+                                      className="btn-view"
+                                      onClick={() =>
+                                        navigate(
+                                          `/exportproductdetail/${product.id}`,
+                                        )
+                                      }
+                                    >
+                                      View
+                                    </button>
+                                    <button
                                       className="btn-edit"
                                       onClick={() => navigateEdit(product.id)}
                                     >
@@ -1418,7 +1345,6 @@ const ExportProductlist = () => {
               boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
             }}
           >
-            {/* Header */}
             <div
               style={{
                 padding: "20px 24px 16px",
@@ -1436,11 +1362,11 @@ const ExportProductlist = () => {
                 }}
               >
                 {bulkItems.length} variant(s) from {selectedProductIds.size}{" "}
-                product(s)
+                product(s) — freight costs calculated from customer's sea
+                freight rates
               </p>
             </div>
 
-            {/* Customer Selector */}
             <div
               style={{
                 padding: "16px 24px",
@@ -1478,7 +1404,6 @@ const ExportProductlist = () => {
               </select>
             </div>
 
-            {/* Items Table */}
             <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}>
               <table
                 style={{
@@ -1569,7 +1494,6 @@ const ExportProductlist = () => {
               </table>
             </div>
 
-            {/* Footer */}
             <div
               style={{
                 padding: "16px 24px",

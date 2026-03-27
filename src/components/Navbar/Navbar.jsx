@@ -32,7 +32,9 @@ const Navbar = () => {
   const isAuthPage =
     location.pathname === "/" ||
     location.pathname === "/login" ||
-    location.pathname === "/register";
+    location.pathname === "/register" ||
+    location.pathname === "/forgot-password" ||
+    location.pathname === "/reset-password";
 
   if (isAuthPage) return null;
 

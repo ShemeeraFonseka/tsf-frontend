@@ -58,6 +58,12 @@ export default function Login() {
         >
           {loading ? "Signing in…" : "Sign In"}
         </button>
+
+        <p className="authSwitchText">
+          <Link to="/forgot-password" className="authSwitchLink">
+            Forgot password?
+          </Link>
+        </p>
         <p className="authSwitchText">
           Don't have an account?{" "}
           <Link to="/register" className="authSwitchLink">

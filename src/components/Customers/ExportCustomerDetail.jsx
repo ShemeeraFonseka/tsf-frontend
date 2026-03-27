@@ -42,7 +42,6 @@ const ExportCustomerDetail = () => {
     multiplier: "",
     divisor: "",
     fob_price: "",
-    // Air freight tiers
     freight_cost_45kg: "",
     freight_cost_100kg: "",
     freight_cost_300kg: "",
@@ -51,7 +50,6 @@ const ExportCustomerDetail = () => {
     cnf_100kg: "",
     cnf_300kg: "",
     cnf_500kg: "",
-    // Sea freight — both containers
     freight_cost_20ft: "",
     cnf_20ft: "",
     freight_cost_40ft: "",
@@ -62,7 +60,6 @@ const ExportCustomerDetail = () => {
 
   const [formData, setFormData] = useState(initialFormData);
 
-  /* ── Fetch helpers ── */
   const fetchCustomer = async () => {
     try {
       const r = await fetch(`${API_URL}/api/exportcustomerlist/${cus_id}`);
@@ -135,7 +132,6 @@ const ExportCustomerDetail = () => {
     fetchUsdRate();
   }, [cus_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ── Freight rate helpers ── */
   const getAirFreightRateForCustomer = (cust) => {
     if (!cust || freightRates.length === 0) return null;
     if (cust.airport_code) {
@@ -195,7 +191,6 @@ const ExportCustomerDetail = () => {
     !currentUsdRate || !lkr
       ? 0
       : (parseFloat(lkr) / parseFloat(currentUsdRate)).toFixed(2);
-
   const convertToLKR = (usd) =>
     !currentUsdRate || !usd
       ? 0
@@ -242,7 +237,6 @@ const ExportCustomerDetail = () => {
     };
   };
 
-  /* ── Calculate both sea freight containers ── */
   const calculateBothSeaContainers = (fobLKR, cust) => {
     const seaRate = getSeaFreightRateForCustomer(cust);
     if (!seaRate) return {};
@@ -395,7 +389,6 @@ const ExportCustomerDetail = () => {
       data.forwardHandling_cost_usd = convertToUSD(value);
 
     if (field === "freight_type") {
-      // Reset all freight outputs
       data.freight_cost_45kg = "";
       data.freight_cost_100kg = "";
       data.freight_cost_300kg = "";
@@ -441,7 +434,6 @@ const ExportCustomerDetail = () => {
         data.cnf_500kg = calculateCNF(fobLKR, tiers.freight_cost_500kg);
       }
     } else if (data.freight_type === "sea") {
-      // Always calculate both containers
       const seaCosts = calculateBothSeaContainers(fobLKR, customer);
       Object.assign(data, seaCosts);
     }
@@ -476,7 +468,6 @@ const ExportCustomerDetail = () => {
           parseFloat(formData.forwardHandling_cost_usd) || 0,
         freight_type: formData.freight_type,
         fob_price: parseFloat(formData.fob_price),
-        // Air freight
         multiplier:
           formData.freight_type === "air"
             ? parseFloat(formData.multiplier) || 0
@@ -517,7 +508,6 @@ const ExportCustomerDetail = () => {
           formData.freight_type === "air"
             ? parseFloat(formData.cnf_500kg) || 0
             : 0,
-        // Sea freight — both containers
         freight_cost_20ft:
           formData.freight_type === "sea"
             ? parseFloat(formData.freight_cost_20ft) || 0
@@ -541,7 +531,6 @@ const ExportCustomerDetail = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Failed to save");
@@ -597,7 +586,6 @@ const ExportCustomerDetail = () => {
       multiplier: price.multiplier || "",
       divisor: price.divisor || "",
       fob_price: price.fob_price,
-      // Air
       freight_cost_45kg: price.freight_cost_45kg || "",
       freight_cost_100kg: price.freight_cost_100kg || "",
       freight_cost_300kg: price.freight_cost_300kg || "",
@@ -606,7 +594,6 @@ const ExportCustomerDetail = () => {
       cnf_100kg: price.cnf_100kg || "",
       cnf_300kg: price.cnf_300kg || "",
       cnf_500kg: price.cnf_500kg || "",
-      // Sea — both containers
       freight_cost_20ft: price.freight_cost_20ft || "",
       cnf_20ft: price.cnf_20ft || "",
       freight_cost_40ft: price.freight_cost_40ft || "",
@@ -640,11 +627,9 @@ const ExportCustomerDetail = () => {
 
   const formatCategory = (cat) =>
     cat ? cat.charAt(0).toUpperCase() + cat.slice(1) : "—";
-
   const getProductDisplayName = (p) =>
     `${p.common_name || "Unnamed"} - ${formatCategory(p.category)}`;
 
-  /* ── Freight info render ── */
   const getCurrentFreightInfo = () => {
     if (!customer) return null;
     const airRate = getAirFreightRateForCustomer(customer);
@@ -744,7 +729,6 @@ const ExportCustomerDetail = () => {
     );
   };
 
-  /* ── Cost blocks ── */
   const COST_FIELDS = [
     { key: "export_doc", label: "Export Documentation" },
     { key: "transport_cost", label: "Transport Cost" },
@@ -771,7 +755,6 @@ const ExportCustomerDetail = () => {
       const pageW = doc.internal.pageSize.getWidth();
       const pageH = doc.internal.pageSize.getHeight();
       const margin = 14;
-
       const NAVY = [13, 71, 161];
       const NAVY_DARK = [8, 47, 114];
       const NAVY_LIGHT = [224, 232, 247];
@@ -779,14 +762,12 @@ const ExportCustomerDetail = () => {
       const DARK = [20, 20, 40];
       const GREY_LINE = [180, 200, 230];
 
-      // HEADER BAND
       doc.setFillColor(...NAVY);
       doc.rect(0, 0, pageW, 40, "F");
-
       try {
         doc.addImage(logoSrc, "PNG", margin, 6, 36, 28);
       } catch {
-        // fallback: blank space if image fails
+        /* no logo */
       }
       doc.setTextColor(...WHITE);
       doc.setFontSize(16);
@@ -809,7 +790,6 @@ const ExportCustomerDetail = () => {
         align: "center",
       });
 
-      // Sub-header strip
       doc.setFillColor(...NAVY_LIGHT);
       doc.rect(0, 40, pageW, 16, "F");
       doc.setDrawColor(...GREY_LINE);
@@ -817,34 +797,6 @@ const ExportCustomerDetail = () => {
       doc.line(0, 40, pageW, 40);
       doc.line(0, 56, pageW, 56);
 
-      doc.setTextColor(...DARK);
-      doc.setFontSize(10);
-      const col2 = pageW / 2;
-
-      //doc.setFont(undefined, "bold");
-      //doc.text("Customer:", margin, 46);
-      //doc.setFont(undefined, "normal");
-      //doc.text(customer?.cus_name || "N/A", margin + 20, 46);
-
-      /*doc.setFont(undefined, "bold");
-      doc.text("Country:", margin, 53);
-      doc.setFont(undefined, "normal");
-      let destText = customer?.country || "N/A";
-      if (customer?.airport_code) destText += `   ${customer.airport_code}`;
-      if (customer?.port_code) destText += `   ${customer.port_code}`;
-      doc.text(destText, margin + 18, 53);
-
-      const genDate = new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-      doc.setFont(undefined, "bold");
-      doc.text("Date:", col2, 53);
-      doc.setFont(undefined, "normal");
-      doc.text(genDate, col2 + 12, 53);*/
-
-      // Image fetch helper
       const imageCache = {};
       const fetchImageAsBase64 = async (imagePath) => {
         if (!imagePath) return null;
@@ -900,7 +852,6 @@ const ExportCustomerDetail = () => {
       };
 
       const renderTable = (items, startY, headDark, headLabel, extraCols) => {
-        // Define the custom order for common names only
         const commonNameOrder = [
           "Freshwater Scampi Cryogenic Frozen With Claw Grade A quality",
           "Mud Crabs Cryogenic Frozen",
@@ -960,7 +911,6 @@ const ExportCustomerDetail = () => {
           "Marlin loin",
         ];
 
-        // Group products by common name
         const productMap = {};
         items.forEach((p) => {
           const key = `${p.common_name}__${p.scientific_name || ""}`;
@@ -976,45 +926,28 @@ const ExportCustomerDetail = () => {
           productMap[key].variants.push({ size: p.size_range || "—", p });
         });
 
-        // Sort variants within each product by size (numeric/alphabetical)
         Object.values(productMap).forEach((prod) => {
           prod.variants.sort((a, b) => {
-            // Extract numbers for natural sorting
             const extractNumber = (str) => {
               const match = str.match(/\d+/g);
               return match ? parseInt(match[0]) : Infinity;
             };
-
-            const numA = extractNumber(a.size);
-            const numB = extractNumber(b.size);
-
-            if (numA !== numB) {
-              return numA - numB;
-            }
-
-            // If numbers are the same or no numbers, sort alphabetically
+            const numA = extractNumber(a.size),
+              numB = extractNumber(b.size);
+            if (numA !== numB) return numA - numB;
             return a.size.localeCompare(b.size);
           });
         });
 
-        // Sort products by custom common name order
         const sortedProducts = Object.values(productMap).sort((a, b) => {
           const indexA = commonNameOrder.indexOf(a.common_name);
           const indexB = commonNameOrder.indexOf(b.common_name);
-
-          // If both are in the custom order, sort by that order
-          if (indexA !== -1 && indexB !== -1) {
-            return indexA - indexB;
-          }
-          // If only A is in custom order, A comes first
+          if (indexA !== -1 && indexB !== -1) return indexA - indexB;
           if (indexA !== -1) return -1;
-          // If only B is in custom order, B comes first
           if (indexB !== -1) return 1;
-          // If neither is in custom order, sort alphabetically
           return a.common_name.localeCompare(b.common_name);
         });
 
-        // Build table body with proper grouping
         const tableBody = [];
         const firstRowSet = new Set();
 
@@ -1028,16 +961,15 @@ const ExportCustomerDetail = () => {
 
         const bodyRows = tableBody.map(({ prod, v, vi }) => {
           const p = v.p;
-          const base = [
+          return [
             "",
             vi === 0 ? prod.common_name : "",
             vi === 0 ? prod.scientific_name : "",
             v.size,
+            ...extraCols(p),
           ];
-          return [...base, ...extraCols(p)];
         });
 
-        // Rest of the autoTable configuration remains the same...
         autoTable(doc, {
           startY,
           margin: { left: margin, right: margin },
@@ -1053,40 +985,43 @@ const ExportCustomerDetail = () => {
           body: bodyRows,
           theme: "grid",
           columnStyles: {
-            0: { cellWidth: 30, halign: "center", valign: "middle" },
+            0: { cellWidth: 22, halign: "center", valign: "middle" },
             1: {
-              cellWidth: 60,
+              cellWidth: 50,
               halign: "left",
               valign: "middle",
               fontStyle: "bold",
-              fontSize: 11,
+              fontSize: 10,
             },
             2: {
-              cellWidth: 42,
+              cellWidth: 36,
               halign: "left",
               valign: "middle",
               fontStyle: "italic",
-              fontSize: 10,
+              fontSize: 9,
               textColor: [50, 80, 150],
             },
             3: {
-              cellWidth: 35,
+              cellWidth: 26,
               halign: "left",
               valign: "middle",
-              fontSize: 11,
+              fontSize: 10,
             },
-            4: { halign: "right", valign: "middle" },
-            // 5: { halign: "right", valign: "middle" }, // CNF col 2 — commented out (FOB only)
+            4: { halign: "right", valign: "middle", fontSize: 10 },
+            5: { halign: "right", valign: "middle", fontSize: 10 },
+            6: { halign: "right", valign: "middle", fontSize: 10 },
+            7: { halign: "right", valign: "middle", fontSize: 10 },
+            8: { halign: "right", valign: "middle", fontSize: 10 },
           },
           headStyles: {
             fillColor: headDark,
             textColor: WHITE,
             fontStyle: "bold",
-            fontSize: 10,
+            fontSize: 9,
             cellPadding: { top: 3, bottom: 3, left: 2, right: 2 },
           },
           bodyStyles: {
-            fontSize: 10,
+            fontSize: 9,
             cellPadding: { top: 4, bottom: 4, left: 2, right: 2 },
             minCellHeight: 20,
             textColor: DARK,
@@ -1107,8 +1042,8 @@ const ExportCustomerDetail = () => {
           didDrawCell: (data) => {
             if (data.section !== "body" || data.column.index !== 0) return;
             if (!firstRowSet.has(data.row.index)) return;
-            const imgW = 18,
-              imgH = 18;
+            const imgW = 16,
+              imgH = 16;
             const x = data.cell.x + (data.cell.width - imgW) / 2;
             const y = data.cell.y + (data.cell.height - imgH) / 2;
             const prod = tableBody[data.row.index]?.prod;
@@ -1131,7 +1066,6 @@ const ExportCustomerDetail = () => {
 
       const airProducts = prices.filter((p) => p.freight_type === "air");
       const seaProducts = prices.filter((p) => p.freight_type === "sea");
-
       let startY = 62;
 
       if (airProducts.length > 0) {
@@ -1143,26 +1077,19 @@ const ExportCustomerDetail = () => {
         doc.text("AIR FREIGHT PRODUCTS", margin + 4, startY + 5.5);
         startY += 10;
 
-        // ── FOB price column (CNF columns commented out) ──
         const airHeadLabels = [
-          { content: "FOB Price (USD)", styles: { halign: "right" } },
-          // { content: "CNF +45kg", styles: { halign: "right" } },   // CNF — commented out
-          // { content: "CNF +100kg", styles: { halign: "right" } },  // CNF — commented out
-          // { content: "CNF +300kg", styles: { halign: "right" } },  // CNF — commented out
-          // { content: "CNF +500kg", styles: { halign: "right" } },  // CNF — commented out
+          { content: "FOB (USD)", styles: { halign: "right" } },
+          { content: "CNF +45kg", styles: { halign: "right" } },
+          { content: "CNF +100kg", styles: { halign: "right" } },
+          { content: "CNF +300kg", styles: { halign: "right" } },
+          { content: "CNF +500kg", styles: { halign: "right" } },
         ];
         const airExtraCols = (p) => [
-          `$${
-            parseFloat(p.fob_price || 0) && currentUsdRate
-              ? (parseFloat(p.fob_price) / parseFloat(currentUsdRate)).toFixed(
-                  2,
-                )
-              : "0.00"
-          }`,
-          // `$${parseFloat(p.cnf_45kg || 0).toFixed(2)}`,   // CNF — commented out
-          // `$${parseFloat(p.cnf_100kg || 0).toFixed(2)}`,  // CNF — commented out
-          // `$${parseFloat(p.cnf_300kg || 0).toFixed(2)}`,  // CNF — commented out
-          // `$${parseFloat(p.cnf_500kg || 0).toFixed(2)}`,  // CNF — commented out
+          `$${currentUsdRate ? (parseFloat(p.fob_price || 0) / parseFloat(currentUsdRate)).toFixed(2) : "0.00"}`,
+          `$${parseFloat(p.cnf_45kg || 0).toFixed(2)}`,
+          `$${parseFloat(p.cnf_100kg || 0).toFixed(2)}`,
+          `$${parseFloat(p.cnf_300kg || 0).toFixed(2)}`,
+          `$${parseFloat(p.cnf_500kg || 0).toFixed(2)}`,
         ];
 
         startY =
@@ -1181,30 +1108,23 @@ const ExportCustomerDetail = () => {
           startY = 20;
         }
 
-        //doc.setFillColor(...NAVY);
-        //doc.rect(margin, startY, pageW - margin * 2, 8, "F");
-        //doc.setTextColor(...WHITE);
-        //doc.setFontSize(9);
-        //doc.setFont(undefined, "bold");
-        //doc.text("SEA FREIGHT PRODUCTS", margin + 4, startY + 5.5);
-        //startY += 10;
+        doc.setFillColor(...NAVY);
+        doc.rect(margin, startY, pageW - margin * 2, 8, "F");
+        doc.setTextColor(...WHITE);
+        doc.setFontSize(9);
+        doc.setFont(undefined, "bold");
+        doc.text("SEA FREIGHT PRODUCTS", margin + 4, startY + 5.5);
+        startY += 10;
 
-        // ── FOB price column (CNF columns commented out) ──
         const seaHeadLabels = [
-          { content: "FOB Price (USD)", styles: { halign: "right" } },
-          // { content: "CNF 20ft (USD)", styles: { halign: "right" } },  // CNF — commented out
-          // { content: "CNF 40ft (USD)", styles: { halign: "right" } },  // CNF — commented out
+          { content: "FOB (USD)", styles: { halign: "right" } },
+          { content: "CNF 20ft (USD)", styles: { halign: "right" } },
+          { content: "CNF 40ft (USD)", styles: { halign: "right" } },
         ];
         const seaExtraCols = (p) => [
-          `$${
-            parseFloat(p.fob_price || 0) && currentUsdRate
-              ? (parseFloat(p.fob_price) / parseFloat(currentUsdRate)).toFixed(
-                  2,
-                )
-              : "0.00"
-          }`,
-          // `$${parseFloat(p.cnf_20ft || 0).toFixed(2)}`,  // CNF — commented out
-          // `$${parseFloat(p.cnf_40ft || 0).toFixed(2)}`,  // CNF — commented out
+          `$${currentUsdRate ? (parseFloat(p.fob_price || 0) / parseFloat(currentUsdRate)).toFixed(2) : "0.00"}`,
+          `$${parseFloat(p.cnf_20ft || 0).toFixed(2)}`,
+          `$${parseFloat(p.cnf_40ft || 0).toFixed(2)}`,
         ];
 
         renderTable(
@@ -1216,7 +1136,6 @@ const ExportCustomerDetail = () => {
         );
       }
 
-      // Footer on every page
       const totalPages = doc.internal.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
@@ -1251,11 +1170,9 @@ const ExportCustomerDetail = () => {
     }
   };
 
-  /* ── USD rate recalculation effect ── */
   useEffect(() => {
     setFormData((prev) => {
       if (!prev.exfactoryprice || !currentUsdRate) return prev;
-
       const exf = parseFloat(prev.exfactoryprice) || 0;
       const totalUSD = [
         "export_doc_usd",
@@ -1266,7 +1183,6 @@ const ExportCustomerDetail = () => {
       ].reduce((s, k) => s + (parseFloat(prev[k]) || 0), 0);
       const fobLKR = exf + totalUSD * parseFloat(currentUsdRate);
       const updates = { fob_price: fobLKR.toFixed(2) };
-
       if (prev.freight_type === "air") {
         if (prev.freight_cost_45kg)
           updates.cnf_45kg = calculateCNF(fobLKR, prev.freight_cost_45kg);
@@ -1282,12 +1198,11 @@ const ExportCustomerDetail = () => {
         if (prev.freight_cost_40ft)
           updates.cnf_40ft = calculateCNF(fobLKR, prev.freight_cost_40ft);
       }
-
       return { ...prev, ...updates };
     });
   }, [currentUsdRate, calculateCNF]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ════════════════════════════════════════ RENDER ═══════════════════════════════════════ */
+  /* ════════════════════════════════════════ RENDER ════════════════════════════════════════ */
   return (
     <div className="pricelist-container">
       <div className="detail-back-row">
@@ -1335,7 +1250,6 @@ const ExportCustomerDetail = () => {
       {showForm && (
         <div className="priceform-container">
           <h3>{editingPrice ? "Edit Custom Price" : "Add Custom Price"}</h3>
-
           <form onSubmit={handleSubmit} className="apf-container">
             <label className="apf-label">Select Product</label>
             <select
