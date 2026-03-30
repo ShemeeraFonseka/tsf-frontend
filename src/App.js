@@ -30,6 +30,8 @@ import ExportProductDetailAir from "./components/Products/ExportProductDetailAir
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import ResetPassword from "./components/auth/ResetPassword";
+import UserManagement from "./components/users/Usermanagement";
+import UserProfile from "./components/users/UserProfile";
 
 function App() {
   return (
@@ -37,7 +39,7 @@ function App() {
       <Navbar />
       <Routes>
         {/* ── Public ── */}
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
@@ -272,6 +274,24 @@ function App() {
           element={
             <ProtectedRoute>
               <SeaFreightRatesForm />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/usermanagement"
+          element={
+            <ProtectedRoute>
+              <UserManagement />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <UserProfile />
             </ProtectedRoute>
           }
         />

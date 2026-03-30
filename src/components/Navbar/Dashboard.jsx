@@ -88,6 +88,20 @@ const Dashboard = () => {
         },
       ],
     },
+    {
+      title: "User Management",
+      icon: "👥",
+      gradient: "linear-gradient(135deg, #003f5c 0%, #2c7da0 100%)",
+      items: [
+        {
+          name: "Users",
+          path: "/usermanagement",
+          icon: "👥",
+          description: "Manage user accounts",
+          color: "#003f5c",
+        },
+      ],
+    },
   ];
 
   return (

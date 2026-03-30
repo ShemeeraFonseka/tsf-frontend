@@ -7,5 +7,5 @@ export const getUser = () => {
 export const isAdmin = () => {
   const user = getUser();
   if (!user) return false;
-  return user.position !== "sales";
+  return user.position !== "Sales Executive";
 };

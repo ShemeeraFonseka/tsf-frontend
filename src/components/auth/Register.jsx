@@ -62,11 +62,12 @@ export default function Register() {
           onChange={(e) => setPosition(e.target.value)}
         >
           <option value="">Select Position</option>
-          <option value="admin">Admin</option>
-          <option value="director">Director</option>
-          <option value="sales">Sales</option>
-          <option value="purchase">Purchase</option>
-          <option value="qc">QC</option>
+          <option value="Admin">Admin</option>
+          <option value="Director">Director</option>
+          <option value="Manager">Manager</option>
+          <option value="Sales Executive">Sales Executive</option>
+          <option value="Purchase">Purchase</option>
+          <option value="QC">QC</option>
         </select>
 
         {position === "sales" && (
