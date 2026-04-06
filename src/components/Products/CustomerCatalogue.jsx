@@ -59,6 +59,7 @@ const SECTIONS = [
     ],
   },
 ];
+
 const SECTION_ICONS = {
   Oyster: "🦪",
   Clams: "🐚",
@@ -102,11 +103,8 @@ export default function CustomerCatalogue() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [addedKey, setAddedKey] = useState(null);
 
+  // ── No auth check here — catalogue is public ──
   useEffect(() => {
-    if (!customer) {
-      navigate("/customer/login");
-      return;
-    }
     fetch(`${API_URL}/api/productlist`)
       .then((r) => r.json())
       .then((d) => {
@@ -144,6 +142,15 @@ export default function CustomerCatalogue() {
     setTimeout(() => setAddedKey(null), 1500);
   };
 
+  const handleCheckout = () => {
+    setShowCart(false);
+    if (!customer) {
+      navigate("/customer/login");
+    } else {
+      navigate("/customer/checkout");
+    }
+  };
+
   const getImgUrl = (url) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
@@ -173,36 +180,62 @@ export default function CustomerCatalogue() {
             />
             <circle cx="16" cy="14" r="2" fill="#00d4ff" opacity="0.8" />
           </svg>
-          <span className="cc-nav-name" onClick={() => navigate("/")}>
+          <span
+            className="cc-nav-name"
+            style={{ cursor: "pointer" }}
+            onClick={() => navigate("/")}
+          >
             Tropical Shellfish
           </span>
         </div>
-        <div className="cc-nav-right">
-          <span className="cc-nav-user">👤 {customer?.name}</span>
 
-          <button
-            className="cc-nav-orders"
-            onClick={() => navigate("/customer/orders")}
-          >
-            My Orders
-          </button>
-          <button className="cc-cart-btn" onClick={() => setShowCart(true)}>
-            🛒 Cart
-            {cartCount > 0 && (
-              <span className="cc-cart-badge">
-                {parseFloat(cartCount.toFixed(1))}
-              </span>
-            )}
-          </button>
-          <button className="cc-nav-logout" onClick={logout}>
-            Sign Out
-          </button>
+        <div className="cc-nav-right">
+          {customer ? (
+            /* ── Logged in ── */
+            <>
+              <span className="cc-nav-user">👤 {customer.name}</span>
+              <button
+                className="cc-nav-orders"
+                onClick={() => navigate("/customer/orders")}
+              >
+                My Orders
+              </button>
+              <button className="cc-cart-btn" onClick={() => setShowCart(true)}>
+                🛒 Cart
+                {cartCount > 0 && (
+                  <span className="cc-cart-badge">
+                    {parseFloat(cartCount.toFixed(1))}
+                  </span>
+                )}
+              </button>
+              <button className="cc-nav-logout" onClick={logout}>
+                Sign Out
+              </button>
+            </>
+          ) : (
+            /* ── Guest ── */
+            <>
+              <button className="cc-cart-btn" onClick={() => setShowCart(true)}>
+                🛒 Cart
+                {cartCount > 0 && (
+                  <span className="cc-cart-badge">
+                    {parseFloat(cartCount.toFixed(1))}
+                  </span>
+                )}
+              </button>
+              <button
+                className="cc-nav-orders"
+                onClick={() => navigate("/customer/login")}
+              >
+                Sign In / Register
+              </button>
+            </>
+          )}
         </div>
       </nav>
 
       {/* ── MAIN ── */}
       <div className="cc-main">
-        {/* Search + filter */}
         <div className="cc-toolbar">
           <input
             className="cc-search"
@@ -234,7 +267,6 @@ export default function CustomerCatalogue() {
           </div>
         )}
 
-        {/* Sections */}
         {activeSections.map((section) => (
           <div key={section} className="cc-section">
             <div className="cc-section-header">
@@ -251,7 +283,6 @@ export default function CustomerCatalogue() {
                 const hasVariants = variants.length > 0;
                 return (
                   <div key={product.id} className="cc-card">
-                    {/* Image */}
                     <div
                       className="cc-card-img-wrap"
                       onClick={() => setSelectedProduct(product)}
@@ -287,7 +318,6 @@ export default function CustomerCatalogue() {
                         <p className="cc-card-sci">{product.scientific_name}</p>
                       )}
 
-                      {/* Variants */}
                       {hasVariants ? (
                         <div className="cc-variants">
                           {variants.map((v) => {
@@ -434,14 +464,11 @@ export default function CustomerCatalogue() {
                       <span>Rs. {cartTotal.toFixed(2)}</span>
                     </div>
                   )}
-                  <button
-                    className="cc-checkout-btn"
-                    onClick={() => {
-                      setShowCart(false);
-                      navigate("/customer/checkout");
-                    }}
-                  >
-                    Proceed to Checkout →
+                  {/* Redirects to login if not signed in */}
+                  <button className="cc-checkout-btn" onClick={handleCheckout}>
+                    {customer
+                      ? "Proceed to Checkout →"
+                      : "Sign In to Checkout →"}
                   </button>
                 </div>
               </>
@@ -557,6 +584,37 @@ export default function CustomerCatalogue() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {/* Sign in prompt for guests */}
+              {!customer && (
+                <div
+                  style={{
+                    marginTop: "16px",
+                    padding: "14px 16px",
+                    background: "var(--bg-surface)",
+                    border: "1px solid var(--border-glow)",
+                    borderRadius: "var(--radius-sm)",
+                    textAlign: "center",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      color: "var(--text-secondary)",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    Sign in to add items to your cart and place orders.
+                  </p>
+                  <button
+                    className="apf-btn"
+                    onClick={() => navigate("/customer/login")}
+                    style={{ width: "100%" }}
+                  >
+                    Sign In / Register
+                  </button>
                 </div>
               )}
             </div>
