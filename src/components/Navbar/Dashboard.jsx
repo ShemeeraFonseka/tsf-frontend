@@ -89,6 +89,34 @@ const Dashboard = () => {
       ],
     },
     {
+      title: "Orders",
+      icon: "📋",
+      gradient: "linear-gradient(135deg, #064e3b 0%, #059669 100%)",
+      items: [
+        {
+          name: "All Orders",
+          path: "/admin/orders",
+          icon: "📋",
+          description: "View and manage all customer orders",
+          color: "#064e3b",
+        },
+        {
+          name: "Pending Orders",
+          path: "/admin/orders?status=pending",
+          icon: "⏳",
+          description: "Orders awaiting confirmation",
+          color: "#065f46",
+        },
+        {
+          name: "Active Orders",
+          path: "/admin/orders?status=confirmed",
+          icon: "🚢",
+          description: "Confirmed and in-progress orders",
+          color: "#047857",
+        },
+      ],
+    },
+    {
       title: "User Management",
       icon: "👥",
       gradient: "linear-gradient(135deg, #003f5c 0%, #2c7da0 100%)",

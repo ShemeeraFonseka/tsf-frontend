@@ -1,44 +1,25 @@
 /* ─────────────────────────────────────────
-   LandingPage.css
-   Tropical Shellfish — Ocean luxury theme
+   Home.css — Public Customer-Facing Landing Page
+   Uses Productlist.css design tokens
 ───────────────────────────────────────── */
 
 @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap");
 
-/* ── RESET & ROOT ── */
-:root {
-  --navy: #080f1e;
-  --navy-mid: #0a1628;
-  --ocean: #0e3a6e;
-  --teal: #0b7c8a;
-  --seafoam: #1ab5c8;
-  --gold: #c8a96e;
-  --gold-light: #e8cc99;
-  --gold-dim: rgba(200, 169, 110, 0.18);
-  --white: #eef3ff;
-  --grey: #7a94b8;
-  --surface: rgba(255, 255, 255, 0.035);
-  --border: rgba(200, 169, 110, 0.15);
-  --border-teal: rgba(26, 181, 200, 0.12);
-}
-
 .lp-root {
   position: relative;
   min-height: 100vh;
-  background: var(--navy);
-  color: var(--white);
+  background: var(--bg-void);
+  color: var(--text-primary);
   font-family: "DM Sans", sans-serif;
   font-weight: 300;
   overflow-x: hidden;
 }
 
-/* ── CANVAS & GRAIN ── */
 .lp-canvas {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 1;
 }
 
 .lp-grain {
@@ -48,7 +29,7 @@
   pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
   background-size: 200px;
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
 /* ── NAV ── */
@@ -61,64 +42,128 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 52px;
+  padding: 18px 52px;
   background: linear-gradient(
     to bottom,
-    rgba(8, 15, 30, 0.96) 0%,
+    rgba(5, 8, 16, 0.97) 0%,
     transparent 100%
   );
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-subtle);
 }
-
 .lp-nav-logo {
   display: flex;
   align-items: center;
   gap: 12px;
   text-decoration: none;
 }
-
 .lp-nav-name {
   display: block;
   font-family: "Cormorant Garamond", serif;
   font-size: 17px;
   font-weight: 600;
-  color: var(--gold-light);
+  color: var(--text-primary);
   letter-spacing: 0.03em;
   line-height: 1.2;
 }
-
 .lp-nav-sub {
   display: block;
   font-size: 10px;
   font-weight: 400;
-  color: var(--grey);
-  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
-.lp-nav-btn {
-  background: transparent;
-  border: 1px solid var(--gold);
-  color: var(--gold-light);
-  padding: 9px 22px;
-  border-radius: 3px;
-  font-size: 12.5px;
-  font-weight: 500;
-  text-decoration: none;
-  letter-spacing: 0.06em;
-  transition:
-    background 0.25s,
-    color 0.25s,
-    transform 0.2s;
+.lp-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-.lp-nav-btn:hover {
-  background: var(--gold);
-  color: var(--navy);
-  transform: translateY(-1px);
+.lp-nav-link {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  transition:
+    color 0.2s,
+    background 0.2s;
+}
+.lp-nav-link:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface);
 }
 
-/* ── SECTION LAYOUT ── */
+.lp-nav-btn {
+  background: linear-gradient(135deg, #00c4f4, #0080d4);
+  border: none;
+  color: #fff;
+  padding: 9px 22px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  letter-spacing: 0.06em;
+  box-shadow: 0 4px 16px rgba(0, 180, 255, 0.2);
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+.lp-nav-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 180, 255, 0.35);
+}
+
+/* Staff gear — intentionally nearly invisible */
+.lp-nav-staff-wrap {
+  position: relative;
+}
+.lp-nav-gear {
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0.12;
+  padding: 6px 4px;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  transition: opacity 0.25s;
+}
+.lp-nav-gear:hover {
+  opacity: 0.55;
+}
+
+.lp-staff-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  min-width: 148px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  z-index: 200;
+}
+.lp-staff-item {
+  display: block;
+  padding: 9px 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: 4px;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.lp-staff-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* ── SECTIONS ── */
 section {
   position: relative;
   z-index: 2;
@@ -132,14 +177,14 @@ section {
   font-size: 10.5px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--seafoam);
+  color: var(--accent-cyan);
   margin-bottom: 24px;
 }
 .lp-eyebrow-line {
   display: block;
   width: 28px;
   height: 1px;
-  background: var(--seafoam);
+  background: var(--accent-cyan);
   flex-shrink: 0;
 }
 
@@ -152,8 +197,6 @@ section {
   gap: 60px;
   padding: 130px 52px 100px;
 }
-
-/* Animation base states */
 .lp-hero-content,
 .lp-hero-visual {
   opacity: 0;
@@ -174,97 +217,114 @@ section {
 
 .lp-hero-title {
   font-family: "Cormorant Garamond", serif;
-  font-size: clamp(46px, 5.5vw, 82px);
+  font-size: clamp(44px, 5.2vw, 78px);
   font-weight: 300;
   line-height: 1.08;
   letter-spacing: -0.01em;
   margin-bottom: 28px;
-  color: var(--white);
+  color: var(--text-primary);
 }
 .lp-hero-title em {
   font-style: italic;
-  color: var(--gold-light);
+  color: var(--accent-cyan);
 }
 
 .lp-hero-desc {
   font-size: 16px;
   line-height: 1.75;
-  color: var(--grey);
+  color: var(--text-secondary);
   max-width: 460px;
   margin-bottom: 44px;
 }
-
 .lp-hero-actions {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
-/* Buttons */
+/* ── BUTTONS ── */
 .lp-btn-primary {
-  background: var(--gold);
-  color: var(--navy);
-  padding: 14px 32px;
-  border-radius: 3px;
+  background: linear-gradient(135deg, #00c4f4, #0080d4);
+  color: #fff;
+  padding: 13px 28px;
+  border-radius: var(--radius-sm);
   font-size: 13.5px;
-  font-weight: 500;
+  font-weight: 600;
   text-decoration: none;
   letter-spacing: 0.05em;
+  box-shadow: 0 4px 20px rgba(0, 180, 255, 0.25);
   transition:
-    background 0.2s,
     transform 0.2s,
     box-shadow 0.2s;
-  box-shadow: 0 4px 24px rgba(200, 169, 110, 0.25);
+  display: inline-block;
 }
 .lp-btn-primary:hover {
-  background: var(--gold-light);
   transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(200, 169, 110, 0.35);
+  box-shadow: 0 8px 32px rgba(0, 180, 255, 0.4);
 }
 .lp-btn-large {
-  padding: 16px 42px;
+  padding: 16px 40px;
   font-size: 14.5px;
 }
 
+.lp-btn-secondary {
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 13px 24px;
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-sm);
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+  display: inline-block;
+}
+.lp-btn-secondary:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-cyan);
+}
+
 .lp-btn-ghost {
-  color: var(--grey);
+  color: var(--text-secondary);
   text-decoration: none;
   font-size: 13.5px;
   letter-spacing: 0.04em;
-  border-bottom: 1px solid rgba(122, 148, 184, 0.3);
+  border-bottom: 1px solid var(--border-subtle);
   padding-bottom: 2px;
   transition:
     color 0.2s,
     border-color 0.2s;
+  display: inline-block;
 }
 .lp-btn-ghost:hover {
-  color: var(--white);
-  border-color: var(--white);
+  color: var(--text-primary);
+  border-color: var(--accent-cyan);
 }
 
-/* Hero visual — shell grid */
+/* ── SHELL GRID ── */
 .lp-hero-visual {
   display: flex;
   justify-content: center;
 }
-
 .lp-shell-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  max-width: 320px;
+  gap: 12px;
+  max-width: 300px;
 }
-
 .lp-shell-cell {
   aspect-ratio: 1;
-  background: var(--surface);
-  border: 1px solid var(--border-teal);
-  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-md);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
+  gap: 5px;
+  font-size: 30px;
   backdrop-filter: blur(6px);
   opacity: 0;
   transform: scale(0.8);
@@ -273,11 +333,25 @@ section {
     transform 0.3s,
     border-color 0.3s,
     background 0.3s;
+  box-shadow: var(--shadow-glow);
+  cursor: default;
+  padding: 8px;
+}
+.lp-shell-cell small {
+  font-size: 8.5px;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+  text-align: center;
+  line-height: 1.2;
+  display: none;
 }
 .lp-shell-cell:hover {
-  transform: scale(1.1);
-  border-color: var(--gold-dim);
-  background: rgba(200, 169, 110, 0.06);
+  transform: scale(1.06);
+  border-color: var(--accent-cyan);
+  background: var(--bg-hover);
+}
+.lp-shell-cell:hover small {
+  display: block;
 }
 @keyframes cell-pop {
   to {
@@ -285,15 +359,16 @@ section {
     transform: scale(1);
   }
 }
-/* delay for each cell is set inline */
 
 /* ── STATS ── */
 .lp-stats-section {
   padding: 60px 52px;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  background: var(--bg-deep);
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+  z-index: 2;
 }
-
 .lp-stats-row {
   display: flex;
   justify-content: center;
@@ -309,7 +384,6 @@ section {
   opacity: 1;
   transform: translateY(0);
 }
-
 .lp-stat {
   display: flex;
   flex-direction: column;
@@ -325,32 +399,78 @@ section {
   opacity: 1;
   transform: translateY(0);
 }
-
 .lp-stat-value {
   font-family: "Cormorant Garamond", serif;
   font-size: 52px;
   font-weight: 300;
-  color: var(--gold-light);
+  color: var(--accent-cyan);
   line-height: 1;
   letter-spacing: -0.02em;
 }
 .lp-stat-label {
   font-size: 13px;
-  font-weight: 500;
-  color: var(--white);
-  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 .lp-stat-sub {
   font-size: 11.5px;
-  color: var(--grey);
+  color: var(--text-muted);
+}
+
+/* ── PRODUCTS STRIP ── */
+.lp-products-strip {
+  padding: 80px 52px;
+  background: var(--bg-void);
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+  z-index: 2;
+}
+.lp-strip-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  opacity: 0;
+  transform: translateY(30px);
+  transition:
+    opacity 0.8s ease,
+    transform 0.8s ease;
+}
+.lp-strip-inner.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lp-species-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+.lp-chip {
+  padding: 7px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 50px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background 0.2s;
+  cursor: default;
+}
+.lp-chip:hover {
+  border-color: var(--border-glow);
+  color: var(--text-primary);
+  background: var(--bg-hover);
 }
 
 /* ── FEATURES ── */
 .lp-features {
   padding: 100px 52px;
+  background: var(--bg-deep);
 }
-
 .lp-section-header {
   text-align: center;
   margin-bottom: 64px;
@@ -364,23 +484,22 @@ section {
   opacity: 1;
   transform: translateY(0);
 }
-
 .lp-section-title {
   font-family: "Cormorant Garamond", serif;
-  font-size: clamp(34px, 4vw, 54px);
+  font-size: clamp(32px, 4vw, 52px);
   font-weight: 300;
   line-height: 1.15;
-  color: var(--white);
+  color: var(--text-primary);
 }
 .lp-section-title em {
   font-style: italic;
-  color: var(--gold-light);
+  color: var(--accent-cyan);
 }
 
 .lp-feat-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  gap: 18px;
   max-width: 1100px;
   margin: 0 auto;
   opacity: 0;
@@ -389,20 +508,19 @@ section {
 .lp-feat-grid.is-visible {
   opacity: 1;
 }
-
 .lp-feat-card {
-  background: var(--surface);
-  border: 1px solid var(--border-teal);
-  border-radius: 10px;
-  padding: 36px 30px;
-  backdrop-filter: blur(8px);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 32px 26px;
   opacity: 0;
   transform: translateY(24px);
   transition:
     opacity 0.6s ease,
     transform 0.6s ease,
     border-color 0.3s,
-    background 0.3s;
+    background 0.3s,
+    box-shadow 0.3s;
   cursor: default;
 }
 .lp-feat-grid.is-visible .lp-feat-card {
@@ -410,34 +528,33 @@ section {
   transform: translateY(0);
 }
 .lp-feat-card:hover {
-  border-color: var(--border);
-  background: rgba(200, 169, 110, 0.05);
+  border-color: var(--border-glow);
+  background: var(--bg-hover);
+  box-shadow: var(--shadow-glow);
 }
-
 .lp-feat-icon {
-  font-size: 28px;
+  font-size: 26px;
   display: block;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 .lp-feat-title {
   font-family: "Cormorant Garamond", serif;
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 600;
-  color: var(--gold-light);
+  color: var(--accent-cyan);
   margin-bottom: 10px;
-  letter-spacing: 0.01em;
 }
 .lp-feat-desc {
-  font-size: 14px;
+  font-size: 13.5px;
   line-height: 1.7;
-  color: var(--grey);
+  color: var(--text-secondary);
 }
 
 /* ── DIVIDER ── */
 .lp-divider {
   position: relative;
   z-index: 2;
-  height: 80px;
+  height: 60px;
   overflow: hidden;
 }
 .lp-divider svg {
@@ -450,11 +567,11 @@ section {
   padding: 100px 52px;
   display: flex;
   justify-content: center;
+  background: var(--bg-void);
 }
-
 .lp-cta-inner {
   text-align: center;
-  max-width: 600px;
+  max-width: 620px;
   opacity: 0;
   transform: translateY(30px);
   transition:
@@ -465,32 +582,39 @@ section {
   opacity: 1;
   transform: translateY(0);
 }
-
 .lp-cta-title {
   font-family: "Cormorant Garamond", serif;
-  font-size: clamp(36px, 4.5vw, 58px);
+  font-size: clamp(34px, 4.5vw, 56px);
   font-weight: 300;
   line-height: 1.12;
-  color: var(--white);
+  color: var(--text-primary);
   margin-bottom: 20px;
 }
 .lp-cta-title em {
   font-style: italic;
-  color: var(--gold-light);
+  color: var(--accent-cyan);
 }
 .lp-cta-desc {
   font-size: 15px;
   line-height: 1.75;
-  color: var(--grey);
-  margin-bottom: 44px;
+  color: var(--text-secondary);
+  margin-bottom: 40px;
+}
+.lp-cta-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
 /* ── FOOTER ── */
 .lp-footer {
   position: relative;
   z-index: 2;
-  border-top: 1px solid var(--border);
-  padding: 32px 52px;
+  border-top: 1px solid var(--border-subtle);
+  padding: 28px 52px;
+  background: var(--bg-void);
 }
 .lp-footer-inner {
   display: flex;
@@ -508,24 +632,39 @@ section {
   font-family: "Cormorant Garamond", serif;
   font-size: 15px;
   font-weight: 600;
-  color: var(--gold-light);
+  color: var(--text-primary);
 }
 .lp-footer-tagline {
   font-size: 11.5px;
-  color: var(--grey);
+  color: var(--text-muted);
   letter-spacing: 0.04em;
+}
+.lp-footer-links {
+  display: flex;
+  gap: 20px;
+}
+.lp-footer-link {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.lp-footer-link:hover {
+  color: var(--accent-cyan);
 }
 .lp-footer-copy {
   font-size: 11.5px;
-  color: var(--grey);
+  color: var(--text-muted);
 }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
   .lp-nav {
-    padding: 18px 24px;
+    padding: 16px 20px;
   }
-
+  .lp-nav-link {
+    display: none;
+  }
   .lp-hero {
     grid-template-columns: 1fr;
     padding: 120px 24px 80px;
@@ -541,38 +680,39 @@ section {
   .lp-hero-visual {
     display: none;
   }
-
   .lp-stats-section {
     padding: 48px 24px;
   }
   .lp-stats-row {
     gap: 40px;
   }
-
+  .lp-products-strip {
+    padding: 60px 24px;
+  }
   .lp-features {
     padding: 72px 24px;
   }
   .lp-feat-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
-
   .lp-cta {
     padding: 72px 24px;
   }
   .lp-footer {
-    padding: 28px 24px;
+    padding: 24px 20px;
   }
   .lp-footer-inner {
     flex-direction: column;
     align-items: flex-start;
+    gap: 16px;
   }
 }
-
 @media (max-width: 600px) {
   .lp-feat-grid {
     grid-template-columns: 1fr;
   }
-  .lp-stats-row {
-    gap: 28px;
+  .lp-cta-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

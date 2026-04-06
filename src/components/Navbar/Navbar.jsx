@@ -69,7 +69,9 @@ const Navbar = () => {
     location.pathname === "/login" ||
     location.pathname === "/register" ||
     location.pathname === "/forgot-password" ||
-    location.pathname === "/reset-password";
+    location.pathname === "/reset-password" ||
+    location.pathname.startsWith("/customer") ||
+    location.pathname.startsWith("/product-catalogue");
 
   if (isAuthPage) return null;
 
