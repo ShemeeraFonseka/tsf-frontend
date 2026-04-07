@@ -1131,16 +1131,16 @@ const ExportCustomerDetailAir = () => {
         startY += 10;
 
         const airHeadLabels = [
-          { content: "CNF +45kg", styles: { halign: "right" } },
-          { content: "CNF +100kg", styles: { halign: "right" } },
-          { content: "CNF +300kg", styles: { halign: "right" } },
           { content: "CNF +500kg", styles: { halign: "right" } },
+          { content: "CNF +300kg", styles: { halign: "right" } },
+          { content: "CNF +100kg", styles: { halign: "right" } },
+          { content: "CNF +45kg", styles: { halign: "right" } },
         ];
         const airExtraCols = (p) => [
-          `$${parseFloat(p.cnf_45kg || 0).toFixed(2)}`,
-          `$${parseFloat(p.cnf_100kg || 0).toFixed(2)}`,
-          `$${parseFloat(p.cnf_300kg || 0).toFixed(2)}`,
           `$${parseFloat(p.cnf_500kg || 0).toFixed(2)}`,
+          `$${parseFloat(p.cnf_300kg || 0).toFixed(2)}`,
+          `$${parseFloat(p.cnf_100kg || 0).toFixed(2)}`,
+          `$${parseFloat(p.cnf_45kg || 0).toFixed(2)}`,
         ];
 
         startY =
