@@ -38,6 +38,7 @@ import CustomerLogin from "./components/auth/CustomerLogin";
 import CustomerCatalogue from "./components/Products/CustomerCatalogue";
 import Checkout, { OrderSuccess } from "./components/Products/Checkout";
 import { AdminOrders, CustomerOrders } from "./components/Products/OrderPages";
+import InvoiceList from "./components/invoices/InvoicePages";
 
 function App() {
   return (
@@ -321,6 +322,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <AdminOrders />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/invoices"
+            element={
+              <ProtectedRoute>
+                <InvoiceList />
               </ProtectedRoute>
             }
           />

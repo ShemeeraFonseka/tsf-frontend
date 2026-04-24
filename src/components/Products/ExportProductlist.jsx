@@ -179,7 +179,7 @@ const ExportProductlist = () => {
   }, [selectedSpeciesType, items]);
 
   const fetchProducts = () => {
-    fetch(`${API_URL}/api/exportproductlist`)
+    fetch(`${API_URL}/api/productlist?type=export_sea`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch");
         return res.json();
@@ -203,7 +203,7 @@ const ExportProductlist = () => {
     )
       return;
     try {
-      const res = await fetch(`${API_URL}/api/exportproductlist/${productId}`, {
+      const res = await fetch(`${API_URL}/api/productlist/${productId}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete");
@@ -221,9 +221,8 @@ const ExportProductlist = () => {
     return t ? t.label : s.charAt(0).toUpperCase() + s.slice(1);
   };
 
-  const navigateForm = () => navigate("/exportproductform");
-  const navigateEdit = (productId) =>
-    navigate(`/exportproductform/${productId}`);
+  const navigateForm = () => navigate("/productform");
+  const navigateEdit = (productId) => navigate(`/productform/${productId}`);
 
   const getImageUrl = (imageUrl) => {
     if (!imageUrl) return "/images/placeholder-seafood.png";

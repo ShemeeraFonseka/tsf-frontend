@@ -87,7 +87,7 @@ const ExportCustomerDetailAir = () => {
 
   const fetchProducts = async () => {
     try {
-      const r = await fetch(`${API_URL}/api/exportproductlistair`);
+      const r = await fetch(`${API_URL}/api/productlist?type=export_air`);
       if (!r.ok) throw new Error("Failed");
       setProducts(await r.json());
     } catch (e) {
@@ -974,17 +974,15 @@ const ExportCustomerDetailAir = () => {
         // Sort variants within each product numerically
         Object.values(productMap).forEach((prod) => {
           prod.variants.sort((a, b) => {
-            const extractNumber = (str) => {
-              const match = str.match(/\d+/g);
-              return match ? parseInt(match[0]) : Infinity;
-            };
-            const numA = extractNumber(a.size);
-            const numB = extractNumber(b.size);
-            if (numA !== numB) return numA - numB;
-            return a.size.localeCompare(b.size);
+            const priceA = parseFloat(
+              a.p?.cnf_45kg || a.p?.cnf_20ft || a.p?.fob_price || 0,
+            );
+            const priceB = parseFloat(
+              b.p?.cnf_45kg || b.p?.cnf_20ft || b.p?.fob_price || 0,
+            );
+            return priceA - priceB;
           });
         });
-
         // Sort products by PRODUCT_ORDER
         const sortedProducts = Object.values(productMap).sort(
           (a, b) => getSortIndex(a.common_name) - getSortIndex(b.common_name),
@@ -1004,19 +1002,12 @@ const ExportCustomerDetailAir = () => {
 
         const bodyRows = tableBody.map(({ prod, v, vi }) => {
           const p = v.p;
-          const categoryLabel =
-            vi === 0
-              ? prod.category
-                ? prod.category.charAt(0).toUpperCase() + prod.category.slice(1)
-                : "—"
-              : "";
           return [
-            "", // col 0: Picture
-            vi === 0 ? prod.common_name : "", // col 1: Common Name
-            vi === 0 ? prod.scientific_name : "", // col 2: Scientific Name
-            categoryLabel, // col 3: Category
-            v.size, // col 4: Size
-            ...extraCols(p), // col 5+: CNF columns
+            "",
+            vi === 0 ? prod.common_name : "",
+            vi === 0 ? prod.scientific_name : "",
+            v.size,
+            ...extraCols(p),
           ];
         });
 
@@ -1028,7 +1019,6 @@ const ExportCustomerDetailAir = () => {
               { content: "Picture", styles: { halign: "center" } },
               { content: "Common Name", styles: { halign: "left" } },
               { content: "Scientific Name", styles: { halign: "left" } },
-              { content: "Category", styles: { halign: "left" } },
               { content: "Size", styles: { halign: "left" } },
               ...headLabel,
             ],
@@ -1038,31 +1028,30 @@ const ExportCustomerDetailAir = () => {
           columnStyles: {
             0: { cellWidth: 24, halign: "center", valign: "middle" },
             1: {
-              cellWidth: 55,
+              cellWidth: 60,
               halign: "left",
               valign: "middle",
               fontStyle: "bold",
               fontSize: 10,
             },
             2: {
-              cellWidth: 38,
+              cellWidth: 42,
               halign: "left",
               valign: "middle",
               fontStyle: "italic",
               fontSize: 9,
               textColor: [50, 80, 150],
             },
-            3: { cellWidth: 22, halign: "left", valign: "middle", fontSize: 9 },
-            4: {
-              cellWidth: 28,
+            3: {
+              cellWidth: 30,
               halign: "left",
               valign: "middle",
               fontSize: 10,
             },
+            4: { halign: "right", valign: "middle" },
             5: { halign: "right", valign: "middle" },
             6: { halign: "right", valign: "middle" },
             7: { halign: "right", valign: "middle" },
-            8: { halign: "right", valign: "middle" },
           },
           headStyles: {
             fillColor: headDark,
@@ -1081,7 +1070,7 @@ const ExportCustomerDetailAir = () => {
           },
           willDrawCell: (data) => {
             if (data.section !== "body") return;
-            if (!firstRowSet.has(data.row.index) && data.column.index <= 3) {
+            if (!firstRowSet.has(data.row.index) && data.column.index <= 2) {
               data.cell.styles.lineWidth = {
                 top: 0,
                 bottom: 0.3,
@@ -1122,14 +1111,6 @@ const ExportCustomerDetailAir = () => {
       let startY = 62;
 
       if (airProducts.length > 0) {
-        doc.setFillColor(...NAVY);
-        doc.rect(margin, startY, pageW - margin * 2, 8, "F");
-        doc.setTextColor(...WHITE);
-        doc.setFontSize(9);
-        doc.setFont(undefined, "bold");
-        doc.text("AIR FREIGHT PRODUCTS", margin + 4, startY + 5.5);
-        startY += 10;
-
         const airHeadLabels = [
           { content: "CNF +500kg", styles: { halign: "right" } },
           { content: "CNF +300kg", styles: { halign: "right" } },

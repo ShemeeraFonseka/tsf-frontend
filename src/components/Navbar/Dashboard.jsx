@@ -114,6 +114,12 @@ const Dashboard = () => {
           description: "Confirmed and in-progress orders",
           color: "#047857",
         },
+        {
+          name: "Invoices",
+          path: "/invoices",
+          icon: "🧾",
+          description: "Create and manage invoices",
+        },
       ],
     },
     {

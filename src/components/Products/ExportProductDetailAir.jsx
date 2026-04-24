@@ -12,7 +12,7 @@ const ExportProductDetailAir = () => {
   const [currentUsdRate, setCurrentUsdRate] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/exportproductlistair/${id}`)
+    fetch(`${API_URL}/api/productlist/${id}`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch");
         return res.json();

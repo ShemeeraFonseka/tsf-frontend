@@ -141,7 +141,7 @@ const Productlist = () => {
   }, [selectedSpeciesType, items]);
 
   const fetchProducts = () => {
-    fetch(`${API_URL}/api/productlist`)
+    fetch(`${API_URL}/api/productlist?type=local`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch");
         return res.json();
