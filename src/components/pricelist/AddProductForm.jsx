@@ -504,7 +504,27 @@ export default function AddProductForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save");
 
-      navigate(isEdit ? -1 : "/productlist");
+      // Navigate to the correct list based on product types
+      const types = form.product_types;
+      const getDestination = () => {
+        const isLocalOnly =
+          types.includes("local") &&
+          !types.includes("export_sea") &&
+          !types.includes("export_air");
+        const isSeaOnly =
+          types.includes("export_sea") &&
+          !types.includes("local") &&
+          !types.includes("export_air");
+        const isAirOnly =
+          types.includes("export_air") &&
+          !types.includes("local") &&
+          !types.includes("export_sea");
+        if (isLocalOnly) return "/productlist";
+        if (isSeaOnly) return "/exportproductlist";
+        if (isAirOnly) return "/exportproductlistair";
+        return "/allproductlist"; // multi-type
+      };
+      navigate(getDestination());
     } catch (err) {
       setError(err.message);
     } finally {
