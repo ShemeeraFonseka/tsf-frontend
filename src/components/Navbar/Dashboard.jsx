@@ -10,10 +10,17 @@ const Dashboard = () => {
       gradient: "linear-gradient(135deg, #1e4b8c 0%, #2d7fc1 100%)",
       items: [
         {
-          name: "Product List",
-          path: "/productlist",
+          name: "All Products",
+          path: "/allproductlist",
           icon: "📦",
           description: "View and manage all products",
+          color: "#1e4b8c",
+        },
+        {
+          name: "Local Products",
+          path: "/productlist",
+          icon: "📦",
+          description: "View and manage local products",
           color: "#1e4b8c",
         },
         {

@@ -960,7 +960,7 @@ const Productlist = () => {
               isFirstOfGroup: index === 0,
               commonName: product.commonName,
               scientificName: product.scientificName,
-              category: product.category,
+
               image: product.image,
               size: variant.size || "—",
               sellingPrice: variant.selling_price ?? null,
@@ -971,7 +971,7 @@ const Productlist = () => {
             isFirstOfGroup: true,
             commonName: product.commonName,
             scientificName: product.scientificName,
-            category: product.category,
+
             image: product.image,
             size: "—",
             sellingPrice: null,
@@ -983,7 +983,6 @@ const Productlist = () => {
         "",
         row.isFirstOfGroup ? row.commonName : "",
         row.isFirstOfGroup ? row.scientificName : "",
-        row.isFirstOfGroup ? formatCategory(row.category) : "",
         row.size,
         row.sellingPrice != null
           ? `Rs. ${parseFloat(row.sellingPrice).toFixed(2)}`
@@ -998,7 +997,6 @@ const Productlist = () => {
             { content: "Picture", styles: { halign: "center" } },
             { content: "Common Name", styles: { halign: "left" } },
             { content: "Scientific Name", styles: { halign: "left" } },
-            { content: "Condition", styles: { halign: "left" } },
             { content: "Size", styles: { halign: "left" } },
             { content: "Selling Price (Rs)", styles: { halign: "right" } },
           ],
@@ -1027,9 +1025,8 @@ const Productlist = () => {
             fontSize: 9,
             textColor: [50, 80, 150],
           },
-          3: { cellWidth: 30, halign: "left", valign: "middle", fontSize: 10 },
-          4: { cellWidth: 50, halign: "left", valign: "middle", fontSize: 10 },
-          5: {
+          3: { cellWidth: 60, halign: "left", valign: "middle", fontSize: 10 },
+          4: {
             halign: "right",
             valign: "middle",
             fontSize: 10,
@@ -1057,7 +1054,7 @@ const Productlist = () => {
           if (data.section !== "body") return;
           const row = tableBody[data.row.index];
           if (!row) return;
-          if (!row.isFirstOfGroup && data.column.index <= 3)
+          if (!row.isFirstOfGroup && data.column.index <= 2)
             data.cell.styles.lineWidth = {
               top: 0,
               bottom: 0.3,

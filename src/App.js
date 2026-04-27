@@ -39,6 +39,7 @@ import CustomerCatalogue from "./components/Products/CustomerCatalogue";
 import Checkout, { OrderSuccess } from "./components/Products/Checkout";
 import { AdminOrders, CustomerOrders } from "./components/Products/OrderPages";
 import InvoiceList from "./components/invoices/InvoicePages";
+import AllProductslist from "./components/Products/AllProductsList";
 
 function App() {
   return (
@@ -87,6 +88,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Productlist />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/allproductlist"
+            element={
+              <ProtectedRoute>
+                <AllProductslist />
               </ProtectedRoute>
             }
           />
