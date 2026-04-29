@@ -2,6 +2,9 @@ import React, { useEffect, useState, useMemo } from "react";
 import "./Productlist.css";
 import { useNavigate } from "react-router-dom";
 import { isAdmin } from "../../hooks/useAuth";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import logoSrc from "./logo.png";
 
 /* ── Type badge config ─────────────────────────────────────────── */
 const TYPE_CONFIG = {
@@ -173,6 +176,343 @@ export default function AllProductslist() {
     return `${API_URL}${url}`;
   };
 
+  /* ── PDF Download ─────────────────────────────────────────── */
+  const handleDownloadPDF = async () => {
+    if (filtered.length === 0) {
+      alert("No products to download");
+      return;
+    }
+    try {
+      const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+      });
+      const pageW = doc.internal.pageSize.getWidth(); // 297
+      const pageH = doc.internal.pageSize.getHeight(); // 210
+      const M = 12; // margin
+
+      // ── Palette ──────────────────────────────────────────────────────
+      const NAVY = [8, 47, 114]; // deep navy
+      const NAVY2 = [13, 71, 161]; // mid navy
+
+      const WHITE = [255, 255, 255];
+      const OFF_W = [248, 250, 255]; // near-white row alt
+      const DARK = [15, 23, 42]; // ink
+      const SLATE = [71, 85, 105]; // muted text
+
+      const SEP = [203, 213, 225]; // separator lines
+
+      // ══════════════════════════════════════════════
+      // HEADER  — full-bleed deep navy band
+      // ══════════════════════════════════════════════
+      doc.setFillColor(...NAVY);
+      doc.rect(0, 0, pageW, 48, "F");
+
+      // Logo
+      try {
+        doc.addImage(logoSrc, "PNG", M, 8, 34, 26);
+      } catch {}
+
+      // Company name
+      doc.setTextColor(...WHITE);
+      doc.setFontSize(20);
+      doc.setFont(undefined, "bold");
+      doc.text("TROPICAL SHELLFISH", M + 40, 22);
+      doc.setFontSize(8.5);
+      doc.setFont(undefined, "normal");
+      doc.setTextColor(160, 200, 255);
+      doc.text("PRIVATE LIMITED", M + 40, 28.5);
+      doc.setTextColor(200, 220, 255);
+      doc.text("Premium Seafood Exporters  ·  Sri Lanka", M + 40, 34.5);
+
+      // Right side — catalogue title box
+      const titleX = pageW - M - 68;
+      doc.setFillColor(255, 255, 255, 18); // subtle white tint
+      doc.roundedRect(titleX, 9, 68, 30, 3, 3, "F");
+      doc.setDrawColor(100, 140, 210);
+      doc.setLineWidth(0.5);
+      doc.roundedRect(titleX, 9, 68, 30, 3, 3, "S");
+      doc.setTextColor(180, 210, 255);
+      doc.setFontSize(13);
+      doc.setFont(undefined, "bold");
+      doc.text("PRODUCT CATALOGUE", titleX + 34, 22, { align: "center" });
+      doc.setFontSize(7.5);
+      doc.setFont(undefined, "normal");
+      doc.setTextColor(200, 220, 255);
+      const dateStr = new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      doc.text(dateStr, titleX + 34, 29, { align: "center" });
+      doc.text(`${filtered.length} Products`, titleX + 34, 34.5, {
+        align: "center",
+      });
+
+      // ══════════════════════════════════════════════
+      // COLUMN LEGEND BAR  (just below header)
+      // ══════════════════════════════════════════════
+      const legendY = 48;
+      doc.setFillColor(...NAVY2);
+      doc.rect(0, legendY, pageW, 14, "F");
+      doc.setTextColor(...WHITE);
+      doc.setFontSize(8);
+      doc.setFont(undefined, "bold");
+
+      // ── Image cache ──────────────────────────────────────────────────
+      const imageCache = {};
+      const fetchImg = async (imagePath) => {
+        if (!imagePath || imageCache[imagePath] !== undefined)
+          return imageCache[imagePath];
+        try {
+          const url = imagePath.startsWith("http")
+            ? imagePath
+            : `${API_URL}${imagePath}`;
+          const res = await fetch(url);
+          if (!res.ok) {
+            imageCache[imagePath] = null;
+            return null;
+          }
+          const blob = await res.blob();
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              imageCache[imagePath] = reader.result;
+              resolve(reader.result);
+            };
+            reader.onerror = () => {
+              imageCache[imagePath] = null;
+              resolve(null);
+            };
+            reader.readAsDataURL(blob);
+          });
+        } catch {
+          imageCache[imagePath] = null;
+          return null;
+        }
+      };
+      await Promise.all(
+        [...new Set(filtered.map((p) => p.image_url).filter(Boolean))].map(
+          fetchImg,
+        ),
+      );
+
+      // ── Image placeholder ─────────────────────────────────────────────
+      const drawPlaceholder = (x, y, w, h) => {
+        doc.setFillColor(220, 230, 248);
+        doc.roundedRect(x, y, w, h, 2, 2, "F");
+        doc.setDrawColor(160, 185, 230);
+        doc.setLineWidth(0.25);
+        doc.roundedRect(x, y, w, h, 2, 2, "S");
+        // fish silhouette hint
+        doc.setFontSize(11);
+        doc.setTextColor(170, 195, 230);
+        doc.text("🐟", x + w / 2, y + h / 2 + 2, { align: "center" });
+      };
+
+      // ── Build table data ──────────────────────────────────────────────
+      const IMG_W = 32; // image cell width
+      const tableBody = filtered.map((product) => {
+        const variants = product.variants || [];
+        const cat = (product.category || "").toLowerCase();
+
+        // Sizes — sorted numerically where possible, wrapped nicely
+        const rawSizes = [
+          ...new Set(variants.map((v) => v.size).filter(Boolean)),
+        ];
+        const sizes = rawSizes.length > 0 ? rawSizes.join(", ") : "—";
+
+        return {
+          image: product.image_url || null,
+          common_name: product.common_name || "—",
+          scientific_name: product.scientific_name || "—",
+          sizes,
+          category: cat,
+          rowHeight: Math.max(28, Math.ceil(rawSizes.length / 3) * 6 + 18),
+        };
+      });
+
+      // ── autoTable ────────────────────────────────────────────────────
+      autoTable(doc, {
+        startY: legendY + 14 + 1,
+        margin: { left: M, right: M },
+        head: [
+          [
+            { content: "", styles: { halign: "center" } },
+            { content: "COMMON NAME", styles: { halign: "left" } },
+            { content: "SCIENTIFIC NAME", styles: { halign: "left" } },
+            { content: "AVAILABLE SIZES", styles: { halign: "left" } },
+            { content: "CONDITION", styles: { halign: "center" } },
+          ],
+        ],
+        body: tableBody.map((row) => [
+          "",
+          row.common_name,
+          row.scientific_name,
+          row.sizes,
+          row.category
+            ? row.category.charAt(0).toUpperCase() + row.category.slice(1)
+            : "—",
+        ]),
+        theme: "plain",
+        columnStyles: {
+          0: { cellWidth: IMG_W, halign: "center", valign: "middle" },
+          1: {
+            cellWidth: 68,
+            halign: "left",
+            valign: "middle",
+            fontStyle: "bold",
+            fontSize: 10,
+            textColor: DARK,
+          },
+          2: {
+            cellWidth: 72,
+            halign: "left",
+            valign: "middle",
+            fontStyle: "italic",
+            fontSize: 8.5,
+            textColor: [60, 90, 160],
+          },
+          3: {
+            cellWidth: "auto",
+            halign: "left",
+            valign: "middle",
+            fontSize: 8.5,
+            textColor: SLATE,
+          },
+          4: {
+            cellWidth: 32,
+            halign: "center",
+            valign: "middle",
+            fontSize: 9,
+            textColor: [50, 80, 150],
+          },
+        },
+        headStyles: {
+          fillColor: NAVY2,
+          textColor: WHITE,
+          fontStyle: "bold",
+          fontSize: 7.5,
+          cellPadding: { top: 4, bottom: 4, left: 3, right: 3 },
+          lineWidth: 0,
+        },
+        bodyStyles: {
+          fontSize: 10,
+          cellPadding: { top: 5, bottom: 5, left: 3, right: 3 },
+          minCellHeight: 28,
+          textColor: DARK,
+          lineWidth: 0,
+        },
+        // Custom alternating rows + separator lines
+        willDrawCell: (data) => {
+          if (data.section !== "body") return;
+          // Alternating row fill
+          const even = data.row.index % 2 === 0;
+          doc.setFillColor(...(even ? OFF_W : [240, 245, 255]));
+          doc.rect(
+            data.cell.x,
+            data.cell.y,
+            data.cell.width,
+            data.cell.height,
+            "F",
+          );
+          // Thin horizontal separator
+          doc.setDrawColor(...SEP);
+          doc.setLineWidth(0.2);
+          doc.line(
+            data.cell.x,
+            data.cell.y + data.cell.height,
+            data.cell.x + data.cell.width,
+            data.cell.y + data.cell.height,
+          );
+          // Left accent bar on first column
+          if (data.column.index === 0) {
+            doc.setFillColor(...NAVY2);
+            doc.rect(M, data.cell.y, 2, data.cell.height, "F");
+          }
+        },
+        didDrawCell: (data) => {
+          if (data.section !== "body") return;
+          const row = tableBody[data.row.index];
+          if (!row) return;
+
+          // ── Image cell ──
+          if (data.column.index === 0) {
+            const pad = 4;
+            const imgW = data.cell.width - pad * 2;
+            const imgH = data.cell.height - pad * 2;
+            const x = data.cell.x + pad;
+            const y = data.cell.y + pad;
+            // Rounded clip background
+            doc.setFillColor(240, 245, 255);
+            doc.roundedRect(x, y, imgW, imgH, 2, 2, "F");
+            const imgSrc = row.image ? imageCache[row.image] : null;
+            if (imgSrc) {
+              const imgFmt = imgSrc.includes("image/png") ? "PNG" : "JPEG";
+              try {
+                doc.addImage(
+                  imgSrc,
+                  imgFmt,
+                  x,
+                  y,
+                  imgW,
+                  imgH,
+                  undefined,
+                  "FAST",
+                );
+              } catch {
+                drawPlaceholder(x, y, imgW, imgH);
+              }
+            } else {
+              drawPlaceholder(x, y, imgW, imgH);
+            }
+            // Subtle image border
+            doc.setDrawColor(180, 200, 230);
+            doc.setLineWidth(0.3);
+            doc.roundedRect(x, y, imgW, imgH, 2, 2, "S");
+          }
+        },
+      });
+
+      // ══════════════════════════════════════════════
+      // FOOTER on every page
+      // ══════════════════════════════════════════════
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let pg = 1; pg <= totalPages; pg++) {
+        doc.setPage(pg);
+
+        // Footer band
+        doc.setFillColor(...NAVY);
+        doc.rect(0, pageH - 12, pageW, 12, "F");
+        doc.setFillColor(...NAVY2);
+        doc.rect(0, pageH - 12, pageW, 1.5, "F");
+
+        doc.setTextColor(200, 220, 255);
+        doc.setFontSize(6.5);
+        doc.setFont(undefined, "normal");
+        doc.text(
+          "Tropical Shellfish (Pvt) Ltd  ·  Fresh & Frozen Seafood Exporters, Sri Lanka  ·  Prices subject to change without prior notice",
+          pageW / 2,
+          pageH - 5.5,
+          { align: "center" },
+        );
+        doc.setTextColor(...WHITE);
+        doc.setFont(undefined, "bold");
+        doc.text(`${pg} / ${totalPages}`, pageW - M, pageH - 5.5, {
+          align: "right",
+        });
+      }
+
+      doc.save(
+        `Tropical_Shellfish_Catalogue_${new Date().toISOString().split("T")[0]}.pdf`,
+      );
+    } catch (err) {
+      console.error(err);
+      alert("Error generating PDF: " + err.message);
+    }
+  };
+
   /* ══════════════ RENDER ══════════════ */
   return (
     <div className="pricelist-container">
@@ -323,6 +663,17 @@ export default function AllProductslist() {
             + Add Product
           </button>
         )}
+        <button
+          className="apf-btn"
+          onClick={handleDownloadPDF}
+          disabled={filtered.length === 0}
+          style={{
+            background: "var(--accent-cyan, #0ea5e9)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          ⬇ Download PDF
+        </button>
       </div>
 
       {/* ── Result count ── */}
