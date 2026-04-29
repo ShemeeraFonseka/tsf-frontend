@@ -196,7 +196,7 @@ export default function AddProductForm() {
   const [localVariants, setLocalVariants] = useState([blankLocalVariant()]);
   const [exportVariants, setExportVariants] = useState([blankExportVariant()]);
 
-  const [latestUsdRate, setLatestUsdRate] = useState(null); // Store the LATEST rate from DB
+  const [usdRate, setUsdRate] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -206,24 +206,14 @@ export default function AddProductForm() {
     form.product_types.includes("export_sea") ||
     form.product_types.includes("export_air");
 
-  // ── fetch LATEST USD rate on mount ──
+  // ── fetch USD rate on mount ──
   useEffect(() => {
-    const fetchLatestUsdRate = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/usd-rate`);
-        const data = await response.json();
-        if (data.rate) {
-          setLatestUsdRate(parseFloat(data.rate));
-          console.log(`[AddProductForm] Latest USD rate from DB: ${data.rate}`);
-        }
-      } catch (error) {
-        console.error("Failed to fetch latest USD rate:", error);
-        // Fallback to default
-        setLatestUsdRate(304);
-      }
-    };
-
-    fetchLatestUsdRate();
+    fetch(`${API_URL}/api/usd-rate`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.rate) setUsdRate(String(d.rate));
+      })
+      .catch(() => {});
   }, []);
 
   // ── load product for edit ──
@@ -269,9 +259,7 @@ export default function AddProductForm() {
           unit: v.unit || "kg",
           purchasing_price: v.purchasing_price ?? "",
           jc_fob: v.jc_fob ?? "",
-          // Store the stored rate for reference, but we'll use latest for calculations
-          stored_usdrate: v.usdrate ?? "",
-          usdrate: latestUsdRate || v.usdrate || "", // Use latest rate for calculations
+          usdrate: v.usdrate ?? "",
           labour_overhead: v.labour_overhead ?? "",
           packing_cost: v.packing_cost ?? "",
           profit_usd: v.profit_usd ?? "",
@@ -294,34 +282,7 @@ export default function AddProductForm() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [id, latestUsdRate]); // Add latestUsdRate as dependency - when it loads, recalc
-
-  // When latestUsdRate loads, recalculate all export variants to use the new rate
-  useEffect(() => {
-    if (!hasExport || !latestUsdRate) return;
-
-    console.log(
-      `[AddProductForm] Recalculating export variants with latest rate: ${latestUsdRate}`,
-    );
-
-    setExportVariants((prevVariants) =>
-      prevVariants.map((variant) => {
-        // Recalculate using the latest rate
-        const updatedVariant = {
-          ...variant,
-          usdrate: latestUsdRate,
-        };
-
-        // Trigger recalculation of exfactoryprice, profit_margin, etc.
-        return calcExport(
-          updatedVariant,
-          "usdrate",
-          latestUsdRate,
-          latestUsdRate,
-        );
-      }),
-    );
-  }, [latestUsdRate, hasExport]);
+  }, [id]); // eslint-disable-line
 
   // ── product_types toggle ──
   const toggleType = (type) => {
@@ -354,7 +315,7 @@ export default function AddProductForm() {
         prev.map((v, i) => {
           if (i !== idx) return v;
           const newPP = sf(val);
-          const rate = latestUsdRate || sf(v.usdrate, 304);
+          const rate = sf(v.usdrate || usdRate, 304);
           return calcExport(
             { ...v, purchasing_price: newPP },
             "purchasing_price",
@@ -369,7 +330,7 @@ export default function AddProductForm() {
     setLocalVariants((p) => [...p, blankLocalVariant()]);
     // Add matching export row if product is also export
     if (hasExport) {
-      const base = { ...blankExportVariant(), usdrate: latestUsdRate };
+      const base = { ...blankExportVariant(), usdrate: usdRate };
       setExportVariants((p) => [...p, base]);
     }
   };
@@ -384,13 +345,29 @@ export default function AddProductForm() {
     setExportVariants((prev) =>
       prev.map((v, i) => {
         if (i !== idx) return v;
-        const rate = field === "usdrate" ? val : latestUsdRate || v.usdrate;
+        const rate = field === "usdrate" ? val : v.usdrate || usdRate;
         let updated = calcExport(v, field, val, sf(rate, 304));
         return updated;
       }),
     );
   };
 
+  // Called when a local variant purchasing_price changes — re-trigger export calc for matching export row
+  const syncExportPurchasePrice = (localIdx, newPP) => {
+    setExportVariants((prev) =>
+      prev.map((v, i) => {
+        if (i !== localIdx) return v;
+        // inject the new purchasing_price into the export variant and recalc
+        const rate = sf(v.usdrate || usdRate, 304);
+        return calcExport(
+          { ...v, purchasing_price: newPP },
+          "purchasing_price",
+          newPP,
+          rate,
+        );
+      }),
+    );
+  };
   const addEV = () => {
     const matchingLocalPP = hasLocal
       ? (localVariants[exportVariants.length]?.purchasing_price ??
@@ -399,13 +376,12 @@ export default function AddProductForm() {
       : "";
     const base = {
       ...blankExportVariant(),
-      usdrate: latestUsdRate,
+      usdrate: usdRate,
       purchasing_price: matchingLocalPP,
     };
-    const initialised =
-      matchingLocalPP && latestUsdRate
-        ? calcExport(base, "purchasing_price", matchingLocalPP, latestUsdRate)
-        : base;
+    const initialised = matchingLocalPP
+      ? calcExport(base, "purchasing_price", matchingLocalPP, sf(usdRate, 304))
+      : base;
     setExportVariants((p) => [...p, initialised]);
     // Add matching local row if product is also local
     if (hasLocal) setLocalVariants((p) => [...p, blankLocalVariant()]);
@@ -476,8 +452,7 @@ export default function AddProductForm() {
             unit: ev.unit || lv?.unit || "kg",
             purchasing_price: pp,
             jc_fob: sf(ev.jc_fob),
-            // Store the latest USD rate with the product for historical reference
-            usdrate: sf(latestUsdRate, 304),
+            usdrate: sf(ev.usdrate, 304),
             labour_overhead: sf(ev.labour_overhead),
             packing_cost: sf(ev.packing_cost),
             profit_usd: sf(ev.profit_usd),
@@ -504,27 +479,13 @@ export default function AddProductForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save");
 
-      // Navigate to the correct list based on product types
+      // Navigate: local-only → local list, everything else → all products
       const types = form.product_types;
-      const getDestination = () => {
-        const isLocalOnly =
-          types.includes("local") &&
-          !types.includes("export_sea") &&
-          !types.includes("export_air");
-        const isSeaOnly =
-          types.includes("export_sea") &&
-          !types.includes("local") &&
-          !types.includes("export_air");
-        const isAirOnly =
-          types.includes("export_air") &&
-          !types.includes("local") &&
-          !types.includes("export_sea");
-        if (isLocalOnly) return "/productlist";
-        if (isSeaOnly) return "/exportproductlist";
-        if (isAirOnly) return "/exportproductlistair";
-        return "/allproductlist"; // multi-type
-      };
-      navigate(getDestination());
+      const isLocalOnly =
+        types.includes("local") &&
+        !types.includes("export_sea") &&
+        !types.includes("export_air");
+      navigate(isLocalOnly ? "/productlist" : "/allproductlist");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -898,25 +859,6 @@ export default function AddProductForm() {
                   ✕
                 </button>
 
-                {/* Show warning if stored rate differs from latest */}
-                {v.stored_usdrate && v.stored_usdrate !== latestUsdRate && (
-                  <div
-                    style={{
-                      marginBottom: "12px",
-                      padding: "8px 12px",
-                      background: "rgba(250, 204, 21, 0.1)",
-                      border: "1px solid rgba(250, 204, 21, 0.3)",
-                      borderRadius: "var(--radius-sm)",
-                      fontSize: "12px",
-                      color: "#facc15",
-                    }}
-                  >
-                    ⚠️ This product was last saved with USD rate{" "}
-                    {v.stored_usdrate}. Current rate is {latestUsdRate}.
-                    Calculations below use the latest rate.
-                  </div>
-                )}
-
                 <div
                   style={{
                     display: "grid",
@@ -947,29 +889,15 @@ export default function AddProductForm() {
                     </select>
                   </div>
                   <div>
-                    <label className={lbl}>USD Rate (Current)</label>
+                    <label className={lbl}>USD Rate</label>
                     <input
                       className={inp}
                       type="number"
                       step="0.01"
-                      value={latestUsdRate || ""}
-                      readOnly
-                      style={{
-                        background: "var(--bg-deep)",
-                        fontWeight: "700",
-                        color: "var(--accent-cyan)",
-                        cursor: "not-allowed",
-                      }}
+                      value={v.usdrate || usdRate}
+                      onChange={(e) => setEV(i, "usdrate", e.target.value)}
+                      placeholder={usdRate || "304"}
                     />
-                    <div
-                      style={{
-                        fontSize: "10px",
-                        color: "var(--text-muted)",
-                        marginTop: "3px",
-                      }}
-                    >
-                      Using latest rate from database
-                    </div>
                   </div>
                 </div>
 
@@ -1239,7 +1167,9 @@ export default function AddProductForm() {
                         }}
                       >
                         ≈ Rs.{" "}
-                        {(sf(v.profit_usd) * (latestUsdRate || 304)).toFixed(2)}
+                        {(
+                          sf(v.profit_usd) * sf(v.usdrate || usdRate, 304)
+                        ).toFixed(2)}
                       </div>
                     )}
                     {v.profit_currency === "lkr" && v.profit_lkr && (
@@ -1251,10 +1181,10 @@ export default function AddProductForm() {
                         }}
                       >
                         ≈ $
-                        {(latestUsdRate || 304) > 0
-                          ? (sf(v.profit_lkr) / (latestUsdRate || 304)).toFixed(
-                              4,
-                            )
+                        {sf(v.usdrate || usdRate, 304) > 0
+                          ? (
+                              sf(v.profit_lkr) / sf(v.usdrate || usdRate, 304)
+                            ).toFixed(4)
                           : "0"}
                       </div>
                     )}
@@ -1288,9 +1218,10 @@ export default function AddProductForm() {
                     <input
                       className={inp}
                       value={
-                        v.exfactoryprice && (latestUsdRate || 304) > 0
+                        v.exfactoryprice && sf(v.usdrate || usdRate, 304) > 0
                           ? (
-                              sf(v.exfactoryprice) / (latestUsdRate || 304)
+                              sf(v.exfactoryprice) /
+                              sf(v.usdrate || usdRate, 304)
                             ).toFixed(4)
                           : ""
                       }

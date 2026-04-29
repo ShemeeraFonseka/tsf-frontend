@@ -253,7 +253,7 @@ const ExportProductlistAir = () => {
   Object.keys(groupedBySection).forEach((section) => {
     groupedProductsBySection[section] = groupedBySection[section].reduce(
       (acc, product) => {
-        const key = product.common_name;
+        const key = `${product.common_name}||${product.category || ""}`; // ← separate by category
         if (!acc[key]) acc[key] = [];
         acc[key].push(product);
         return acc;
@@ -1009,7 +1009,9 @@ const ExportProductlistAir = () => {
                       </tr>
 
                       {Object.entries(sectionProducts).map(
-                        ([commonName, products]) => {
+                        ([groupKey, products]) => {
+                          const commonName =
+                            products[0]?.common_name || groupKey.split("||")[0];
                           const groupRowSpan = getTotalRowsForGroup(products);
                           const firstProduct = products[0];
                           const imgSrc = getImageUrl(firstProduct.image_url);
@@ -1131,30 +1133,6 @@ const ExportProductlistAir = () => {
                                           >
                                             View
                                           </button>
-
-                                          {adminUser && (
-                                            <button
-                                              className="btn-edit"
-                                              onClick={() =>
-                                                navigateEdit(product.id)
-                                              }
-                                            >
-                                              Edit
-                                            </button>
-                                          )}
-                                          {adminUser && (
-                                            <button
-                                              className="btn-delete"
-                                              onClick={() =>
-                                                handleDelete(
-                                                  product.id,
-                                                  product.common_name,
-                                                )
-                                              }
-                                            >
-                                              Delete
-                                            </button>
-                                          )}
                                         </div>
                                       </td>
                                     )}
