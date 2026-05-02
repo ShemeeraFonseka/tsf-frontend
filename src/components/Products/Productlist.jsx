@@ -4,45 +4,202 @@ import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import logoSrc from "./logo.png";
-
 import { isAdmin } from "../../hooks/useAuth";
 
+const sf = (v, d = 0) => (isFinite(parseFloat(v)) ? parseFloat(v) : d);
+
 /* ── Badge helpers ─────────────────────────────────────────────── */
-const getSpeciesBadgeClass = (speciesType) => {
-  if (!speciesType) return "badge-default";
-  const val = speciesType.toLowerCase();
-  if (val === "fish") return "badge-fish";
-  if (val === "crustacean") return "badge-crustacean";
-  return "badge-default";
-};
-const getSpeciesBadgeIcon = (speciesType) => {
-  if (!speciesType) return "🌊";
-  const val = speciesType.toLowerCase();
-  if (val === "fish") return "🐟";
-  if (val === "crustacean") return "🦞";
-  return "🌊";
-};
-const getCategoryBadgeClass = (category) => {
-  if (!category) return "badge-default-cat";
-  const val = category.toLowerCase();
-  if (val === "live") return "badge-live";
-  if (val === "fresh") return "badge-fresh";
-  if (val === "frozen") return "badge-frozen";
+const getCategoryBadgeClass = (c) => {
+  if (!c) return "badge-default-cat";
+  const v = c.toLowerCase();
+  if (v === "live") return "badge-live";
+  if (v === "fresh") return "badge-fresh";
+  if (v === "frozen") return "badge-frozen";
   return "badge-default-cat";
 };
-const getCategoryBadgeIcon = (category) => {
-  if (!category) return "";
-  const val = category.toLowerCase();
-  if (val === "live") return "🟢";
-  if (val === "fresh") return "💧";
-  if (val === "frozen") return "❄️";
+const getCategoryBadgeIcon = (c) => {
+  if (!c) return "";
+  const v = c.toLowerCase();
+  if (v === "live") return "🟢";
+  if (v === "fresh") return "💧";
+  if (v === "frozen") return "❄️";
   return "";
 };
-/* ──────────────────────────────────────────────────────────────── */
+const getSpeciesBadgeClass = (s) => {
+  if (!s) return "badge-default";
+  const v = s.toLowerCase();
+  if (v === "fish") return "badge-fish";
+  if (v === "crustacean") return "badge-crustacean";
+  return "badge-default";
+};
+const getSpeciesBadgeIcon = (s) => {
+  if (!s) return "🌊";
+  const v = s.toLowerCase();
+  if (v === "fish") return "🐟";
+  if (v === "crustacean") return "🦞";
+  return "🌊";
+};
+const fmt = (v) => (!v ? "-" : v.charAt(0).toUpperCase() + v.slice(1));
 
+const sectionCategories = [
+  { name: "Oyster", keywords: ["oyster", "depurated oyster"] },
+  {
+    name: "Clams",
+    keywords: [
+      "clam",
+      "clams",
+      "pen clams",
+      "short neck clams",
+      "blood clams",
+      "sea clams",
+      "mangrove clams",
+    ],
+  },
+  { name: "Mussel", keywords: ["mussel", "brown mussel", "green mussel"] },
+  { name: "Crab", keywords: ["crab", "sea crab", "mud crab", "cut crab"] },
+  {
+    name: "Prawn",
+    keywords: [
+      "prawn",
+      "flowery prawn",
+      "black tiger",
+      "white prawn",
+      "lobster",
+    ],
+  },
+  { name: "Scampi", keywords: ["scampi"] },
+  { name: "Cuttlefish", keywords: ["cuttlefish", "squid"] },
+  { name: "Octopus", keywords: ["octopus", "baby octopus"] },
+  {
+    name: "Fish",
+    keywords: [
+      "fish",
+      "jack",
+      "eel",
+      "tuna",
+      "tilapia",
+      "mackerel",
+      "rohu",
+      "sardine",
+      "mullet",
+      "barramundi",
+      "catla",
+      "parrot",
+      "red mullet",
+      "scad",
+      "mahi mahi",
+      "anchovy",
+      "snapper",
+      "grouper",
+      "seer",
+      "salmon",
+    ],
+  },
+];
+
+const speciesTypes = [
+  { value: "all", label: "All Products", icon: "🌊" },
+  { value: "crustacean", label: "Crustacean", icon: "🦞" },
+  { value: "fish", label: "Fish", icon: "🐟" },
+];
+
+const PRODUCT_ORDER = [
+  "white prawn",
+  "black tiger frozen",
+  "black tiger",
+  "flowery prawn",
+  "lobster frozen",
+  "lobster",
+  "sea crab fresh",
+  "sea crab frozen",
+  "sea crab",
+  "cut crab fresh",
+  "cut crab frozen",
+  "cut crab",
+  "scampi headless",
+  "scampi claw",
+  "scampi",
+  "cuttlefish fresh whole",
+  "cuttlefish whole cleaned",
+  "cuttlefish fresh corn",
+  "cuttlefish cleaned corn",
+  "squid fresh cleaned",
+  "squid",
+  "baby octopus frozen",
+  "baby octopus",
+  "octopus frozen",
+  "octopus",
+  "yellow fin tuna",
+  "seer fish",
+  "barramundi",
+  "scad",
+  "trevally",
+  "trevalley",
+  "indian mackerel",
+  "tenched sardine",
+  "anchovy",
+  "jack trevally",
+  "red mullet",
+  "grey mullet",
+  "tiger grouper",
+  "red grouper",
+  "red snapper",
+  "mahi mahi",
+  "salmon fish",
+  "parrot fish",
+  "tuna",
+  "catla",
+  "rohu",
+  "tilapia",
+  "oyster",
+  "green mussel",
+  "short neck clam",
+  "mangrove clam",
+  "blood clam",
+  "brown mussel",
+  "mussel",
+];
+
+const getSortIndex = (name) => {
+  const lower = (name || "").toLowerCase();
+  const idx = PRODUCT_ORDER.findIndex((k) => lower.includes(k));
+  return idx === -1 ? 9999 : idx;
+};
+
+// ── Calc helpers for pricing modal ───────────────────────────────
+function calcFromProfit(pp, profit) {
+  const sp = pp + profit;
+  const pmp = sp > 0 ? (profit / sp) * 100 : 0;
+  return {
+    profit,
+    selling_price: parseFloat(sp.toFixed(2)),
+    profit_margin_percentage: parseFloat(pmp.toFixed(2)),
+  };
+}
+function calcFromSelling(pp, sp) {
+  const profit = sp - pp;
+  const pmp = sp > 0 ? (profit / sp) * 100 : 0;
+  return {
+    profit: parseFloat(profit.toFixed(2)),
+    selling_price: sp,
+    profit_margin_percentage: parseFloat(pmp.toFixed(2)),
+  };
+}
+function calcFromMarginPct(pp, pmp) {
+  const profit = pmp < 100 ? (pmp / (100 - pmp)) * pp : 0;
+  const sp = pp + profit;
+  return {
+    profit: parseFloat(profit.toFixed(2)),
+    selling_price: parseFloat(sp.toFixed(2)),
+    profit_margin_percentage: pmp,
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   COMPONENT
+══════════════════════════════════════════════════════════════════ */
 const Productlist = () => {
   const adminUser = isAdmin();
-
   const API_URL = process.env.REACT_APP_API_URL;
   const navigate = useNavigate();
 
@@ -52,99 +209,34 @@ const Productlist = () => {
   const [error, setError] = useState(null);
   const [selectedSpeciesType, setSelectedSpeciesType] = useState("all");
 
-  /* ── Bulk-add state ──────────────────────────────────────────── */
+  /* ── "Add from Catalogue" modal state ─────────────────────────── */
+  const [showCatalogueModal, setShowCatalogueModal] = useState(false);
+  const [catalogue, setCatalogue] = useState([]); // all master products
+  const [catalogueLoading, setCatalogueLoading] = useState(false);
+  const [catalogueSearch, setCatalogueSearch] = useState("");
+  const [selectedCatProduct, setSelectedCatProduct] = useState(null); // product chosen from catalogue
+  const [pricingRows, setPricingRows] = useState([]); // variant pricing being set
+  const [savingPricing, setSavingPricing] = useState(false);
+  const [selectedPricingCategories, setSelectedPricingCategories] = useState([
+    "fresh",
+  ]);
+
+  /* ── "Add to Customer" bulk modal state (unchanged) ───────────── */
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState(new Set());
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [bulkCustomerId, setBulkCustomerId] = useState("");
-  const [bulkItems, setBulkItems] = useState([]); // per-variant rows with editable margin
+  const [bulkItems, setBulkItems] = useState([]);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
-  /* ──────────────────────────────────────────────────────────────── */
 
-  const sectionCategories = [
-    { name: "Oyster", keywords: ["oyster", "depurated oyster"] },
-    {
-      name: "Clams",
-      keywords: [
-        "clam",
-        "clams",
-        "pen clams",
-        "short neck clams",
-        "blood clams",
-        "sea clams",
-        "mangrove clams",
-      ],
-    },
-    { name: "Mussel", keywords: ["mussel", "brown mussel", "green mussel"] },
-    { name: "Crab", keywords: ["crab", "sea crab", "mud crab", "cut crab"] },
-    {
-      name: "Prawn",
-      keywords: [
-        "prawn",
-        "flowery prawn",
-        "black tiger",
-        "white prawn",
-        "lobster",
-      ],
-    },
-    { name: "Scampi", keywords: ["scampi"] },
-    { name: "Cuttlefish", keywords: ["cuttlefish", "squid"] },
-    { name: "Octopus", keywords: ["octopus", "baby octopus"] },
-    {
-      name: "Fish",
-      keywords: [
-        "fish",
-        "jack",
-        "eel",
-        "tuna",
-        "tilapia",
-        "mackerel",
-        "rohu",
-        "sardine",
-        "mullet",
-        "barramundi",
-        "catla",
-        "parrot",
-        "red mullet",
-        "scad",
-        "mahi mahi",
-        "anchovy",
-        "snapper",
-        "grouper",
-        "seer",
-        "salmon",
-      ],
-    },
-  ];
-
-  const speciesTypes = [
-    { value: "all", label: "All Products", icon: "🌊" },
-    { value: "crustacean", label: "Crustacean", icon: "🦞" },
-    { value: "fish", label: "Fish", icon: "🐟" },
-  ];
-
-  useEffect(() => {
-    fetchProducts();
-  }, []); // eslint-disable-line
-
-  useEffect(() => {
-    if (selectedSpeciesType === "all") setFilteredItems(items);
-    else
-      setFilteredItems(
-        items.filter(
-          (item) =>
-            item.species_type?.toLowerCase() ===
-            selectedSpeciesType.toLowerCase(),
-        ),
-      );
-  }, [selectedSpeciesType, items]);
-
+  /* ── Fetch local product list ─────────────────────────────────── */
   const fetchProducts = () => {
-    fetch(`${API_URL}/api/productlist?type=local`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch");
-        return res.json();
+    setLoading(true);
+    fetch(`${API_URL}/api/local-product-prices/full-list`)
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to fetch");
+        return r.json();
       })
       .then((data) => {
         setItems(data);
@@ -157,117 +249,168 @@ const Productlist = () => {
       });
   };
 
-  // In fetchCustomers, log to confirm the shape:
+  useEffect(() => {
+    fetchProducts();
+  }, []); // eslint-disable-line
+
+  useEffect(() => {
+    if (selectedSpeciesType === "all") setFilteredItems(items);
+    else
+      setFilteredItems(
+        items.filter(
+          (p) => p.species_type?.toLowerCase() === selectedSpeciesType,
+        ),
+      );
+  }, [selectedSpeciesType, items]);
+
+  /* ── Catalogue modal ─────────────────────────────────────────── */
+  const openCatalogueModal = async () => {
+    setShowCatalogueModal(true);
+    setSelectedCatProduct(null);
+    setPricingRows([]);
+    setCatalogueSearch("");
+    setCatalogueLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/productlist`);
+      const data = await res.json();
+      setCatalogue(data);
+    } catch {
+      setCatalogue([]);
+    } finally {
+      setCatalogueLoading(false);
+    }
+  };
+
+  const selectCatalogueProduct = (product) => {
+    setSelectedCatProduct(product);
+    // Pre-fill pricing rows — if product already in local list, use existing prices
+    const existing = items.find((p) => p.id === product.id);
+    // Pre-fill categories from existing or product default
+    const existingCats = existing
+      ? existing.categories || (existing.category ? [existing.category] : [])
+      : product.categories ||
+        (product.category ? [product.category] : ["fresh"]);
+    setSelectedPricingCategories(existingCats);
+
+    const rows = (product.variants || []).map((v) => {
+      const ex = existing?.variants?.find(
+        (ev) => String(ev.id) === String(v.id),
+      );
+      const pp = sf(v.purchasing_price);
+      return {
+        variant_id: v.id,
+        size: v.size,
+        unit: v.unit,
+        purchasing_price: pp,
+        profit: ex ? sf(ex.profit) : 0,
+        selling_price: ex ? sf(ex.selling_price) : pp,
+        profit_margin_percentage: ex ? sf(ex.profit_margin_percentage) : 0,
+        local_price_id: ex?.local_price_id || null,
+      };
+    });
+    setPricingRows(rows);
+  };
+
+  const updatePricingRow = (idx, field, val) => {
+    setPricingRows((prev) =>
+      prev.map((row, i) => {
+        if (i !== idx) return row;
+        const pp = sf(row.purchasing_price);
+        const v = sf(val);
+        if (field === "profit")
+          return { ...row, ...calcFromProfit(pp, v), profit: v };
+        if (field === "selling_price")
+          return { ...row, ...calcFromSelling(pp, v), selling_price: v };
+        if (field === "profit_margin_percentage")
+          return {
+            ...row,
+            ...calcFromMarginPct(pp, v),
+            profit_margin_percentage: v,
+          };
+        return { ...row, [field]: val };
+      }),
+    );
+  };
+
+  // Apply same profit to all rows at once
+  const applyProfitToAll = (profit) => {
+    setPricingRows((prev) =>
+      prev.map((row) => ({
+        ...row,
+        ...calcFromProfit(sf(row.purchasing_price), sf(profit)),
+      })),
+    );
+  };
+
+  const savePricing = async () => {
+    if (!selectedCatProduct) return;
+    setSavingPricing(true);
+    try {
+      const res = await fetch(`${API_URL}/api/local-product-prices/bulk`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_id: selectedCatProduct.id,
+          categories: selectedPricingCategories,
+          variants: pricingRows.map((r) => ({
+            variant_id: r.variant_id,
+            profit: sf(r.profit),
+            selling_price: sf(r.selling_price),
+            profit_margin_percentage: sf(r.profit_margin_percentage),
+          })),
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      alert(`✅ Pricing saved for ${selectedCatProduct.common_name}`);
+      setShowCatalogueModal(false);
+      fetchProducts();
+    } catch (err) {
+      alert("Error: " + err.message);
+    } finally {
+      setSavingPricing(false);
+    }
+  };
+
+  /* ── Remove from local list ───────────────────────────────────── */
+  const handleRemoveFromLocal = async (productId, productName) => {
+    if (
+      !window.confirm(
+        `Remove "${productName}" from the local list? This will delete its local pricing only — the product stays in the master catalogue.`,
+      )
+    )
+      return;
+    try {
+      // Delete all local_product_prices rows for this product
+      const res = await fetch(
+        `${API_URL}/api/local-product-prices/product/${productId}`,
+        { method: "DELETE" },
+      );
+      if (!res.ok) throw new Error("Failed to remove");
+      fetchProducts();
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+  };
+
+  /* ── Bulk-add to customer (unchanged) ───────────────────────────── */
   const fetchCustomers = async () => {
     try {
       const res = await fetch(`${API_URL}/api/customerlist`);
-      if (!res.ok) throw new Error("Failed to fetch customers");
       const data = await res.json();
-      console.log("Customers sample:", data[0]); // ← check field names here
       setCustomers(data);
     } catch (err) {
       console.error(err);
     }
   };
 
-  const handleDelete = async (productId, productName) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to delete "${productName}"? This will delete all variants as well.`,
-      )
-    )
-      return;
-    try {
-      const res = await fetch(`${API_URL}/api/productlist/${productId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to delete");
-      fetchProducts();
-    } catch (err) {
-      alert("Error deleting product: " + err.message);
-    }
-  };
-
-  const formatCategory = (c) =>
-    !c ? "-" : c.charAt(0).toUpperCase() + c.slice(1);
-  const formatSpeciesType = (s) => {
-    if (!s) return "-";
-    const t = speciesTypes.find((x) => x.value === s.toLowerCase());
-    return t ? t.label : s.charAt(0).toUpperCase() + s.slice(1);
-  };
-
-  const navigateForm = () => navigate("/productform");
-  const navigateEdit = (productId) => navigate(`/productform/${productId}`);
-
-  const getImageUrl = (imageUrl) => {
-    if (!imageUrl) return "/images/placeholder-seafood.png";
-    if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://"))
-      return imageUrl;
-    return `${API_URL}${imageUrl}`;
-  };
-
-  const getSpeciesTypeCount = (typeValue) => {
-    if (typeValue === "all") return items.length;
-    return items.filter(
-      (item) => item.species_type?.toLowerCase() === typeValue,
-    ).length;
-  };
-
-  const getProductSection = (product) => {
-    const commonName = product.common_name?.toLowerCase() || "";
-    for (const section of sectionCategories) {
-      if (section.keywords.some((keyword) => commonName.includes(keyword)))
-        return section.name;
-    }
-    return "Other";
-  };
-
-  const groupProductsBySection = (products) => {
-    const grouped = {};
-    sectionCategories.forEach((section) => {
-      grouped[section.name] = [];
-    });
-    grouped["Other"] = [];
-    products.forEach((product) => {
-      grouped[getProductSection(product)].push(product);
-    });
-    return grouped;
-  };
-
-  const groupedBySection = groupProductsBySection(filteredItems);
-  const groupedProductsBySection = {};
-  Object.keys(groupedBySection).forEach((section) => {
-    groupedProductsBySection[section] = groupedBySection[section].reduce(
-      (acc, product) => {
-        const key = product.common_name;
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(product);
-        return acc;
-      },
-      {},
-    );
-  });
-
-  const getTotalRowsForGroup = (products) =>
-    products.reduce((sum, product) => {
-      const variants = product.variants || [];
-      return sum + (variants.length > 0 ? variants.length : 1);
-    }, 0);
-
-  const sectionHasProducts = (section) =>
-    Object.keys(groupedProductsBySection[section] || {}).length > 0;
-
-  /* ── Bulk-add handlers ───────────────────────────────────────── */
   const toggleBulkMode = () => {
-    setBulkMode((prev) => !prev);
+    setBulkMode((p) => !p);
     setSelectedProductIds(new Set());
   };
-
-  const toggleProductSelection = (productId) => {
+  const toggleProductSelection = (id) => {
     setSelectedProductIds((prev) => {
       const next = new Set(prev);
-      if (next.has(productId)) next.delete(productId);
-      else next.add(productId);
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
   };
@@ -278,53 +421,26 @@ const Productlist = () => {
       return;
     }
     await fetchCustomers();
-
-    // Build bulk items — one row per variant of each selected product
     const rows = [];
     filteredItems.forEach((product) => {
       if (!selectedProductIds.has(product.id)) return;
-      const variants = product.variants || [];
-      if (variants.length > 0) {
-        variants.forEach((variant) => {
-          const profit = parseFloat(variant.profit) || 0;
-          const purchasingPrice = parseFloat(variant.purchasing_price) || 0;
-          const sellingPrice = purchasingPrice + profit;
-          const marginPercentage =
-            sellingPrice > 0 ? (profit / sellingPrice) * 100 : 0;
-          rows.push({
-            key: `${product.id}-${variant.id}`,
-            product_id: product.id,
-            variant_id: variant.id,
-            common_name: product.common_name,
-            scientific_name: product.scientific_name || "",
-            category: product.category,
-            image_url: product.image_url || "",
-            size_range: `${variant.size}`,
-            purchasing_price: purchasingPrice,
-            margin: profit,
-            margin_percentage: parseFloat(marginPercentage.toFixed(2)),
-            selling_price: parseFloat(sellingPrice.toFixed(2)),
-          });
-        });
-      } else {
-        // Product with no variants
+      (product.variants || []).forEach((v) => {
         rows.push({
-          key: `${product.id}-none`,
+          key: `${product.id}-${v.id}`,
           product_id: product.id,
-          variant_id: null,
+          variant_id: v.id,
           common_name: product.common_name,
           scientific_name: product.scientific_name || "",
           category: product.category,
           image_url: product.image_url || "",
-          size_range: "",
-          purchasing_price: 0,
-          margin: 0,
-          margin_percentage: 0,
-          selling_price: 0,
+          size_range: v.size || "",
+          purchasing_price: sf(v.purchasing_price),
+          margin: sf(v.profit),
+          margin_percentage: sf(v.profit_margin_percentage),
+          selling_price: sf(v.selling_price),
         });
-      }
+      });
     });
-
     setBulkItems(rows);
     setBulkCustomerId("");
     setShowBulkModal(true);
@@ -335,26 +451,21 @@ const Productlist = () => {
       prev.map((item) => {
         if (item.key !== key) return item;
         const updated = { ...item, [field]: value };
-        const pp = parseFloat(updated.purchasing_price) || 0;
-        const margin = parseFloat(updated.margin) || 0;
-        const marginPct = parseFloat(updated.margin_percentage) || 0;
-
+        const pp = sf(updated.purchasing_price);
         if (field === "margin") {
-          const sp = pp + margin;
+          const sp = pp + sf(value);
           updated.selling_price = parseFloat(sp.toFixed(2));
           updated.margin_percentage =
-            sp > 0 ? parseFloat(((margin / sp) * 100).toFixed(2)) : 0;
+            sp > 0 ? parseFloat(((sf(value) / sp) * 100).toFixed(2)) : 0;
         } else if (field === "margin_percentage") {
-          const newMargin = (pp * marginPct) / (100 - marginPct);
-          const sp = pp + newMargin;
-          updated.margin = parseFloat(newMargin.toFixed(2));
-          updated.selling_price = parseFloat(sp.toFixed(2));
+          const m = (pp * sf(value)) / (100 - sf(value));
+          updated.margin = parseFloat(m.toFixed(2));
+          updated.selling_price = parseFloat((pp + m).toFixed(2));
         } else if (field === "selling_price") {
-          const sp = parseFloat(value) || 0;
-          const newMargin = sp - pp;
-          updated.margin = parseFloat(newMargin.toFixed(2));
+          const m = sf(value) - pp;
+          updated.margin = parseFloat(m.toFixed(2));
           updated.margin_percentage =
-            sp > 0 ? parseFloat(((newMargin / sp) * 100).toFixed(2)) : 0;
+            sf(value) > 0 ? parseFloat(((m / sf(value)) * 100).toFixed(2)) : 0;
         }
         return updated;
       }),
@@ -367,75 +478,47 @@ const Productlist = () => {
       return;
     }
     setBulkSubmitting(true);
-    let successCount = 0;
-    let skipCount = 0;
-    let errorCount = 0;
-
+    let success = 0,
+      skip = 0,
+      fail = 0;
     try {
-      // Fetch existing customer products to avoid duplicates
       const existingRes = await fetch(
         `${API_URL}/api/customer-products/${bulkCustomerId}`,
       );
       const existingData = existingRes.ok ? await existingRes.json() : [];
-
-      // Normalize to string for safe comparison — handle null variant_id
       const existingKeys = new Set(
         existingData.map((e) => `${e.product_id}-${e.variant_id ?? "null"}`),
       );
 
-      console.log("Existing keys:", [...existingKeys]);
-
       for (const item of bulkItems) {
         const dupKey = `${item.product_id}-${item.variant_id ?? "null"}`;
-        console.log(
-          "Checking:",
-          dupKey,
-          "→ duplicate:",
-          existingKeys.has(dupKey),
-        );
-
         if (existingKeys.has(dupKey)) {
-          skipCount++;
+          skip++;
           continue;
         }
-
-        const payload = {
-          cus_id: parseInt(bulkCustomerId),
-          product_id: item.product_id,
-          variant_id: item.variant_id ?? null,
-          common_name: item.common_name,
-          scientific_name: item.scientific_name || null,
-          category: item.category,
-          image_url: item.image_url || null,
-          size_range: item.size_range,
-          purchasing_price: item.purchasing_price,
-          margin: item.margin,
-          margin_percentage: item.margin_percentage,
-          selling_price: item.selling_price,
-        };
-
-        console.log("Posting payload:", payload);
-
         const res = await fetch(`${API_URL}/api/customer-products`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            cus_id: parseInt(bulkCustomerId),
+            product_id: item.product_id,
+            variant_id: item.variant_id ?? null,
+            common_name: item.common_name,
+            scientific_name: item.scientific_name || null,
+            category: item.category,
+            image_url: item.image_url || null,
+            size_range: item.size_range,
+            purchasing_price: item.purchasing_price,
+            margin: item.margin,
+            margin_percentage: item.margin_percentage,
+            selling_price: item.selling_price,
+          }),
         });
-
-        if (res.ok) {
-          successCount++;
-        } else {
-          const errData = await res.json();
-          console.error("Failed to insert:", errData);
-          errorCount++;
-        }
+        res.ok ? success++ : fail++;
       }
-
-      let msg = `✅ Added ${successCount} item(s) successfully.`;
-      if (skipCount > 0)
-        msg += `\n⚠️ ${skipCount} item(s) skipped (already exist).`;
-      if (errorCount > 0)
-        msg += `\n❌ ${errorCount} item(s) failed — check console.`;
+      let msg = `✅ Added ${success} item(s).`;
+      if (skip) msg += `\n⚠️ ${skip} skipped (already exist).`;
+      if (fail) msg += `\n❌ ${fail} failed.`;
       alert(msg);
       setShowBulkModal(false);
       setBulkMode(false);
@@ -446,95 +529,61 @@ const Productlist = () => {
       setBulkSubmitting(false);
     }
   };
-  /* ──────────────────────────────────────────────────────────────── */
 
-  const PRODUCT_ORDER = [
-    "white prawn",
-    "black tiger frozen",
-    "black tiger",
-    "flowery prawn",
-    "lobster frozen",
-    "lobster",
-    "sea crab fresh",
-    "sea crab frozen",
-    "sea crab",
-    "cut crab fresh",
-    "cut crab frozen",
-    "cut crab",
-    "scampi headless",
-    "scampi claw",
-    "scampi",
-    "cuttlefish fresh whole",
-    "cuttlefish whole cleaned",
-    "cuttlefish fresh corn",
-    "cuttlefish cleaned corn",
-    "squid fresh cleaned",
-    "squid",
-    "baby octopus frozen",
-    "baby octopus",
-    "octopus frozen",
-    "octopus",
-    "yellow fin tuna",
-    "seer fish",
-    "barramundi",
-    "scad",
-    "trevally",
-    "trevalley",
-    "indian mackerel",
-    "tenched sardine",
-    "anchovy",
-    "jack trevally",
-    "red mullet",
-    "grey mullet",
-    "tiger grouper",
-    "red grouper",
-    "red snapper",
-    "mahi mahi",
-    "salmon fish",
-    "parrot fish",
-    "premium norweigian salmon fillet",
-    "premium norwegion smoke salmon",
-    "salmon tail",
-    "salmon ground",
-    "tuna shashimi loins",
-    "tuna loin grade a",
-    "tuna loin grade b",
-    "tuna shashimi cut",
-    "tuna off cut",
-    "tuna trimming",
-    "tuna belly",
-    "tuna",
-    "catla",
-    "rohu",
-    "tilapia",
-    "seafood mix",
-    "claw meat packet",
-    "clean prawns packet",
-    "half shell mussel",
-    "pen clam",
-    "oyster can",
-    "sea crab meat",
-    "mud crab body",
-    "mud crab claw",
-    "mud crab lump",
-    "mud crab jambo",
-    "mud crab",
-    "oyster meat",
-    "oyster",
-    "green mussel",
-    "short neck clam",
-    "mangrove clam",
-    "blood clam",
-    "brown mussel",
-    "mussel",
-  ];
-
-  const getSortIndex = (commonName) => {
-    const lower = (commonName || "").toLowerCase();
-    const idx = PRODUCT_ORDER.findIndex((key) => lower.includes(key));
-    return idx === -1 ? 9999 : idx;
+  /* ── Grouping ─────────────────────────────────────────────────── */
+  const getSection = (product) => {
+    const name = product.common_name?.toLowerCase() || "";
+    for (const s of sectionCategories) {
+      if (s.keywords.some((k) => name.includes(k))) return s.name;
+    }
+    return "Other";
   };
 
+  const groupedBySection = (() => {
+    const grouped = {};
+    sectionCategories.forEach((s) => {
+      grouped[s.name] = {};
+    });
+    grouped["Other"] = {};
+    filteredItems.forEach((product) => {
+      const section = getSection(product);
+      const key = `${product.common_name}||${product.category || ""}`;
+      if (!grouped[section][key]) grouped[section][key] = [];
+      grouped[section][key].push(product);
+    });
+    return grouped;
+  })();
+
+  const sectionHasProducts = (section) =>
+    Object.keys(groupedBySection[section] || {}).length > 0;
+  const getTotalRows = (products) =>
+    products.reduce(
+      (sum, p) => sum + Math.max((p.variants || []).length, 1),
+      0,
+    );
+
+  const getImageUrl = (url) => {
+    if (!url) return "/images/placeholder-seafood.png";
+    if (url.startsWith("http")) return url;
+    return `${API_URL}${url}`;
+  };
+
+  const getSpeciesCount = (val) =>
+    val === "all"
+      ? items.length
+      : items.filter((p) => p.species_type?.toLowerCase() === val).length;
+
+  /* ── Catalogue filter ─────────────────────────────────────────── */
+  const filteredCatalogue = catalogue.filter((p) => {
+    if (!catalogueSearch) return true;
+    const q = catalogueSearch.toLowerCase();
+    return (
+      p.common_name?.toLowerCase().includes(q) ||
+      p.scientific_name?.toLowerCase().includes(q)
+    );
+  });
+
+  /* ── PDF functions (kept from original, now reads selling_price from variant) ── */
   const handleDownloadPDF = async () => {
     if (filteredItems.length === 0) {
       alert("No products to download");
@@ -546,23 +595,20 @@ const Productlist = () => {
         unit: "mm",
         format: "a4",
       });
-      const pageW = doc.internal.pageSize.getWidth();
-      const pageH = doc.internal.pageSize.getHeight();
-      const margin = 14;
-      const NAVY = [13, 71, 161];
-      const NAVY_DARK = [8, 47, 114];
-      const NAVY_LIGHT = [224, 232, 247];
-      const WHITE = [255, 255, 255];
-      const DARK = [20, 20, 40];
-      const GREY_LINE = [180, 200, 230];
-
+      const pageW = doc.internal.pageSize.getWidth(),
+        pageH = doc.internal.pageSize.getHeight(),
+        margin = 14;
+      const NAVY = [13, 71, 161],
+        NAVY_DARK = [8, 47, 114],
+        NAVY_LIGHT = [224, 232, 247],
+        WHITE = [255, 255, 255],
+        DARK = [20, 20, 40],
+        GREY = [180, 200, 230];
       doc.setFillColor(...NAVY);
       doc.rect(0, 0, pageW, 40, "F");
       try {
         doc.addImage(logoSrc, "PNG", margin, 6, 36, 28);
-      } catch {
-        /* no logo */
-      }
+      } catch {}
       doc.setTextColor(...WHITE);
       doc.setFontSize(16);
       doc.setFont(undefined, "bold");
@@ -574,13 +620,8 @@ const Productlist = () => {
         margin + 42,
         26,
       );
-
       doc.setFillColor(...NAVY_LIGHT);
       doc.rect(0, 40, pageW, 16, "F");
-      doc.setDrawColor(...GREY_LINE);
-      doc.setLineWidth(0.3);
-      doc.line(0, 40, pageW, 40);
-      doc.line(0, 56, pageW, 56);
       doc.setTextColor(...DARK);
       doc.setFontSize(10);
       doc.setFont(undefined, "bold");
@@ -595,113 +636,81 @@ const Productlist = () => {
         margin + 22,
         50,
       );
-      const filterLabel =
-        selectedSpeciesType === "all"
-          ? "All Species"
-          : formatSpeciesType(selectedSpeciesType);
-      doc.setFont(undefined, "bold");
-      doc.text("Filter:", margin + 90, 50);
-      doc.setFont(undefined, "normal");
-      doc.text(filterLabel, margin + 102, 50);
 
       const imageCache = {};
-      const fetchImageAsBase64 = async (imagePath) => {
-        if (!imagePath) return null;
-        if (imageCache[imagePath]) return imageCache[imagePath];
+      const fetchImg = async (p) => {
+        if (!p || imageCache[p] !== undefined) return;
         try {
-          const url = imagePath.startsWith("http")
-            ? imagePath
-            : `${API_URL}${imagePath}`;
-          const res = await fetch(url);
-          if (!res.ok) return null;
-          const blob = await res.blob();
-          return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              imageCache[imagePath] = reader.result;
-              resolve(reader.result);
-            };
-            reader.onerror = () => resolve(null);
-            reader.readAsDataURL(blob);
+          const url = p.startsWith("http") ? p : `${API_URL}${p}`;
+          const blob = await (await fetch(url)).blob();
+          imageCache[p] = await new Promise((res) => {
+            const r = new FileReader();
+            r.onloadend = () => res(r.result);
+            r.readAsDataURL(blob);
           });
         } catch {
-          return null;
+          imageCache[p] = null;
         }
       };
-      const allImagePaths = [
-        ...new Set(filteredItems.map((p) => p.image_url).filter(Boolean)),
-      ];
-      await Promise.all(allImagePaths.map((img) => fetchImageAsBase64(img)));
+      await Promise.all(
+        [...new Set(filteredItems.map((p) => p.image_url).filter(Boolean))].map(
+          fetchImg,
+        ),
+      );
 
-      const drawImgPlaceholder = (x, y, w, h) => {
+      const drawPlaceholder = (x, y, w, h) => {
         doc.setFillColor(232, 238, 252);
         doc.roundedRect(x, y, w, h, 2, 2, "F");
-        doc.setDrawColor(...GREY_LINE);
+        doc.setDrawColor(...GREY);
         doc.setLineWidth(0.3);
         doc.roundedRect(x, y, w, h, 2, 2, "S");
-        const cx = x + w / 2,
-          cy = y + h / 2;
-        doc.setDrawColor(25, 100, 200);
-        doc.setLineWidth(0.5);
-        doc.circle(cx, cy - 1, Math.min(w, h) * 0.2, "S");
         doc.setFontSize(5);
         doc.setTextColor(25, 100, 200);
         doc.setFont(undefined, "normal");
-        doc.text("No Image", cx, cy + h * 0.28, { align: "center" });
+        doc.text("No Image", x + w / 2, y + h / 2 + h * 0.28, {
+          align: "center",
+        });
       };
 
-      const allProductsMap = {};
-      filteredItems.forEach((product) => {
-        const key = product.common_name;
-        if (!allProductsMap[key]) {
-          allProductsMap[key] = {
-            product,
+      const map = {};
+      filteredItems.forEach((p) => {
+        if (!map[p.common_name])
+          map[p.common_name] = {
+            product: p,
             variants: [],
-            category: product.category, // ← store at map level
+            category: p.category,
           };
-        }
-        if (product.variants?.length > 0)
-          allProductsMap[key].variants.push(...product.variants);
+        if (p.variants?.length) map[p.common_name].variants.push(...p.variants);
       });
-
-      const sortedProducts = Object.values(allProductsMap).sort(
+      const sorted = Object.values(map).sort(
         (a, b) =>
           getSortIndex(a.product.common_name) -
           getSortIndex(b.product.common_name),
       );
-
       const tableBody = [];
-      sortedProducts.forEach(({ product, variants, category }) => {
-        if (variants.length > 0) {
-          variants.forEach((variant, vIdx) => {
+      sorted.forEach(({ product, variants, category }) => {
+        if (variants.length) {
+          variants.forEach((v, i) =>
             tableBody.push({
-              isFirstOfGroup: vIdx === 0,
+              isFirst: i === 0,
               commonName: product.common_name,
               scientificName: product.scientific_name || "—",
               image: product.image_url || null,
-              type: formatCategory(category), // ← use map-level category
-              size: variant.size && variant.size !== "-" ? variant.size : "—",
-            });
-          });
+              type: fmt(category),
+              size: v.size || "—",
+            }),
+          );
         } else {
           tableBody.push({
-            isFirstOfGroup: true,
+            isFirst: true,
             commonName: product.common_name,
             scientificName: product.scientific_name || "—",
             image: product.image_url || null,
-            type: formatCategory(category),
+            type: fmt(category),
             size: "—",
           });
         }
       });
-
-      const bodyRows = tableBody.map((row) => [
-        "",
-        row.isFirstOfGroup ? row.commonName : "",
-        row.isFirstOfGroup ? row.scientificName : "",
-        row.isFirstOfGroup ? row.type : "",
-        row.size,
-      ]);
 
       autoTable(doc, {
         startY: 62,
@@ -715,7 +724,13 @@ const Productlist = () => {
             { content: "Size", styles: { halign: "left" } },
           ],
         ],
-        body: bodyRows,
+        body: tableBody.map((r) => [
+          "",
+          r.isFirst ? r.commonName : "",
+          r.isFirst ? r.scientificName : "",
+          r.isFirst ? r.type : "",
+          r.size,
+        ]),
         theme: "grid",
         columnStyles: {
           0: { cellWidth: 28, halign: "center", valign: "middle" },
@@ -749,14 +764,13 @@ const Productlist = () => {
           cellPadding: { top: 4, bottom: 4, left: 2, right: 2 },
           minCellHeight: 20,
           textColor: DARK,
-          lineColor: GREY_LINE,
+          lineColor: GREY,
           lineWidth: 0.3,
         },
         willDrawCell: (data) => {
           if (data.section !== "body") return;
-          const row = tableBody[data.row.index];
-          if (!row) return;
-          if (!row.isFirstOfGroup && data.column.index <= 3)
+          const r = tableBody[data.row.index];
+          if (r && !r.isFirst && data.column.index <= 3)
             data.cell.styles.lineWidth = {
               top: 0,
               bottom: 0.3,
@@ -766,21 +780,21 @@ const Productlist = () => {
         },
         didDrawCell: (data) => {
           if (data.section !== "body" || data.column.index !== 0) return;
-          const row = tableBody[data.row.index];
-          if (!row || !row.isFirstOfGroup) return;
+          const r = tableBody[data.row.index];
+          if (!r || !r.isFirst) return;
           const imgW = 18,
-            imgH = 18;
-          const x = data.cell.x + (data.cell.width - imgW) / 2;
-          const y = data.cell.y + (data.cell.height - imgH) / 2;
-          const imgSrc = row.image ? imageCache[row.image] : null;
-          if (imgSrc) {
-            const fmt = imgSrc.includes("image/png") ? "PNG" : "JPEG";
+            imgH = 18,
+            x = data.cell.x + (data.cell.width - imgW) / 2,
+            y = data.cell.y + (data.cell.height - imgH) / 2;
+          const src = r.image ? imageCache[r.image] : null;
+          if (src) {
+            const f = src.includes("image/png") ? "PNG" : "JPEG";
             try {
-              doc.addImage(imgSrc, fmt, x, y, imgW, imgH, undefined, "FAST");
+              doc.addImage(src, f, x, y, imgW, imgH, undefined, "FAST");
             } catch {
-              drawImgPlaceholder(x, y, imgW, imgH);
+              drawPlaceholder(x, y, imgW, imgH);
             }
-          } else drawImgPlaceholder(x, y, imgW, imgH);
+          } else drawPlaceholder(x, y, imgW, imgH);
         },
       });
 
@@ -822,23 +836,20 @@ const Productlist = () => {
         unit: "mm",
         format: "a4",
       });
-      const pageW = doc.internal.pageSize.getWidth();
-      const pageH = doc.internal.pageSize.getHeight();
-      const margin = 14;
-      const NAVY = [13, 71, 161];
-      const NAVY_DARK = [8, 47, 114];
-      const NAVY_LIGHT = [224, 232, 247];
-      const WHITE = [255, 255, 255];
-      const DARK = [20, 20, 40];
-      const GREY_LINE = [180, 200, 230];
-
+      const pageW = doc.internal.pageSize.getWidth(),
+        pageH = doc.internal.pageSize.getHeight(),
+        margin = 14;
+      const NAVY = [13, 71, 161],
+        NAVY_DARK = [8, 47, 114],
+        NAVY_LIGHT = [224, 232, 247],
+        WHITE = [255, 255, 255],
+        DARK = [20, 20, 40],
+        GREY = [180, 200, 230];
       doc.setFillColor(...NAVY);
       doc.rect(0, 0, pageW, 40, "F");
       try {
         doc.addImage(logoSrc, "PNG", margin, 6, 36, 28);
-      } catch {
-        /* no logo */
-      }
+      } catch {}
       doc.setTextColor(...WHITE);
       doc.setFontSize(16);
       doc.setFont(undefined, "bold");
@@ -850,13 +861,8 @@ const Productlist = () => {
         margin + 42,
         26,
       );
-
       doc.setFillColor(...NAVY_LIGHT);
       doc.rect(0, 40, pageW, 16, "F");
-      doc.setDrawColor(...GREY_LINE);
-      doc.setLineWidth(0.3);
-      doc.line(0, 40, pageW, 40);
-      doc.line(0, 56, pageW, 56);
       doc.setTextColor(...DARK);
       doc.setFontSize(10);
       doc.setFont(undefined, "bold");
@@ -871,123 +877,84 @@ const Productlist = () => {
         margin + 52,
         50,
       );
-      const filterLabel =
-        selectedSpeciesType === "all"
-          ? "All Species"
-          : formatSpeciesType(selectedSpeciesType);
-      doc.setFont(undefined, "bold");
-      doc.text("Filter:", margin + 130, 50);
-      doc.setFont(undefined, "normal");
-      doc.text(filterLabel, margin + 142, 50);
 
       const imageCache = {};
-      const fetchImageAsBase64 = async (imagePath) => {
-        if (!imagePath) return null;
-        if (imageCache[imagePath]) return imageCache[imagePath];
+      const fetchImg = async (p) => {
+        if (!p || imageCache[p] !== undefined) return;
         try {
-          const url = imagePath.startsWith("http")
-            ? imagePath
-            : `${API_URL}${imagePath}`;
-          const res = await fetch(url);
-          if (!res.ok) return null;
-          const blob = await res.blob();
-          return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              imageCache[imagePath] = reader.result;
-              resolve(reader.result);
-            };
-            reader.onerror = () => resolve(null);
-            reader.readAsDataURL(blob);
+          const blob = await (
+            await fetch(p.startsWith("http") ? p : `${API_URL}${p}`)
+          ).blob();
+          imageCache[p] = await new Promise((res) => {
+            const r = new FileReader();
+            r.onloadend = () => res(r.result);
+            r.readAsDataURL(blob);
           });
         } catch {
-          return null;
+          imageCache[p] = null;
         }
       };
-      const allImagePaths = [
-        ...new Set(filteredItems.map((p) => p.image_url).filter(Boolean)),
-      ];
-      await Promise.all(allImagePaths.map((img) => fetchImageAsBase64(img)));
+      await Promise.all(
+        [...new Set(filteredItems.map((p) => p.image_url).filter(Boolean))].map(
+          fetchImg,
+        ),
+      );
 
-      const drawImgPlaceholder = (x, y, w, h) => {
-        doc.setFillColor(232, 238, 252);
-        doc.roundedRect(x, y, w, h, 2, 2, "F");
-        doc.setDrawColor(...GREY_LINE);
-        doc.setLineWidth(0.3);
-        doc.roundedRect(x, y, w, h, 2, 2, "S");
-        const cx = x + w / 2,
-          cy = y + h / 2;
-        doc.setDrawColor(25, 100, 200);
-        doc.setLineWidth(0.5);
-        doc.circle(cx, cy - 1, Math.min(w, h) * 0.2, "S");
-        doc.setFontSize(5);
-        doc.setTextColor(25, 100, 200);
-        doc.setFont(undefined, "normal");
-        doc.text("No Image", cx, cy + h * 0.28, { align: "center" });
-      };
-
-      const groupedByName = {};
-      filteredItems.forEach((product) => {
-        const key = product.common_name;
-        if (!groupedByName[key])
-          groupedByName[key] = {
-            commonName: product.common_name,
-            scientificName: product.scientific_name || "—",
-            category: product.category,
-            image: product.image_url || null,
+      const map = {};
+      filteredItems.forEach((p) => {
+        if (!map[p.common_name])
+          map[p.common_name] = {
+            commonName: p.common_name,
+            scientificName: p.scientific_name || "—",
+            image: p.image_url || null,
             variants: [],
           };
-        if (product.variants?.length > 0)
-          groupedByName[key].variants.push(...product.variants);
+        if (p.variants?.length) map[p.common_name].variants.push(...p.variants);
       });
-
-      const sortedProductNames = Object.keys(groupedByName).sort((a, b) => {
-        const idxA = getSortIndex(a);
-        const idxB = getSortIndex(b);
-        if (idxA !== idxB) return idxA - idxB;
-        return a.localeCompare(b);
-      });
-
+      const sorted = Object.keys(map).sort(
+        (a, b) => getSortIndex(a) - getSortIndex(b),
+      );
       const tableBody = [];
-      sortedProductNames.forEach((commonName) => {
-        const product = groupedByName[commonName];
-        if (product.variants.length > 0) {
-          const sortedVariants = [...product.variants].sort(
-            (a, b) => (parseFloat(a.size) || 0) - (parseFloat(b.size) || 0),
-          );
-          sortedVariants.forEach((variant, index) => {
+      sorted.forEach((name) => {
+        const p = map[name];
+        const vars = [...p.variants].sort(
+          (a, b) => (sf(a.size) || 0) - (sf(b.size) || 0),
+        );
+        if (vars.length)
+          vars.forEach((v, i) =>
             tableBody.push({
-              isFirstOfGroup: index === 0,
-              commonName: product.commonName,
-              scientificName: product.scientificName,
-
-              image: product.image,
-              size: variant.size || "—",
-              sellingPrice: variant.selling_price ?? null,
-            });
-          });
-        } else {
+              isFirst: i === 0,
+              commonName: p.commonName,
+              scientificName: p.scientificName,
+              image: p.image,
+              size: v.size || "—",
+              sellingPrice: v.selling_price ?? null,
+            }),
+          );
+        else
           tableBody.push({
-            isFirstOfGroup: true,
-            commonName: product.commonName,
-            scientificName: product.scientificName,
-
-            image: product.image,
+            isFirst: true,
+            commonName: p.commonName,
+            scientificName: p.scientificName,
+            image: p.image,
             size: "—",
             sellingPrice: null,
           });
-        }
       });
 
-      const bodyRows = tableBody.map((row) => [
-        "",
-        row.isFirstOfGroup ? row.commonName : "",
-        row.isFirstOfGroup ? row.scientificName : "",
-        row.size,
-        row.sellingPrice != null
-          ? `Rs. ${parseFloat(row.sellingPrice).toFixed(2)}`
-          : "—",
-      ]);
+      const drawPlaceholder = (x, y, w, h) => {
+        doc.setFillColor(232, 238, 252);
+        doc.roundedRect(x, y, w, h, 2, 2, "F");
+        doc.setDrawColor(...GREY);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(x, y, w, h, 2, 2, "S");
+        doc.setFontSize(5);
+        doc.setTextColor(25, 100, 200);
+        doc.setFont(undefined, "normal");
+        doc.text("No Image", x + w / 2, y + h / 2 + h * 0.28, {
+          align: "center",
+        });
+      };
 
       autoTable(doc, {
         startY: 62,
@@ -1001,7 +968,15 @@ const Productlist = () => {
             { content: "Selling Price (Rs)", styles: { halign: "right" } },
           ],
         ],
-        body: bodyRows,
+        body: tableBody.map((r) => [
+          "",
+          r.isFirst ? r.commonName : "",
+          r.isFirst ? r.scientificName : "",
+          r.size,
+          r.sellingPrice != null
+            ? `Rs. ${parseFloat(r.sellingPrice).toFixed(2)}`
+            : "—",
+        ]),
         theme: "grid",
         columnStyles: {
           0: {
@@ -1046,15 +1021,13 @@ const Productlist = () => {
           cellPadding: { top: 4, bottom: 4, left: 2, right: 2 },
           minCellHeight: 22,
           textColor: DARK,
-          lineColor: GREY_LINE,
+          lineColor: GREY,
           lineWidth: 0.3,
         },
-        alternateRowStyles: { fillColor: [255, 255, 255] },
         willDrawCell: (data) => {
           if (data.section !== "body") return;
-          const row = tableBody[data.row.index];
-          if (!row) return;
-          if (!row.isFirstOfGroup && data.column.index <= 2)
+          const r = tableBody[data.row.index];
+          if (r && !r.isFirst && data.column.index <= 2)
             data.cell.styles.lineWidth = {
               top: 0,
               bottom: 0.3,
@@ -1064,21 +1037,21 @@ const Productlist = () => {
         },
         didDrawCell: (data) => {
           if (data.section !== "body" || data.column.index !== 0) return;
-          const row = tableBody[data.row.index];
-          if (!row || !row.isFirstOfGroup) return;
+          const r = tableBody[data.row.index];
+          if (!r || !r.isFirst) return;
           const imgW = 18,
-            imgH = 18;
-          const x = data.cell.x + (data.cell.width - imgW) / 2;
-          const y = data.cell.y + (data.cell.height - imgH) / 2;
-          const imgSrc = row.image ? imageCache[row.image] : null;
-          if (imgSrc) {
-            const fmt = imgSrc.includes("image/png") ? "PNG" : "JPEG";
+            imgH = 18,
+            x = data.cell.x + (data.cell.width - imgW) / 2,
+            y = data.cell.y + (data.cell.height - imgH) / 2;
+          const src = r.image ? imageCache[r.image] : null;
+          if (src) {
+            const f = src.includes("image/png") ? "PNG" : "JPEG";
             try {
-              doc.addImage(imgSrc, fmt, x, y, imgW, imgH, undefined, "FAST");
+              doc.addImage(src, f, x, y, imgW, imgH, undefined, "FAST");
             } catch {
-              drawImgPlaceholder(x, y, imgW, imgH);
+              drawPlaceholder(x, y, imgW, imgH);
             }
-          } else drawImgPlaceholder(x, y, imgW, imgH);
+          } else drawPlaceholder(x, y, imgW, imgH);
         },
       });
 
@@ -1108,14 +1081,28 @@ const Productlist = () => {
   };
 
   /* ══════════════════════════ RENDER ══════════════════════════════ */
+  const sectionIcon = {
+    Oyster: "🦪",
+    Clams: "🐚",
+    Mussel: "🦪",
+    Crab: "🦀",
+    Prawn: "🦐",
+    Scampi: "🦞",
+    Cuttlefish: "🐙",
+    Octopus: "🐙",
+    Fish: "🐟",
+    Other: "📦",
+  };
+
   return (
     <div className="pricelist-container">
       <h2>Local Product List</h2>
 
+      {/* ── Toolbar ─────────────────────────────────────────────── */}
       <div className="add-section">
         {adminUser && (
-          <button className="apf-btn" onClick={navigateForm}>
-            + Add Product
+          <button className="apf-btn" onClick={openCatalogueModal}>
+            + Add from Catalogue
           </button>
         )}
         <button
@@ -1188,21 +1175,20 @@ const Productlist = () => {
 
       {/* Species Filter Pills */}
       <div className="species-filter">
-        {speciesTypes.map((type) => {
-          const count = getSpeciesTypeCount(type.value);
-          return (
-            <button
-              key={type.value}
-              className={`species-pill ${selectedSpeciesType === type.value ? "active" : ""}`}
-              onClick={() => setSelectedSpeciesType(type.value)}
-              disabled={count === 0 && type.value !== "all"}
-            >
-              <span className="species-icon">{type.icon}</span>
-              <span className="species-label">{type.label}</span>
-              <span className="species-count">({count})</span>
-            </button>
-          );
-        })}
+        {speciesTypes.map((type) => (
+          <button
+            key={type.value}
+            className={`species-pill ${selectedSpeciesType === type.value ? "active" : ""}`}
+            onClick={() => setSelectedSpeciesType(type.value)}
+            disabled={getSpeciesCount(type.value) === 0 && type.value !== "all"}
+          >
+            <span className="species-icon">{type.icon}</span>
+            <span className="species-label">{type.label}</span>
+            <span className="species-count">
+              ({getSpeciesCount(type.value)})
+            </span>
+          </button>
+        ))}
       </div>
 
       {loading && <div className="info">Loading…</div>}
@@ -1214,7 +1200,7 @@ const Productlist = () => {
             Showing <strong>{filteredItems.length}</strong>{" "}
             {selectedSpeciesType === "all"
               ? "products"
-              : formatSpeciesType(selectedSpeciesType)}
+              : fmt(selectedSpeciesType)}
           </div>
 
           <div className="table-wrap">
@@ -1234,322 +1220,312 @@ const Productlist = () => {
                 </tr>
               </thead>
               <tbody>
-                {Object.keys(groupedProductsBySection).map((section) => {
-                  if (!sectionHasProducts(section)) return null;
-                  const sectionProducts = groupedProductsBySection[section];
+                {[...sectionCategories.map((s) => s.name), "Other"].map(
+                  (section) => {
+                    if (!sectionHasProducts(section)) return null;
+                    return (
+                      <React.Fragment key={section}>
+                        <tr className="section-header">
+                          <td
+                            colSpan={bulkMode ? 11 : 10}
+                            className="section-title"
+                          >
+                            <span className="section-icon">
+                              {sectionIcon[section] || "📦"}
+                            </span>
+                            {section}
+                          </td>
+                        </tr>
 
-                  return (
-                    <React.Fragment key={section}>
-                      <tr className="section-header">
-                        <td
-                          colSpan={bulkMode ? 11 : 10}
-                          className="section-title"
-                        >
-                          <span className="section-icon">
-                            {section === "Oyster" && "🦪"}
-                            {section === "Clams" && "🐚"}
-                            {section === "Mussel" && "🦪"}
-                            {section === "Crab" && "🦀"}
-                            {section === "Prawn" && "🦐"}
-                            {section === "Scampi" && "🦞"}
-                            {section === "Cuttlefish" && "🐙"}
-                            {section === "Octopus" && "🐙"}
-                            {section === "Fish" && "🐟"}
-                            {section === "Other" && "📦"}
-                          </span>
-                          {section}
-                        </td>
-                      </tr>
+                        {Object.entries(groupedBySection[section]).map(
+                          ([groupKey, products]) => {
+                            const commonName =
+                              products[0]?.common_name ||
+                              groupKey.split("||")[0];
+                            const groupRowSpan = getTotalRows(products);
+                            const firstProduct = products[0];
+                            const imgSrc = getImageUrl(firstProduct.image_url);
+                            const isSelected = selectedProductIds.has(
+                              firstProduct.id,
+                            );
+                            let isFirstOfGroup = true;
 
-                      {Object.entries(sectionProducts).map(
-                        ([commonName, products]) => {
-                          const groupRowSpan = getTotalRowsForGroup(products);
-                          const firstProduct = products[0];
-                          const imgSrc = getImageUrl(firstProduct.image_url);
-                          const isSelected = selectedProductIds.has(
-                            firstProduct.id,
-                          );
-                          let isFirstRowOfGroup = true;
+                            return products.map((product) => {
+                              const variants = product.variants || [];
 
-                          return products.map((product) => {
-                            const variants = product.variants || [];
+                              if (variants.length > 0) {
+                                return variants.map((variant, vi) => {
+                                  const isVeryFirst =
+                                    isFirstOfGroup && vi === 0;
+                                  const isFirstOfProd = vi === 0;
+                                  if (isVeryFirst) isFirstOfGroup = false;
 
-                            if (variants.length > 0) {
-                              return variants.map((variant, variantIndex) => {
-                                const isVeryFirstRow =
-                                  isFirstRowOfGroup && variantIndex === 0;
-                                const isFirstOfProduct = variantIndex === 0;
-                                if (isVeryFirstRow) isFirstRowOfGroup = false;
-
-                                return (
-                                  <tr
-                                    key={`${product.id}-${variant.id || variantIndex}`}
-                                    className={
-                                      isVeryFirstRow
-                                        ? "product-group-start"
-                                        : ""
-                                    }
-                                  >
-                                    {/* Checkbox — only on first row of group */}
-                                    {bulkMode && isVeryFirstRow && (
-                                      <td
-                                        rowSpan={groupRowSpan}
-                                        style={{
-                                          textAlign: "center",
-                                          verticalAlign: "middle",
-                                        }}
-                                      >
-                                        <input
-                                          type="checkbox"
-                                          checked={isSelected}
-                                          onChange={() =>
-                                            toggleProductSelection(
-                                              firstProduct.id,
-                                            )
-                                          }
+                                  return (
+                                    <tr
+                                      key={`${product.id}-${variant.id || vi}`}
+                                      className={
+                                        isVeryFirst ? "product-group-start" : ""
+                                      }
+                                    >
+                                      {bulkMode && isVeryFirst && (
+                                        <td
+                                          rowSpan={groupRowSpan}
                                           style={{
-                                            width: "18px",
-                                            height: "18px",
-                                            cursor: "pointer",
+                                            textAlign: "center",
+                                            verticalAlign: "middle",
                                           }}
-                                        />
-                                      </td>
-                                    )}
-                                    {isVeryFirstRow && (
-                                      <>
-                                        <td
-                                          className="thumb-cell"
-                                          rowSpan={groupRowSpan}
                                         >
-                                          <img
-                                            src={imgSrc}
-                                            alt={commonName}
-                                            className="thumb"
-                                          />
-                                        </td>
-                                        <td
-                                          rowSpan={groupRowSpan}
-                                          style={{ fontWeight: 600 }}
-                                        >
-                                          {commonName}
-                                        </td>
-                                        <td
-                                          className="scientific"
-                                          rowSpan={groupRowSpan}
-                                        >
-                                          {firstProduct.scientific_name || "—"}
-                                        </td>
-                                      </>
-                                    )}
-                                    {isFirstOfProduct && (
-                                      <td rowSpan={variants.length}>
-                                        <span
-                                          className={`category-badge ${getCategoryBadgeClass(product.category)}`}
-                                        >
-                                          {getCategoryBadgeIcon(
-                                            product.category,
-                                          )}{" "}
-                                          {formatCategory(product.category)}
-                                        </span>
-                                      </td>
-                                    )}
-                                    <td>{variant.size || "—"}</td>
-                                    <td className="price-cell">
-                                      Rs.&nbsp;
-                                      {parseFloat(
-                                        variant.purchasing_price,
-                                      ).toFixed(2)}
-                                    </td>
-                                    <td className="price-cell">
-                                      Rs.&nbsp;
-                                      {parseFloat(variant.profit).toFixed(2)}
-                                    </td>
-                                    <td className="price-cell">
-                                      Rs.&nbsp;
-                                      {parseFloat(
-                                        variant.selling_price,
-                                      ).toFixed(2)}
-                                    </td>
-                                    {isFirstOfProduct && (
-                                      <td
-                                        className="actions-cell"
-                                        rowSpan={variants.length}
-                                      >
-                                        <div className="actions-wrapper">
-                                          <button
-                                            className="btn-view"
-                                            onClick={() =>
-                                              navigate(
-                                                `/productdetail/${product.id}`,
+                                          <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={() =>
+                                              toggleProductSelection(
+                                                firstProduct.id,
                                               )
                                             }
+                                            style={{
+                                              width: "18px",
+                                              height: "18px",
+                                              cursor: "pointer",
+                                            }}
+                                          />
+                                        </td>
+                                      )}
+                                      {isVeryFirst && (
+                                        <>
+                                          <td
+                                            className="thumb-cell"
+                                            rowSpan={groupRowSpan}
                                           >
-                                            View
-                                          </button>
-                                          {adminUser && (
+                                            <img
+                                              src={imgSrc}
+                                              alt={commonName}
+                                              className="thumb"
+                                            />
+                                          </td>
+                                          <td
+                                            rowSpan={groupRowSpan}
+                                            style={{ fontWeight: 600 }}
+                                          >
+                                            {commonName}
+                                          </td>
+                                          <td
+                                            className="scientific"
+                                            rowSpan={groupRowSpan}
+                                          >
+                                            {firstProduct.scientific_name ||
+                                              "—"}
+                                          </td>
+                                        </>
+                                      )}
+                                      {isFirstOfProd && (
+                                        <td rowSpan={variants.length}>
+                                          <span
+                                            className={`category-badge ${getCategoryBadgeClass(product.category)}`}
+                                          >
+                                            {getCategoryBadgeIcon(
+                                              product.category,
+                                            )}{" "}
+                                            {fmt(product.category)}
+                                          </span>
+                                        </td>
+                                      )}
+                                      <td>{variant.size || "—"}</td>
+                                      <td className="price-cell">
+                                        Rs.&nbsp;
+                                        {sf(variant.purchasing_price).toFixed(
+                                          2,
+                                        )}
+                                      </td>
+                                      <td className="price-cell">
+                                        Rs.&nbsp;{sf(variant.profit).toFixed(2)}
+                                      </td>
+                                      <td className="price-cell">
+                                        Rs.&nbsp;
+                                        {sf(variant.selling_price).toFixed(2)}
+                                      </td>
+                                      {isFirstOfProd && (
+                                        <td
+                                          className="actions-cell"
+                                          rowSpan={variants.length}
+                                        >
+                                          <div className="actions-wrapper">
                                             <button
-                                              className="btn-edit"
+                                              className="btn-view"
                                               onClick={() =>
-                                                navigateEdit(product.id)
-                                              }
-                                            >
-                                              Edit
-                                            </button>
-                                          )}
-                                          {adminUser && (
-                                            <button
-                                              className="btn-delete"
-                                              onClick={() =>
-                                                handleDelete(
-                                                  product.id,
-                                                  product.common_name,
+                                                navigate(
+                                                  `/productdetail/${product.id}`,
                                                 )
                                               }
                                             >
-                                              Delete
+                                              View
                                             </button>
-                                          )}
-                                        </div>
-                                      </td>
-                                    )}
-                                  </tr>
-                                );
-                              });
-                            }
+                                            {adminUser && (
+                                              <button
+                                                className="btn-edit"
+                                                onClick={() => {
+                                                  setShowCatalogueModal(true);
+                                                  setCatalogueLoading(false);
+                                                  setCatalogue([product]);
+                                                  selectCatalogueProduct(
+                                                    product,
+                                                  );
+                                                }}
+                                              >
+                                                Price
+                                              </button>
+                                            )}
+                                            {adminUser && (
+                                              <button
+                                                className="btn-delete"
+                                                onClick={() =>
+                                                  handleRemoveFromLocal(
+                                                    product.id,
+                                                    product.common_name,
+                                                  )
+                                                }
+                                              >
+                                                Remove
+                                              </button>
+                                            )}
+                                          </div>
+                                        </td>
+                                      )}
+                                    </tr>
+                                  );
+                                });
+                              }
 
-                            // No variants
-                            const isVeryFirstRow = isFirstRowOfGroup;
-                            if (isVeryFirstRow) isFirstRowOfGroup = false;
-                            return (
-                              <tr
-                                key={product.id}
-                                className={
-                                  isVeryFirstRow ? "product-group-start" : ""
-                                }
-                              >
-                                {bulkMode && isVeryFirstRow && (
-                                  <td
-                                    rowSpan={groupRowSpan}
-                                    style={{
-                                      textAlign: "center",
-                                      verticalAlign: "middle",
-                                    }}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={isSelected}
-                                      onChange={() =>
-                                        toggleProductSelection(firstProduct.id)
-                                      }
-                                      style={{
-                                        width: "18px",
-                                        height: "18px",
-                                        cursor: "pointer",
-                                      }}
-                                    />
-                                  </td>
-                                )}
-                                {isVeryFirstRow && (
-                                  <>
+                              // No variants row
+                              const isVeryFirst = isFirstOfGroup;
+                              if (isVeryFirst) isFirstOfGroup = false;
+                              return (
+                                <tr
+                                  key={product.id}
+                                  className={
+                                    isVeryFirst ? "product-group-start" : ""
+                                  }
+                                >
+                                  {bulkMode && isVeryFirst && (
                                     <td
-                                      className="thumb-cell"
                                       rowSpan={groupRowSpan}
+                                      style={{
+                                        textAlign: "center",
+                                        verticalAlign: "middle",
+                                      }}
                                     >
-                                      <img
-                                        src={imgSrc}
-                                        alt={commonName}
-                                        className="thumb"
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() =>
+                                          toggleProductSelection(
+                                            firstProduct.id,
+                                          )
+                                        }
+                                        style={{
+                                          width: "18px",
+                                          height: "18px",
+                                          cursor: "pointer",
+                                        }}
                                       />
                                     </td>
-                                    <td
-                                      rowSpan={groupRowSpan}
-                                      style={{ fontWeight: 600 }}
-                                    >
-                                      {commonName}
-                                    </td>
-                                    <td
-                                      className="scientific"
-                                      rowSpan={groupRowSpan}
-                                    >
-                                      {firstProduct.scientific_name || "—"}
-                                    </td>
-                                    <td rowSpan={groupRowSpan}>
-                                      <span
-                                        className={`species-badge ${getSpeciesBadgeClass(firstProduct.species_type)}`}
+                                  )}
+                                  {isVeryFirst && (
+                                    <>
+                                      <td
+                                        className="thumb-cell"
+                                        rowSpan={groupRowSpan}
                                       >
-                                        {getSpeciesBadgeIcon(
-                                          firstProduct.species_type,
-                                        )}{" "}
-                                        {formatSpeciesType(
-                                          firstProduct.species_type,
-                                        )}
-                                      </span>
-                                    </td>
-                                  </>
-                                )}
-                                <td>
-                                  <span
-                                    className={`category-badge ${getCategoryBadgeClass(product.category)}`}
-                                  >
-                                    {getCategoryBadgeIcon(product.category)}{" "}
-                                    {formatCategory(product.category)}
-                                  </span>
-                                </td>
-                                <td className="muted">—</td>
-                                <td className="muted">—</td>
-                                <td className="muted">—</td>
-                                <td className="muted">—</td>
-                                <td className="actions-cell">
-                                  <div className="actions-wrapper">
-                                    <button
-                                      className="btn-view"
-                                      onClick={() =>
-                                        navigate(`/productdetail/${product.id}`)
-                                      }
+                                        <img
+                                          src={imgSrc}
+                                          alt={commonName}
+                                          className="thumb"
+                                        />
+                                      </td>
+                                      <td
+                                        rowSpan={groupRowSpan}
+                                        style={{ fontWeight: 600 }}
+                                      >
+                                        {commonName}
+                                      </td>
+                                      <td
+                                        className="scientific"
+                                        rowSpan={groupRowSpan}
+                                      >
+                                        {firstProduct.scientific_name || "—"}
+                                      </td>
+                                      <td rowSpan={groupRowSpan}>
+                                        <span
+                                          className={`species-badge ${getSpeciesBadgeClass(firstProduct.species_type)}`}
+                                        >
+                                          {getSpeciesBadgeIcon(
+                                            firstProduct.species_type,
+                                          )}{" "}
+                                          {fmt(firstProduct.species_type)}
+                                        </span>
+                                      </td>
+                                    </>
+                                  )}
+                                  <td>
+                                    <span
+                                      className={`category-badge ${getCategoryBadgeClass(product.category)}`}
                                     >
-                                      View
-                                    </button>
+                                      {getCategoryBadgeIcon(product.category)}{" "}
+                                      {fmt(product.category)}
+                                    </span>
+                                  </td>
+                                  <td className="muted">—</td>
+                                  <td className="muted">—</td>
+                                  <td className="muted">—</td>
+                                  <td className="muted">—</td>
+                                  <td className="actions-cell">
+                                    <div className="actions-wrapper">
+                                      <button
+                                        className="btn-view"
+                                        onClick={() =>
+                                          navigate(
+                                            `/productdetail/${product.id}`,
+                                          )
+                                        }
+                                      >
+                                        View
+                                      </button>
+                                      {adminUser && (
+                                        <button
+                                          className="btn-delete"
+                                          onClick={() =>
+                                            handleRemoveFromLocal(
+                                              product.id,
+                                              product.common_name,
+                                            )
+                                          }
+                                        >
+                                          Remove
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          },
+                        )}
+                      </React.Fragment>
+                    );
+                  },
+                )}
 
-                                    <button
-                                      className="btn-edit"
-                                      onClick={() => navigateEdit(product.id)}
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      className="btn-delete"
-                                      onClick={() =>
-                                        handleDelete(
-                                          product.id,
-                                          product.common_name,
-                                        )
-                                      }
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          });
-                        },
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-
-                {Object.keys(groupedProductsBySection).filter((s) =>
-                  sectionHasProducts(s),
-                ).length === 0 && (
+                {!sectionCategories
+                  .concat([{ name: "Other" }])
+                  .some((s) => sectionHasProducts(s.name)) && (
                   <tr>
                     <td
                       colSpan={bulkMode ? 11 : 10}
                       className="muted"
                       style={{ textAlign: "center", padding: "3rem" }}
                     >
-                      {selectedSpeciesType === "all"
-                        ? "No items found"
-                        : `No ${formatSpeciesType(selectedSpeciesType)} found`}
+                      No products in the local list yet. Click "+ Add from
+                      Catalogue" to add products.
                     </td>
                   </tr>
                 )}
@@ -1559,7 +1535,544 @@ const Productlist = () => {
         </>
       )}
 
-      {/* ── Bulk Add Modal ─────────────────────────────────────────── */}
+      {/* ══════════════════════════════════════════════════════════════
+          ADD FROM CATALOGUE MODAL
+      ══════════════════════════════════════════════════════════════ */}
+      {showCatalogueModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px",
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: "12px",
+              width: "100%",
+              maxWidth: "900px",
+              maxHeight: "92vh",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: "20px 24px 16px",
+                borderBottom: "1px solid #e5e7eb",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: "18px", color: "#1e3a5f" }}>
+                  {selectedCatProduct
+                    ? `📋 Set Local Pricing — ${selectedCatProduct.common_name}`
+                    : "🗂️ Add from Catalogue"}
+                </h3>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: "13px",
+                    color: "#6b7280",
+                  }}
+                >
+                  {selectedCatProduct
+                    ? "Set profit and selling price per size. These prices will appear in the local list."
+                    : "Select a product from the master catalogue to add to the local list."}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowCatalogueModal(false);
+                  setSelectedCatProduct(null);
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: "20px",
+                  cursor: "pointer",
+                  color: "#6b7280",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {!selectedCatProduct ? (
+              /* ── Step 1: Pick a product ── */
+              <>
+                <div
+                  style={{
+                    padding: "16px 24px",
+                    borderBottom: "1px solid #e5e7eb",
+                  }}
+                >
+                  <input
+                    value={catalogueSearch}
+                    onChange={(e) => setCatalogueSearch(e.target.value)}
+                    placeholder="🔍 Search by name…"
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: "8px",
+                      border: "1px solid #d1d5db",
+                      fontSize: "14px",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+                  {catalogueLoading && (
+                    <div
+                      style={{
+                        padding: "24px",
+                        textAlign: "center",
+                        color: "#6b7280",
+                      }}
+                    >
+                      Loading catalogue…
+                    </div>
+                  )}
+                  {!catalogueLoading &&
+                    filteredCatalogue.map((product) => {
+                      const inLocalList = items.some(
+                        (p) => p.id === product.id,
+                      );
+                      return (
+                        <div
+                          key={product.id}
+                          onClick={() => selectCatalogueProduct(product)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "14px",
+                            padding: "12px 24px",
+                            cursor: "pointer",
+                            borderBottom: "1px solid #f1f5f9",
+                            background: inLocalList ? "#f0fdf4" : "#fff",
+                            transition: "background 0.15s",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.background = inLocalList
+                              ? "#dcfce7"
+                              : "#f8faff")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.background = inLocalList
+                              ? "#f0fdf4"
+                              : "#fff")
+                          }
+                        >
+                          <img
+                            src={
+                              product.image_url
+                                ? product.image_url.startsWith("http")
+                                  ? product.image_url
+                                  : `${API_URL}${product.image_url}`
+                                : "/images/placeholder-seafood.png"
+                            }
+                            alt={product.common_name}
+                            style={{
+                              width: "44px",
+                              height: "44px",
+                              borderRadius: "8px",
+                              objectFit: "cover",
+                              border: "1px solid #e5e7eb",
+                            }}
+                          />
+                          <div style={{ flex: 1 }}>
+                            <div
+                              style={{
+                                fontWeight: 600,
+                                color: "#1e3a5f",
+                                fontSize: "14px",
+                              }}
+                            >
+                              {product.common_name}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "12px",
+                                color: "#6b7280",
+                                fontStyle: "italic",
+                              }}
+                            >
+                              {product.scientific_name || "—"}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "11px",
+                                color: "#94a3b8",
+                                marginTop: "2px",
+                              }}
+                            >
+                              {(product.variants || []).length} size
+                              {(product.variants || []).length !== 1 ? "s" : ""}{" "}
+                              · {fmt(product.category)}
+                            </div>
+                          </div>
+                          {inLocalList && (
+                            <span
+                              style={{
+                                fontSize: "11px",
+                                background: "#dcfce7",
+                                color: "#166534",
+                                padding: "2px 8px",
+                                borderRadius: "12px",
+                                fontWeight: 600,
+                              }}
+                            >
+                              ✓ In list
+                            </span>
+                          )}
+                          <span style={{ color: "#94a3b8", fontSize: "18px" }}>
+                            ›
+                          </span>
+                        </div>
+                      );
+                    })}
+                  {!catalogueLoading && filteredCatalogue.length === 0 && (
+                    <div
+                      style={{
+                        padding: "40px",
+                        textAlign: "center",
+                        color: "#9ca3af",
+                      }}
+                    >
+                      No products found
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              /* ── Step 2: Set pricing ── */
+              <>
+                {/* Quick fill bar */}
+                <div
+                  style={{
+                    padding: "12px 24px",
+                    borderBottom: "1px solid #e5e7eb",
+                    background: "#f8faff",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "13px",
+                      color: "#475569",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Apply profit to all:
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g. 150"
+                    style={{
+                      width: "110px",
+                      padding: "6px 10px",
+                      borderRadius: "6px",
+                      border: "1px solid #d1d5db",
+                      fontSize: "13px",
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") applyProfitToAll(e.target.value);
+                    }}
+                    onBlur={(e) => {
+                      if (e.target.value) applyProfitToAll(e.target.value);
+                    }}
+                  />
+                  <span style={{ fontSize: "12px", color: "#94a3b8" }}>
+                    Press Enter or blur to apply
+                  </span>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      alignItems: "center",
+                      marginLeft: "16px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "13px",
+                        color: "#475569",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Category:
+                    </span>
+                    {[
+                      { key: "fresh", label: "💧 Fresh", color: "#38bdf8" },
+                      { key: "frozen", label: "❄️ Frozen", color: "#818cf8" },
+                      { key: "live", label: "🟢 Live", color: "#34d399" },
+                    ].map((cat) => {
+                      const on = selectedPricingCategories.includes(cat.key);
+                      return (
+                        <button
+                          key={cat.key}
+                          type="button"
+                          onClick={() =>
+                            setSelectedPricingCategories((prev) => {
+                              const has = prev.includes(cat.key);
+                              const next = has
+                                ? prev.filter((c) => c !== cat.key)
+                                : [...prev, cat.key];
+                              return next.length ? next : [cat.key];
+                            })
+                          }
+                          style={{
+                            padding: "5px 12px",
+                            borderRadius: "6px",
+                            border: `2px solid ${on ? cat.color : "#e2e8f0"}`,
+                            background: on ? `${cat.color}20` : "#fff",
+                            color: on ? cat.color : "#94a3b8",
+                            fontWeight: "700",
+                            fontSize: "12px",
+                            cursor: "pointer",
+                            transition: "all 0.15s",
+                          }}
+                        >
+                          {on ? "✓ " : ""}
+                          {cat.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={() => setSelectedCatProduct(null)}
+                    style={{
+                      marginLeft: "auto",
+                      background: "none",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "6px",
+                      padding: "6px 12px",
+                      cursor: "pointer",
+                      fontSize: "13px",
+                      color: "#6b7280",
+                    }}
+                  >
+                    ← Back to catalogue
+                  </button>
+                </div>
+
+                <div
+                  style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}
+                >
+                  {pricingRows.length === 0 && (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        color: "#9ca3af",
+                        padding: "32px",
+                      }}
+                    >
+                      This product has no sizes yet. Add sizes from the master
+                      catalogue first.
+                    </div>
+                  )}
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      fontSize: "13px",
+                    }}
+                  >
+                    {pricingRows.length > 0 && (
+                      <thead>
+                        <tr style={{ background: "#f1f5f9" }}>
+                          {[
+                            "Size",
+                            "Unit",
+                            "Purchase (Rs.)",
+                            "Profit (Rs.)",
+                            "Margin %",
+                            "Selling (Rs.)",
+                          ].map((h) => (
+                            <th
+                              key={h}
+                              style={{
+                                padding: "8px 10px",
+                                color: "#475569",
+                                fontWeight: 600,
+                                textAlign:
+                                  h === "Size" || h === "Unit"
+                                    ? "left"
+                                    : "right",
+                              }}
+                            >
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                    )}
+                    <tbody>
+                      {pricingRows.map((row, i) => (
+                        <tr
+                          key={row.variant_id}
+                          style={{ borderBottom: "1px solid #f1f5f9" }}
+                        >
+                          <td
+                            style={{
+                              padding: "8px 10px",
+                              fontWeight: 600,
+                              color: "#1e3a5f",
+                            }}
+                          >
+                            {row.size || "—"}
+                          </td>
+                          <td style={{ padding: "8px 10px", color: "#6b7280" }}>
+                            {row.unit}
+                          </td>
+                          <td
+                            style={{
+                              padding: "8px 10px",
+                              textAlign: "right",
+                              color: "#374151",
+                            }}
+                          >
+                            Rs. {sf(row.purchasing_price).toFixed(2)}
+                          </td>
+                          <td style={{ padding: "4px 6px" }}>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={row.profit}
+                              onChange={(e) =>
+                                updatePricingRow(i, "profit", e.target.value)
+                              }
+                              style={{
+                                width: "90px",
+                                padding: "5px 8px",
+                                textAlign: "right",
+                                borderRadius: "6px",
+                                border: "1px solid #d1d5db",
+                                fontSize: "13px",
+                              }}
+                            />
+                          </td>
+                          <td style={{ padding: "4px 6px" }}>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={row.profit_margin_percentage}
+                              onChange={(e) =>
+                                updatePricingRow(
+                                  i,
+                                  "profit_margin_percentage",
+                                  e.target.value,
+                                )
+                              }
+                              style={{
+                                width: "70px",
+                                padding: "5px 8px",
+                                textAlign: "right",
+                                borderRadius: "6px",
+                                border: "1px solid #d1d5db",
+                                fontSize: "13px",
+                              }}
+                            />
+                          </td>
+                          <td style={{ padding: "4px 6px" }}>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={row.selling_price}
+                              onChange={(e) =>
+                                updatePricingRow(
+                                  i,
+                                  "selling_price",
+                                  e.target.value,
+                                )
+                              }
+                              style={{
+                                width: "100px",
+                                padding: "5px 8px",
+                                textAlign: "right",
+                                borderRadius: "6px",
+                                border: "1px solid #0d47a1",
+                                fontSize: "13px",
+                                fontWeight: 600,
+                                color: "#0d47a1",
+                              }}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div
+                  style={{
+                    padding: "16px 24px",
+                    borderTop: "1px solid #e5e7eb",
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: "12px",
+                  }}
+                >
+                  <button
+                    onClick={() => {
+                      setShowCatalogueModal(false);
+                      setSelectedCatProduct(null);
+                    }}
+                    style={{
+                      padding: "10px 20px",
+                      borderRadius: "8px",
+                      border: "1px solid #d1d5db",
+                      background: "#fff",
+                      cursor: "pointer",
+                      fontSize: "14px",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={savePricing}
+                    disabled={savingPricing || pricingRows.length === 0}
+                    style={{
+                      padding: "10px 24px",
+                      borderRadius: "8px",
+                      border: "none",
+                      background:
+                        savingPricing || pricingRows.length === 0
+                          ? "#9ca3af"
+                          : "#0d47a1",
+                      color: "#fff",
+                      cursor:
+                        savingPricing || pricingRows.length === 0
+                          ? "not-allowed"
+                          : "pointer",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {savingPricing ? "Saving…" : "Save to Local List"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Bulk Add to Customer Modal (unchanged) ─────────────────── */}
       {showBulkModal && (
         <div
           style={{
@@ -1585,7 +2098,6 @@ const Productlist = () => {
               boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
             }}
           >
-            {/* Modal Header */}
             <div
               style={{
                 padding: "20px 24px 16px",
@@ -1603,11 +2115,9 @@ const Productlist = () => {
                 }}
               >
                 {bulkItems.length} variant(s) from {selectedProductIds.size}{" "}
-                product(s) selected
+                product(s)
               </p>
             </div>
-
-            {/* Customer Selector */}
             <div
               style={{
                 padding: "16px 24px",
@@ -1644,8 +2154,6 @@ const Productlist = () => {
                 ))}
               </select>
             </div>
-
-            {/* Items Table */}
             <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}>
               <table
                 style={{
@@ -1656,66 +2164,27 @@ const Productlist = () => {
               >
                 <thead>
                   <tr style={{ background: "#f1f5f9" }}>
-                    <th
-                      style={{
-                        padding: "8px 10px",
-                        textAlign: "left",
-                        color: "#475569",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Product
-                    </th>
-                    <th
-                      style={{
-                        padding: "8px 10px",
-                        textAlign: "left",
-                        color: "#475569",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Size
-                    </th>
-                    <th
-                      style={{
-                        padding: "8px 10px",
-                        textAlign: "right",
-                        color: "#475569",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Purchase (Rs)
-                    </th>
-                    <th
-                      style={{
-                        padding: "8px 10px",
-                        textAlign: "right",
-                        color: "#475569",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Margin (Rs)
-                    </th>
-                    <th
-                      style={{
-                        padding: "8px 10px",
-                        textAlign: "right",
-                        color: "#475569",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Margin %
-                    </th>
-                    <th
-                      style={{
-                        padding: "8px 10px",
-                        textAlign: "right",
-                        color: "#475569",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Selling (Rs)
-                    </th>
+                    {[
+                      "Product",
+                      "Size",
+                      "Purchase (Rs)",
+                      "Margin (Rs)",
+                      "Margin %",
+                      "Selling (Rs)",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        style={{
+                          padding: "8px 10px",
+                          textAlign:
+                            h === "Product" || h === "Size" ? "left" : "right",
+                          color: "#475569",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -1743,7 +2212,7 @@ const Productlist = () => {
                           color: "#374151",
                         }}
                       >
-                        {item.purchasing_price.toFixed(2)}
+                        {sf(item.purchasing_price).toFixed(2)}
                       </td>
                       <td style={{ padding: "4px 6px" }}>
                         <input
@@ -1814,8 +2283,6 @@ const Productlist = () => {
                 </tbody>
               </table>
             </div>
-
-            {/* Modal Footer */}
             <div
               style={{
                 padding: "16px 24px",
@@ -1856,7 +2323,7 @@ const Productlist = () => {
                   fontWeight: 600,
                 }}
               >
-                {bulkSubmitting ? "Adding…" : `Add to Customer`}
+                {bulkSubmitting ? "Adding…" : "Add to Customer"}
               </button>
             </div>
           </div>
