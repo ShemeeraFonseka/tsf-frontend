@@ -434,7 +434,10 @@ export default function ExportProductlistAir() {
       // Also pass image_url directly for new products (POST won't have req.file)
       if (selectedCatProduct.image_url)
         fd.append("image_url_direct", selectedCatProduct.image_url);
-      fd.append("product_id", selectedCatProduct.id); // master products.id FK
+      fd.append(
+        "product_id",
+        selectedCatProduct.product_id || selectedCatProduct.id,
+      ); // master products.id FK
       fd.append("variants", JSON.stringify(variants));
 
       // Match by common_name since exportproductsair has its own id (not products.id)
