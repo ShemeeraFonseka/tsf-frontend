@@ -157,8 +157,9 @@ const speciesTypes = [
 
 // Sea FOB = exfactoryprice / usdrate (purchase price model)
 // or jc_fob + profit + packing + labour (JC FOB model)
-const calcFobUSD = (variant, usdRate) => {
-  const rate = sf(usdRate || variant.usdrate, 1);
+// Always uses variant.usdrate (stored) so table matches DB values
+const calcFobUSD = (variant, liveRate) => {
+  const rate = sf(liveRate || variant.usdrate, 1);
   if (sf(variant.jc_fob) > 0) {
     return (
       sf(variant.jc_fob) +
@@ -167,7 +168,14 @@ const calcFobUSD = (variant, usdRate) => {
       sf(variant.labour_overhead)
     );
   }
-  return sf(variant.exfactoryprice) / rate;
+  if (rate <= 0) return 0;
+  // Recalculate exfactory with live rate, then FOB = exfactory / rate
+  const pp = sf(variant.purchasing_price);
+  const labour = sf(variant.labour_overhead);
+  const packing = sf(variant.packing_cost);
+  const profit = sf(variant.profit);
+  const exf = pp + (labour + packing + profit) * rate;
+  return exf / rate;
 };
 
 export default function ExportProductlist() {
@@ -303,7 +311,7 @@ export default function ExportProductlist() {
   };
 
   const blankSeaRow = (v) => ({
-    variant_id: v.id,
+    variant_id: v.id || Date.now() * 1000 + Math.floor(Math.random() * 1000),
     size: v.size,
     unit: v.unit,
     purchasing_price: sf(v.purchasing_price),
@@ -346,31 +354,28 @@ export default function ExportProductlist() {
 
   const selectCatalogueProduct = (product) => {
     setSelectedCatProduct(product);
-    const existing = items.find(
-      (p) =>
-        p.common_name?.toLowerCase() === product.common_name?.toLowerCase(),
-    );
+    // Use product.variants directly — calcSeaRow recalculates exfactoryprice from costs + live rate
     const rows = (product.variants || []).map((v) => {
-      const ev = existing?.variants?.find(
-        (ev) => String(ev.id) === String(v.id),
-      );
-      if (ev)
-        return {
+      const hasCosts = sf(v.purchasing_price) > 0 || sf(v.jc_fob) > 0;
+      if (hasCosts) {
+        const row = {
           variant_id: v.id,
           size: v.size,
           unit: v.unit,
           purchasing_price: sf(v.purchasing_price),
-          model: sf(ev.jc_fob) > 0 ? "jc_fob" : "purchase",
-          jc_fob: ev.jc_fob ?? "",
-          usdrate: ev.usdrate ?? usdRate,
-          labour_overhead: ev.labour_overhead ?? "",
-          packing_cost: ev.packing_cost ?? "",
-          profit: ev.profit ?? "",
-          exfactoryprice: ev.exfactoryprice ?? "",
-          profit_margin: ev.profit_margin ?? "",
-          multiplier: ev.multiplier ?? "",
-          divisor: ev.divisor ?? "1",
+          model: sf(v.jc_fob) > 0 ? "jc_fob" : "purchase",
+          jc_fob: v.jc_fob ?? "",
+          usdrate: usdRate, // live rate → recalculates exfactoryprice
+          labour_overhead: v.labour_overhead ?? "",
+          packing_cost: v.packing_cost ?? "",
+          profit: v.profit ?? "",
+          exfactoryprice: v.exfactoryprice ?? "",
+          profit_margin: v.profit_margin ?? "",
+          multiplier: v.multiplier ?? "",
+          divisor: v.divisor ?? "1",
         };
+        return calcSeaRow(row); // always recalculates with current live rate
+      }
       return blankSeaRow(v);
     });
     setExportPricingRows(rows);
@@ -497,7 +502,7 @@ export default function ExportProductlist() {
         const fobUSD = calcFobUSD(variant, currentUsdRate);
         rows.push({
           key: `${product.id}-${variant.id}`,
-          product_id: product.product_id || product.id,
+          product_id: product.product_id || product.id, // master products.id for FK constraint
           variant_id: variant.id ? Math.floor(parseFloat(variant.id)) : null,
           common_name: product.common_name,
           scientific_name: product.scientific_name || "",
@@ -1054,7 +1059,7 @@ export default function ExportProductlist() {
                                   );
                                   return (
                                     <tr
-                                      key={`${product.id}-${variant.id || vi}`}
+                                      key={`${product.id}-${vi}-${variant.id || vi}`}
                                       className={
                                         isVeryFirst ? "product-group-start" : ""
                                       }
@@ -1148,10 +1153,28 @@ export default function ExportProductlist() {
                                                 onClick={() => {
                                                   setShowCatalogueModal(true);
                                                   setCatalogueLoading(false);
-                                                  setCatalogue([product]);
-                                                  selectCatalogueProduct(
-                                                    product,
-                                                  );
+                                                  // Reload fresh from server to get latest variant prices
+                                                  fetch(
+                                                    `${API_URL}/api/exportproductlist`,
+                                                  )
+                                                    .then((r) => r.json())
+                                                    .then((freshItems) => {
+                                                      const fresh =
+                                                        freshItems.find(
+                                                          (p) =>
+                                                            p.id === product.id,
+                                                        ) || product;
+                                                      setCatalogue([fresh]);
+                                                      selectCatalogueProduct(
+                                                        fresh,
+                                                      );
+                                                    })
+                                                    .catch(() => {
+                                                      setCatalogue([product]);
+                                                      selectCatalogueProduct(
+                                                        product,
+                                                      );
+                                                    });
                                                 }}
                                               >
                                                 Price

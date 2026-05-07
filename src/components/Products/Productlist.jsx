@@ -1262,7 +1262,7 @@ const Productlist = () => {
 
                                   return (
                                     <tr
-                                      key={`${product.id}-${variant.id || vi}`}
+                                      key={`${product.id}-${vi}-${variant.id || vi}`}
                                       className={
                                         isVeryFirst ? "product-group-start" : ""
                                       }
@@ -1717,7 +1717,9 @@ const Productlist = () => {
                               }}
                             >
                               {(product.variants || []).length} size
-                              {(product.variants || []).length !== 1 ? "s" : ""}{" "}
+                              {(product.variants || []).length !== 1
+                                ? "s"
+                                : ""}{" "}
                               · {fmt(product.category)}
                             </div>
                           </div>
@@ -1924,7 +1926,7 @@ const Productlist = () => {
                     <tbody>
                       {pricingRows.map((row, i) => (
                         <tr
-                          key={row.variant_id}
+                          key={`${row.variant_id}-${i}`}
                           style={{ borderBottom: "1px solid #f1f5f9" }}
                         >
                           <td
