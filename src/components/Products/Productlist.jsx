@@ -42,57 +42,116 @@ const getSpeciesBadgeIcon = (s) => {
 const fmt = (v) => (!v ? "-" : v.charAt(0).toUpperCase() + v.slice(1));
 
 const sectionCategories = [
+  // ── Shellfish ──
   { name: "Oyster", keywords: ["oyster", "depurated oyster"] },
   {
     name: "Clams",
     keywords: [
       "clam",
       "clams",
-      "pen clams",
-      "short neck clams",
-      "blood clams",
-      "sea clams",
-      "mangrove clams",
+      "pen clam",
+      "short neck clam",
+      "blood clam",
+      "sea clam",
+      "mangrove clam",
+      "nylon shell",
+      "scallop",
+      "razor clam",
+      "aballone",
     ],
   },
-  { name: "Mussel", keywords: ["mussel", "brown mussel", "green mussel"] },
-  { name: "Crab", keywords: ["crab", "sea crab", "mud crab", "cut crab"] },
+  {
+    name: "Mussel",
+    keywords: ["mussel", "brown mussel", "green mussel", "half shell"],
+  },
+  // ── Crustacean ──
+  {
+    name: "Crab",
+    keywords: [
+      "mud crab",
+      "sea crab",
+      "cut crab",
+      "blue swimming crab",
+      "lagoon crab",
+    ],
+  },
   {
     name: "Prawn",
     keywords: [
-      "prawn",
-      "flowery prawn",
-      "black tiger",
       "white prawn",
-      "lobster",
+      "black tiger",
+      "flowery prawn",
+      "sea prawns",
+      "prawn",
+      "shrimp",
+      "vannamei",
+      "pacific white",
     ],
   },
+  { name: "Lobster", keywords: ["lobster"] },
   { name: "Scampi", keywords: ["scampi"] },
-  { name: "Cuttlefish", keywords: ["cuttlefish", "squid"] },
-  { name: "Octopus", keywords: ["octopus", "baby octopus"] },
+  // ── Cephalopoda ──
   {
-    name: "Fish",
+    name: "Cuttlefish & Squid",
+    keywords: ["cuttlefish", "squid", "cuttlefish broken rings"],
+  },
+  { name: "Octopus", keywords: ["octopus", "baby octopus"] },
+  // ── Fish ──
+  {
+    name: "Marine Fish",
     keywords: [
-      "fish",
-      "jack",
-      "eel",
-      "tuna",
-      "tilapia",
-      "mackerel",
-      "rohu",
-      "sardine",
-      "mullet",
+      "yellow fin tuna",
+      "seer fish",
       "barramundi",
-      "catla",
-      "parrot",
-      "red mullet",
       "scad",
-      "mahi mahi",
+      "trevally",
+      "indian mackerel",
+      "tenched sardine",
       "anchovy",
-      "snapper",
-      "grouper",
-      "seer",
+      "jack trevally",
+      "red mullet",
+      "grey mullet",
+      "tiger grouper",
+      "red grouper",
+      "red snapper",
+      "mahi mahi",
       "salmon",
+      "parrot fish",
+      "tuna",
+      "king fish",
+      "sword fish",
+      "barracuda",
+      "bonito",
+      "cobia",
+      "thread fin",
+      "sea bass",
+      "rabbit fish",
+      "sole fish",
+      "emperor",
+      "grouper",
+      "pomfret",
+      "marlin",
+      "pinjalo",
+      "job fish",
+    ],
+  },
+  {
+    name: "Fresh Water",
+    keywords: ["eel", "catla", "rohu", "tilapia", "freshwater", "river"],
+  },
+  // ── Processed ──
+  {
+    name: "Processed Products",
+    keywords: [
+      "processed",
+      "claw meat",
+      "seafood mix",
+      "half shell",
+      "oyster can",
+      "crab meat",
+      "lump meat",
+      "jambo",
+      "glazing",
     ],
   },
 ];
@@ -104,37 +163,62 @@ const speciesTypes = [
 ];
 
 const PRODUCT_ORDER = [
+  // Oyster
+  "depurated oyster",
+  // Clams
+  "short neck clam",
+  "sea clam",
+  "pen clam",
+  "blood clam",
+  "mangrove clam",
+  "nylon shell",
+  "scallop",
+  "razor clam",
+  "aballone",
+  // Mussel
+  "green mussel",
+  "half shell green mussel",
+  "half shell brown mussel",
+  "brown mussel",
+  // Crab
+  "mud crab",
+  "sea crab fresh",
+  "sea crab frozen",
+  "sea crab",
+  "cut crab",
+  // Prawn
   "white prawn",
   "black tiger frozen",
   "black tiger",
   "flowery prawn",
-  "lobster frozen",
+  "sea prawns",
+  "vannamei",
+  "pacific white",
+  // Lobster
   "lobster",
-  "sea crab fresh",
-  "sea crab frozen",
-  "sea crab",
-  "cut crab fresh",
-  "cut crab frozen",
-  "cut crab",
+  // Scampi
   "scampi headless",
   "scampi claw",
   "scampi",
+  // Cuttlefish & Squid
   "cuttlefish fresh whole",
   "cuttlefish whole cleaned",
   "cuttlefish fresh corn",
   "cuttlefish cleaned corn",
   "squid fresh cleaned",
+  "cuttlefish broken rings",
   "squid",
+  // Octopus
   "baby octopus frozen",
   "baby octopus",
   "octopus frozen",
   "octopus",
+  // Marine Fish
   "yellow fin tuna",
   "seer fish",
   "barramundi",
   "scad",
   "trevally",
-  "trevalley",
   "indian mackerel",
   "tenched sardine",
   "anchovy",
@@ -146,18 +230,38 @@ const PRODUCT_ORDER = [
   "red snapper",
   "mahi mahi",
   "salmon fish",
+  "salmon fillet",
+  "salmon tail",
+  "salmon ground",
+  "salmon",
   "parrot fish",
+  "tuna shashimi loins",
+  "tuna loin grade a",
+  "tuna loin grade b",
+  "tuna shashimi cut",
+  "tuna off cut",
+  "tuna trimming",
+  "tuna belly",
   "tuna",
+  // Fresh Water
+  "eel",
   "catla",
   "rohu",
   "tilapia",
-  "oyster",
-  "green mussel",
-  "short neck clam",
-  "mangrove clam",
-  "blood clam",
-  "brown mussel",
-  "mussel",
+  // Processed
+  "sea crab meat",
+  "mud crab body",
+  "mud crab claw meat",
+  "mud crab lump",
+  "mud crab jambo",
+  "oyster meat",
+  "oyster can",
+  "seafood mix",
+  "green mussel half shell",
+  "claw meat",
+  "clean prawns",
+  "half shell mussel",
+  "pen clam meat",
 ];
 
 const getSortIndex = (name) => {
@@ -591,41 +695,45 @@ const Productlist = () => {
     }
     try {
       const doc = new jsPDF({
-        orientation: "landscape",
+        orientation: "portrait",
         unit: "mm",
         format: "a4",
       });
       const pageW = doc.internal.pageSize.getWidth(),
         pageH = doc.internal.pageSize.getHeight(),
-        margin = 14;
+        margin = 12;
       const NAVY = [13, 71, 161],
         NAVY_DARK = [8, 47, 114],
         NAVY_LIGHT = [224, 232, 247],
         WHITE = [255, 255, 255],
         DARK = [20, 20, 40],
         GREY = [180, 200, 230];
+
+      // Header
       doc.setFillColor(...NAVY);
-      doc.rect(0, 0, pageW, 40, "F");
+      doc.rect(0, 0, pageW, 28, "F");
       try {
-        doc.addImage(logoSrc, "PNG", margin, 6, 36, 28);
+        doc.addImage(logoSrc, "PNG", margin, 4, 22, 20);
       } catch {}
       doc.setTextColor(...WHITE);
-      doc.setFontSize(16);
+      doc.setFontSize(12);
       doc.setFont(undefined, "bold");
-      doc.text("Tropical Shellfish (Pvt) Ltd", margin + 42, 19);
-      doc.setFontSize(10);
+      doc.text("Tropical Shellfish (Pvt) Ltd", margin + 26, 13);
+      doc.setFontSize(7);
       doc.setFont(undefined, "normal");
       doc.text(
         "Fresh & Frozen Seafood Exporters  |  Quality You Can Trust",
-        margin + 42,
-        26,
+        margin + 26,
+        19,
       );
+
+      // Sub-header
       doc.setFillColor(...NAVY_LIGHT);
-      doc.rect(0, 40, pageW, 16, "F");
+      doc.rect(0, 28, pageW, 9, "F");
       doc.setTextColor(...DARK);
-      doc.setFontSize(10);
+      doc.setFontSize(7);
       doc.setFont(undefined, "bold");
-      doc.text("Generated:", margin, 50);
+      doc.text("Generated:", margin, 33.5);
       doc.setFont(undefined, "normal");
       doc.text(
         new Date().toLocaleDateString("en-US", {
@@ -633,10 +741,11 @@ const Productlist = () => {
           month: "long",
           day: "numeric",
         }),
-        margin + 22,
-        50,
+        margin + 18,
+        33.5,
       );
 
+      // Image cache
       const imageCache = {};
       const fetchImg = async (p) => {
         if (!p || imageCache[p] !== undefined) return;
@@ -660,16 +769,13 @@ const Productlist = () => {
 
       const drawPlaceholder = (x, y, w, h) => {
         doc.setFillColor(232, 238, 252);
-        doc.roundedRect(x, y, w, h, 2, 2, "F");
+        doc.roundedRect(x, y, w, h, 1.5, 1.5, "F");
         doc.setDrawColor(...GREY);
-        doc.setLineWidth(0.3);
-        doc.roundedRect(x, y, w, h, 2, 2, "S");
-        doc.setFontSize(5);
+        doc.setLineWidth(0.2);
+        doc.roundedRect(x, y, w, h, 1.5, 1.5, "S");
+        doc.setFontSize(4.5);
         doc.setTextColor(25, 100, 200);
-        doc.setFont(undefined, "normal");
-        doc.text("No Image", x + w / 2, y + h / 2 + h * 0.28, {
-          align: "center",
-        });
+        doc.text("No Image", x + w / 2, y + h / 2 + 1.5, { align: "center" });
       };
 
       const map = {};
@@ -713,7 +819,7 @@ const Productlist = () => {
       });
 
       autoTable(doc, {
-        startY: 62,
+        startY: 40,
         margin: { left: margin, right: margin },
         head: [
           [
@@ -721,7 +827,7 @@ const Productlist = () => {
             { content: "Common Name", styles: { halign: "left" } },
             { content: "Scientific Name", styles: { halign: "left" } },
             { content: "Type", styles: { halign: "left" } },
-            { content: "Size", styles: { halign: "left" } },
+            { content: "Size / Range", styles: { halign: "left" } },
           ],
         ],
         body: tableBody.map((r) => [
@@ -733,39 +839,44 @@ const Productlist = () => {
         ]),
         theme: "grid",
         columnStyles: {
-          0: { cellWidth: 28, halign: "center", valign: "middle" },
+          0: { cellWidth: 14, halign: "center", valign: "middle" },
           1: {
-            cellWidth: 80,
+            cellWidth: 55,
             halign: "left",
             valign: "middle",
             fontStyle: "bold",
-            fontSize: 10,
+            fontSize: 7.5,
           },
           2: {
-            cellWidth: 65,
+            cellWidth: 50,
             halign: "left",
             valign: "middle",
             fontStyle: "italic",
-            fontSize: 9,
+            fontSize: 7,
             textColor: [50, 80, 150],
           },
-          3: { cellWidth: 35, halign: "left", valign: "middle", fontSize: 10 },
-          4: { cellWidth: 55, halign: "left", valign: "middle", fontSize: 10 },
+          3: { cellWidth: 20, halign: "left", valign: "middle", fontSize: 7 },
+          4: {
+            cellWidth: "auto",
+            halign: "left",
+            valign: "middle",
+            fontSize: 7,
+          },
         },
         headStyles: {
           fillColor: NAVY_DARK,
           textColor: WHITE,
           fontStyle: "bold",
-          fontSize: 10,
-          cellPadding: { top: 3, bottom: 3, left: 2, right: 2 },
+          fontSize: 7.5,
+          cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
         },
         bodyStyles: {
-          fontSize: 10,
-          cellPadding: { top: 4, bottom: 4, left: 2, right: 2 },
-          minCellHeight: 20,
+          fontSize: 7.5,
+          cellPadding: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+          minCellHeight: 12,
           textColor: DARK,
           lineColor: GREY,
-          lineWidth: 0.3,
+          lineWidth: 0.2,
         },
         willDrawCell: (data) => {
           if (data.section !== "body") return;
@@ -773,19 +884,19 @@ const Productlist = () => {
           if (r && !r.isFirst && data.column.index <= 3)
             data.cell.styles.lineWidth = {
               top: 0,
-              bottom: 0.3,
-              left: 0.3,
-              right: 0.3,
+              bottom: 0.2,
+              left: 0.2,
+              right: 0.2,
             };
         },
         didDrawCell: (data) => {
           if (data.section !== "body" || data.column.index !== 0) return;
           const r = tableBody[data.row.index];
           if (!r || !r.isFirst) return;
-          const imgW = 18,
-            imgH = 18,
-            x = data.cell.x + (data.cell.width - imgW) / 2,
-            y = data.cell.y + (data.cell.height - imgH) / 2;
+          const imgW = 10,
+            imgH = 10;
+          const x = data.cell.x + (data.cell.width - imgW) / 2;
+          const y = data.cell.y + (data.cell.height - imgH) / 2;
           const src = r.image ? imageCache[r.image] : null;
           if (src) {
             const f = src.includes("image/png") ? "PNG" : "JPEG";
@@ -802,17 +913,17 @@ const Productlist = () => {
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         doc.setFillColor(...NAVY);
-        doc.rect(0, pageH - 10, pageW, 10, "F");
+        doc.rect(0, pageH - 8, pageW, 8, "F");
         doc.setTextColor(...WHITE);
-        doc.setFontSize(7);
+        doc.setFontSize(6);
         doc.setFont(undefined, "normal");
         doc.text(
           "Tropical Shellfish (Pvt) Ltd  |  Prices subject to change without prior notice",
           pageW / 2,
-          pageH - 4,
+          pageH - 3,
           { align: "center" },
         );
-        doc.text(`Page ${i} of ${totalPages}`, pageW - margin, pageH - 4, {
+        doc.text(`Page ${i} of ${totalPages}`, pageW - margin, pageH - 3, {
           align: "right",
         });
       }
@@ -832,41 +943,45 @@ const Productlist = () => {
     }
     try {
       const doc = new jsPDF({
-        orientation: "landscape",
+        orientation: "portrait",
         unit: "mm",
         format: "a4",
       });
       const pageW = doc.internal.pageSize.getWidth(),
         pageH = doc.internal.pageSize.getHeight(),
-        margin = 14;
+        margin = 12;
       const NAVY = [13, 71, 161],
         NAVY_DARK = [8, 47, 114],
         NAVY_LIGHT = [224, 232, 247],
         WHITE = [255, 255, 255],
         DARK = [20, 20, 40],
         GREY = [180, 200, 230];
+
+      // Header
       doc.setFillColor(...NAVY);
-      doc.rect(0, 0, pageW, 40, "F");
+      doc.rect(0, 0, pageW, 28, "F");
       try {
-        doc.addImage(logoSrc, "PNG", margin, 6, 36, 28);
+        doc.addImage(logoSrc, "PNG", margin, 4, 22, 20);
       } catch {}
       doc.setTextColor(...WHITE);
-      doc.setFontSize(16);
+      doc.setFontSize(12);
       doc.setFont(undefined, "bold");
-      doc.text("Tropical Shellfish (Pvt) Ltd", margin + 42, 19);
-      doc.setFontSize(10);
+      doc.text("Tropical Shellfish (Pvt) Ltd", margin + 26, 13);
+      doc.setFontSize(7);
       doc.setFont(undefined, "normal");
       doc.text(
         "Fresh & Frozen Seafood Exporters  |  Quality You Can Trust",
-        margin + 42,
-        26,
+        margin + 26,
+        19,
       );
+
+      // Sub-header
       doc.setFillColor(...NAVY_LIGHT);
-      doc.rect(0, 40, pageW, 16, "F");
+      doc.rect(0, 28, pageW, 9, "F");
       doc.setTextColor(...DARK);
-      doc.setFontSize(10);
+      doc.setFontSize(7);
       doc.setFont(undefined, "bold");
-      doc.text("Price List - Selling Prices", margin, 50);
+      doc.text("Price List — Selling Prices", margin, 33.5);
       doc.setFont(undefined, "normal");
       doc.text(
         new Date().toLocaleDateString("en-US", {
@@ -874,10 +989,11 @@ const Productlist = () => {
           month: "long",
           day: "numeric",
         }),
-        margin + 52,
-        50,
+        margin + 38,
+        33.5,
       );
 
+      // Image cache
       const imageCache = {};
       const fetchImg = async (p) => {
         if (!p || imageCache[p] !== undefined) return;
@@ -899,6 +1015,17 @@ const Productlist = () => {
           fetchImg,
         ),
       );
+
+      const drawPlaceholder = (x, y, w, h) => {
+        doc.setFillColor(232, 238, 252);
+        doc.roundedRect(x, y, w, h, 1.5, 1.5, "F");
+        doc.setDrawColor(...GREY);
+        doc.setLineWidth(0.2);
+        doc.roundedRect(x, y, w, h, 1.5, 1.5, "S");
+        doc.setFontSize(4.5);
+        doc.setTextColor(25, 100, 200);
+        doc.text("No Image", x + w / 2, y + h / 2 + 1.5, { align: "center" });
+      };
 
       const map = {};
       filteredItems.forEach((p) => {
@@ -942,29 +1069,15 @@ const Productlist = () => {
           });
       });
 
-      const drawPlaceholder = (x, y, w, h) => {
-        doc.setFillColor(232, 238, 252);
-        doc.roundedRect(x, y, w, h, 2, 2, "F");
-        doc.setDrawColor(...GREY);
-        doc.setLineWidth(0.3);
-        doc.roundedRect(x, y, w, h, 2, 2, "S");
-        doc.setFontSize(5);
-        doc.setTextColor(25, 100, 200);
-        doc.setFont(undefined, "normal");
-        doc.text("No Image", x + w / 2, y + h / 2 + h * 0.28, {
-          align: "center",
-        });
-      };
-
       autoTable(doc, {
-        startY: 62,
+        startY: 40,
         margin: { left: margin, right: margin },
         head: [
           [
             { content: "Picture", styles: { halign: "center" } },
             { content: "Common Name", styles: { halign: "left" } },
             { content: "Scientific Name", styles: { halign: "left" } },
-            { content: "Size", styles: { halign: "left" } },
+            { content: "Size / Range", styles: { halign: "left" } },
             { content: "Selling Price (Rs)", styles: { halign: "right" } },
           ],
         ],
@@ -980,31 +1093,37 @@ const Productlist = () => {
         theme: "grid",
         columnStyles: {
           0: {
-            cellWidth: 28,
+            cellWidth: 14,
             halign: "center",
             valign: "middle",
-            minCellHeight: 22,
+            minCellHeight: 12,
           },
           1: {
-            cellWidth: 60,
+            cellWidth: 55,
             halign: "left",
             valign: "middle",
             fontStyle: "bold",
-            fontSize: 10,
+            fontSize: 7.5,
           },
           2: {
-            cellWidth: 65,
+            cellWidth: 50,
             halign: "left",
             valign: "middle",
             fontStyle: "italic",
-            fontSize: 9,
+            fontSize: 7,
             textColor: [50, 80, 150],
           },
-          3: { cellWidth: 60, halign: "left", valign: "middle", fontSize: 10 },
+          3: {
+            cellWidth: "auto",
+            halign: "left",
+            valign: "middle",
+            fontSize: 7,
+          },
           4: {
+            cellWidth: 30,
             halign: "right",
             valign: "middle",
-            fontSize: 10,
+            fontSize: 7.5,
             fontStyle: "bold",
             textColor: [0, 120, 0],
           },
@@ -1013,16 +1132,16 @@ const Productlist = () => {
           fillColor: NAVY_DARK,
           textColor: WHITE,
           fontStyle: "bold",
-          fontSize: 10,
-          cellPadding: { top: 3, bottom: 3, left: 2, right: 2 },
+          fontSize: 7.5,
+          cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
         },
         bodyStyles: {
-          fontSize: 10,
-          cellPadding: { top: 4, bottom: 4, left: 2, right: 2 },
-          minCellHeight: 22,
+          fontSize: 7.5,
+          cellPadding: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+          minCellHeight: 12,
           textColor: DARK,
           lineColor: GREY,
-          lineWidth: 0.3,
+          lineWidth: 0.2,
         },
         willDrawCell: (data) => {
           if (data.section !== "body") return;
@@ -1030,19 +1149,19 @@ const Productlist = () => {
           if (r && !r.isFirst && data.column.index <= 2)
             data.cell.styles.lineWidth = {
               top: 0,
-              bottom: 0.3,
-              left: 0.3,
-              right: 0.3,
+              bottom: 0.2,
+              left: 0.2,
+              right: 0.2,
             };
         },
         didDrawCell: (data) => {
           if (data.section !== "body" || data.column.index !== 0) return;
           const r = tableBody[data.row.index];
           if (!r || !r.isFirst) return;
-          const imgW = 18,
-            imgH = 18,
-            x = data.cell.x + (data.cell.width - imgW) / 2,
-            y = data.cell.y + (data.cell.height - imgH) / 2;
+          const imgW = 10,
+            imgH = 10;
+          const x = data.cell.x + (data.cell.width - imgW) / 2;
+          const y = data.cell.y + (data.cell.height - imgH) / 2;
           const src = r.image ? imageCache[r.image] : null;
           if (src) {
             const f = src.includes("image/png") ? "PNG" : "JPEG";
@@ -1059,17 +1178,17 @@ const Productlist = () => {
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         doc.setFillColor(...NAVY);
-        doc.rect(0, pageH - 10, pageW, 10, "F");
+        doc.rect(0, pageH - 8, pageW, 8, "F");
         doc.setTextColor(...WHITE);
-        doc.setFontSize(7);
+        doc.setFontSize(6);
         doc.setFont(undefined, "normal");
         doc.text(
           "Tropical Shellfish (Pvt) Ltd  |  Prices subject to change without prior notice",
           pageW / 2,
-          pageH - 4,
+          pageH - 3,
           { align: "center" },
         );
-        doc.text(`Page ${i} of ${totalPages}`, pageW - margin, pageH - 4, {
+        doc.text(`Page ${i} of ${totalPages}`, pageW - margin, pageH - 3, {
           align: "right",
         });
       }
@@ -1087,10 +1206,13 @@ const Productlist = () => {
     Mussel: "🦪",
     Crab: "🦀",
     Prawn: "🦐",
+    Lobster: "🦞",
     Scampi: "🦞",
-    Cuttlefish: "🐙",
+    "Cuttlefish & Squid": "🦑",
     Octopus: "🐙",
-    Fish: "🐟",
+    "Marine Fish": "🐟",
+    "Fresh Water": "🐠",
+    "Processed Products": "📦",
     Other: "📦",
   };
 
