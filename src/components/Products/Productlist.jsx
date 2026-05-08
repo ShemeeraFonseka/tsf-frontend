@@ -66,6 +66,26 @@ const sectionCategories = [
   },
   // ── Crustacean ──
   {
+    name: "Prawn",
+    keywords: [
+      "white prawn",
+      "black tiger",
+      "flowery prawn",
+      "sea prawns",
+      "shrimp",
+      "vannamei",
+      "pacific white",
+    ],
+  },
+  {
+    name: "Scampi",
+    keywords: [
+      "scampi",
+      "freshwater prawn",
+      "freshwater prawn (scampi) lsb with claw",
+    ],
+  },
+  {
     name: "Crab",
     keywords: [
       "mud crab",
@@ -75,21 +95,8 @@ const sectionCategories = [
       "lagoon crab",
     ],
   },
-  {
-    name: "Prawn",
-    keywords: [
-      "white prawn",
-      "black tiger",
-      "flowery prawn",
-      "sea prawns",
-      "prawn",
-      "shrimp",
-      "vannamei",
-      "pacific white",
-    ],
-  },
   { name: "Lobster", keywords: ["lobster"] },
-  { name: "Scampi", keywords: ["scampi"] },
+
   // ── Cephalopoda ──
   {
     name: "Cuttlefish & Squid",
@@ -180,12 +187,6 @@ const PRODUCT_ORDER = [
   "half shell green mussel",
   "half shell brown mussel",
   "brown mussel",
-  // Crab
-  "mud crab",
-  "sea crab fresh",
-  "sea crab frozen",
-  "sea crab",
-  "cut crab",
   // Prawn
   "white prawn",
   "black tiger frozen",
@@ -194,12 +195,18 @@ const PRODUCT_ORDER = [
   "sea prawns",
   "vannamei",
   "pacific white",
-  // Lobster
-  "lobster",
   // Scampi
   "scampi headless",
   "scampi claw",
   "scampi",
+  // Lobster
+  "lobster",
+  // Crab
+  "mud crab",
+  "sea crab fresh",
+  "sea crab frozen",
+  "sea crab",
+  "cut crab",
   // Cuttlefish & Squid
   "cuttlefish fresh whole",
   "cuttlefish whole cleaned",
