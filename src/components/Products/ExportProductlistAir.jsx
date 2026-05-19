@@ -149,6 +149,24 @@ const PRODUCT_ORDER = [
   "mangrove clam",
 ];
 
+const getCategoryBadgeClass = (c) => {
+  if (!c) return "badge-default-cat";
+  const v = c.toLowerCase();
+  if (v === "live") return "badge-live";
+  if (v === "fresh") return "badge-fresh";
+  if (v === "frozen") return "badge-frozen";
+  return "badge-default-cat";
+};
+
+const getCategoryBadgeIcon = (c) => {
+  if (!c) return "";
+  const v = c.toLowerCase();
+  if (v === "live") return "🟢";
+  if (v === "fresh") return "💧";
+  if (v === "frozen") return "❄️";
+  return "";
+};
+
 const getSortIndex = (name) => {
   const lower = (name || "").toLowerCase();
   const idx = PRODUCT_ORDER.findIndex((k) => lower.includes(k));
@@ -189,6 +207,8 @@ export default function ExportProductlistAir() {
   const [bulkCustomerId, setBulkCustomerId] = useState("");
   const [bulkItems, setBulkItems] = useState([]);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+
+  const [selectedAirCategory, setSelectedAirCategory] = useState("fresh");
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -344,11 +364,12 @@ export default function ExportProductlistAir() {
 
   const selectCatalogueProduct = (product) => {
     setSelectedCatProduct(product);
+
     const existing = items.find(
       (p) =>
         p.common_name?.toLowerCase() === product.common_name?.toLowerCase(),
     );
-
+    setSelectedAirCategory(existing?.category || product.category || "fresh");
     const rows = (product.variants || []).map((v) => {
       const ev = existing?.variants?.find(
         (ev) => String(ev.id) === String(v.id),
@@ -447,6 +468,7 @@ export default function ExportProductlistAir() {
         "product_id",
         selectedCatProduct.product_id || selectedCatProduct.id,
       );
+      fd.append("category", selectedAirCategory);
       fd.append("variants", JSON.stringify(variants));
 
       const existing = items.find(
@@ -1072,7 +1094,9 @@ export default function ExportProductlistAir() {
                   <th>Picture</th>
                   <th>Common Name</th>
                   <th>Scientific Name</th>
+                  <th>Category</th>
                   <th>Size</th>
+
                   <th>Purchase Price</th>
                   <th>JC FOB</th>
                   <th>FOB (USD)</th>
@@ -1087,7 +1111,7 @@ export default function ExportProductlistAir() {
                       <React.Fragment key={section}>
                         <tr className="section-header">
                           <td
-                            colSpan={bulkMode ? 10 : 9}
+                            colSpan={bulkMode ? 11 : 10}
                             className="section-title"
                           >
                             <span className="section-icon">
@@ -1183,7 +1207,20 @@ export default function ExportProductlistAir() {
                                           </td>
                                         </>
                                       )}
+                                      {isFirstOfProd && (
+                                        <td rowSpan={variants.length}>
+                                          <span
+                                            className={`category-badge ${getCategoryBadgeClass(product.category)}`}
+                                          >
+                                            {getCategoryBadgeIcon(
+                                              product.category,
+                                            )}{" "}
+                                            {fmt(product.category)}
+                                          </span>
+                                        </td>
+                                      )}
                                       <td>{variant.size || "—"}</td>
+
                                       <td className="price-cell">
                                         {sf(variant.purchasing_price) > 0
                                           ? `Rs. ${sf(variant.purchasing_price).toFixed(2)}`
@@ -1313,6 +1350,7 @@ export default function ExportProductlistAir() {
                                   <td className="muted">—</td>
                                   <td className="muted">—</td>
                                   <td className="muted">—</td>
+                                  <td className="muted">—</td>
                                   <td className="actions-cell">
                                     <div className="actions-wrapper">
                                       <button
@@ -1354,7 +1392,7 @@ export default function ExportProductlistAir() {
                 ) && (
                   <tr>
                     <td
-                      colSpan={bulkMode ? 10 : 9}
+                      colSpan={bulkMode ? 11 : 10}
                       className="muted"
                       style={{ textAlign: "center", padding: "3rem" }}
                     >
@@ -1622,6 +1660,31 @@ export default function ExportProductlistAir() {
                       fontSize: "13px",
                     }}
                   />
+                  <span
+                    style={{
+                      fontSize: "13px",
+                      color: "#475569",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Category:
+                  </span>
+                  <select
+                    value={selectedAirCategory}
+                    onChange={(e) => setSelectedAirCategory(e.target.value)}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: "6px",
+                      border: "1px solid #d1d5db",
+                      fontSize: "13px",
+                      background: "#fff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <option value="fresh">💧 Fresh</option>
+                    <option value="frozen">❄️ Frozen</option>
+                    <option value="live">🟢 Live</option>
+                  </select>
                   <button
                     onClick={() => setSelectedCatProduct(null)}
                     style={{
