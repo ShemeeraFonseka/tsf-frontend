@@ -9,6 +9,23 @@ import { isAdmin } from "../../hooks/useAuth";
 const sf = (v, d = 0) => (isFinite(parseFloat(v)) ? parseFloat(v) : d);
 const fmt = (v) => (!v ? "—" : v.charAt(0).toUpperCase() + v.slice(1));
 
+const getCategoryBadgeClass = (c) => {
+  if (!c) return "badge-default-cat";
+  const v = c.toLowerCase();
+  if (v === "live") return "badge-live";
+  if (v === "fresh") return "badge-fresh";
+  if (v === "frozen") return "badge-frozen";
+  return "badge-default-cat";
+};
+const getCategoryBadgeIcon = (c) => {
+  if (!c) return "";
+  const v = c.toLowerCase();
+  if (v === "live") return "🟢";
+  if (v === "fresh") return "💧";
+  if (v === "frozen") return "❄️";
+  return "";
+};
+
 const sectionCategories = [
   {
     name: "Fish",
@@ -155,9 +172,6 @@ const speciesTypes = [
   { value: "fish", label: "Fish", icon: "🐟" },
 ];
 
-// Sea FOB = exfactoryprice / usdrate (purchase price model)
-// or jc_fob + profit + packing + labour (JC FOB model)
-// Always uses variant.usdrate (stored) so table matches DB values
 const calcFobUSD = (variant, liveRate) => {
   const rate = sf(liveRate || variant.usdrate, 1);
   if (sf(variant.jc_fob) > 0) {
@@ -169,7 +183,6 @@ const calcFobUSD = (variant, liveRate) => {
     );
   }
   if (rate <= 0) return 0;
-  // Recalculate exfactory with live rate, then FOB = exfactory / rate
   const pp = sf(variant.purchasing_price);
   const labour = sf(variant.labour_overhead);
   const packing = sf(variant.packing_cost);
@@ -190,7 +203,6 @@ export default function ExportProductlist() {
   const [selectedSpeciesType, setSelectedSpeciesType] = useState("all");
   const [currentUsdRate, setCurrentUsdRate] = useState(304);
 
-  /* ── Add from Catalogue ── */
   const [showCatalogueModal, setShowCatalogueModal] = useState(false);
   const [catalogue, setCatalogue] = useState([]);
   const [catalogueLoading, setCatalogueLoading] = useState(false);
@@ -199,8 +211,8 @@ export default function ExportProductlist() {
   const [exportPricingRows, setExportPricingRows] = useState([]);
   const [usdRate, setUsdRate] = useState("304");
   const [savingExport, setSavingExport] = useState(false);
+  const [selectedSeaCategory, setSelectedSeaCategory] = useState("fresh");
 
-  /* ── Bulk add ── */
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState(new Set());
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -247,7 +259,6 @@ export default function ExportProductlist() {
       );
   }, [selectedSpeciesType, items]);
 
-  /* ── Grouping ── */
   const getSection = (product) => {
     const name = product.common_name?.toLowerCase() || "";
     for (const s of sectionCategories) {
@@ -293,7 +304,6 @@ export default function ExportProductlist() {
     return t ? t.label : fmt(s);
   };
 
-  /* ── Add from Catalogue ── */
   const openCatalogueModal = async () => {
     setShowCatalogueModal(true);
     setSelectedCatProduct(null);
@@ -354,7 +364,14 @@ export default function ExportProductlist() {
 
   const selectCatalogueProduct = (product) => {
     setSelectedCatProduct(product);
-    // Use product.variants directly — calcSeaRow recalculates exfactoryprice from costs + live rate
+    setSelectedSeaCategory(
+      items.find(
+        (p) =>
+          p.common_name?.toLowerCase() === product.common_name?.toLowerCase(),
+      )?.category ||
+        product.category ||
+        "fresh",
+    );
     const rows = (product.variants || []).map((v) => {
       const hasCosts = sf(v.purchasing_price) > 0 || sf(v.jc_fob) > 0;
       if (hasCosts) {
@@ -365,7 +382,7 @@ export default function ExportProductlist() {
           purchasing_price: sf(v.purchasing_price),
           model: sf(v.jc_fob) > 0 ? "jc_fob" : "purchase",
           jc_fob: v.jc_fob ?? "",
-          usdrate: usdRate, // live rate → recalculates exfactoryprice
+          usdrate: usdRate,
           labour_overhead: v.labour_overhead ?? "",
           packing_cost: v.packing_cost ?? "",
           profit: v.profit ?? "",
@@ -374,7 +391,7 @@ export default function ExportProductlist() {
           multiplier: v.multiplier ?? "",
           divisor: v.divisor ?? "1",
         };
-        return calcSeaRow(row); // always recalculates with current live rate
+        return calcSeaRow(row);
       }
       return blankSeaRow(v);
     });
@@ -385,11 +402,7 @@ export default function ExportProductlist() {
     setExportPricingRows((prev) =>
       prev.map((row, i) => {
         if (i !== idx) return row;
-        const rate = sf(field === "usdrate" ? val : row.usdrate, 304);
-        let updated = { ...row, [field]: val };
-        if (field === "usdrate" && updated.profit)
-          updated.profit = updated.profit; // keep profit as-is in sea (stored in USD)
-        return calcSeaRow(updated);
+        return calcSeaRow({ ...row, [field]: val });
       }),
     );
   };
@@ -418,7 +431,6 @@ export default function ExportProductlist() {
         multiplier: sf(r.multiplier),
         divisor: sf(r.divisor, 1),
       }));
-
       const fd = new FormData();
       fd.append("common_name", selectedCatProduct.common_name);
       fd.append("scientific_name", selectedCatProduct.scientific_name || "");
@@ -426,6 +438,7 @@ export default function ExportProductlist() {
       fd.append("species_type", selectedCatProduct.species_type || "");
       fd.append("existing_image_url", selectedCatProduct.image_url || "");
       fd.append("product_id", selectedCatProduct.id);
+      fd.append("category", selectedSeaCategory);
       if (selectedCatProduct.image_url)
         fd.append("image_url_direct", selectedCatProduct.image_url);
       fd.append("variants", JSON.stringify(variants));
@@ -473,7 +486,6 @@ export default function ExportProductlist() {
     }
   };
 
-  /* ── Bulk add ── */
   const toggleBulkMode = () => {
     setBulkMode((p) => !p);
     setSelectedProductIds(new Set());
@@ -502,7 +514,7 @@ export default function ExportProductlist() {
         const fobUSD = calcFobUSD(variant, currentUsdRate);
         rows.push({
           key: `${product.id}-${variant.id}`,
-          product_id: product.product_id || product.id, // master products.id for FK constraint
+          product_id: product.product_id || product.id,
           variant_id: variant.id ? Math.floor(parseFloat(variant.id)) : null,
           common_name: product.common_name,
           scientific_name: product.scientific_name || "",
@@ -546,7 +558,6 @@ export default function ExportProductlist() {
         existingData.map((e) => `${e.product_id}-${e.variant_id ?? "null"}`),
       );
 
-      // Fetch sea freight rates for customer
       const custRes = await fetch(
         `${API_URL}/api/exportcustomerlist/${bulkCustomerId}`,
       );
@@ -580,7 +591,6 @@ export default function ExportProductlist() {
           skip++;
           continue;
         }
-
         const fobUSD =
           item.jc_fob > 0
             ? item.jc_fob +
@@ -590,7 +600,6 @@ export default function ExportProductlist() {
             : item.usdrate > 0
               ? item.exfactoryprice / item.usdrate
               : 0;
-
         let fc20 = 0,
           fc40 = 0,
           cnf20 = 0,
@@ -601,7 +610,6 @@ export default function ExportProductlist() {
           cnf20 = parseFloat((fobUSD + fc20).toFixed(4));
           cnf40 = parseFloat((fobUSD + fc40).toFixed(4));
         }
-
         const res = await fetch(`${API_URL}/api/exportcustomer-products`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -655,7 +663,6 @@ export default function ExportProductlist() {
     }
   };
 
-  /* ── PDF ── */
   const handleDownloadPDF = async () => {
     if (filteredItems.length === 0) {
       alert("No products to download");
@@ -903,7 +910,6 @@ export default function ExportProductlist() {
     );
   });
 
-  /* ══ RENDER ══ */
   return (
     <div className="pricelist-container">
       <h2>Export Product List — Sea 🚢</h2>
@@ -1008,6 +1014,7 @@ export default function ExportProductlist() {
                   <th>Picture</th>
                   <th>Common Name</th>
                   <th>Scientific Name</th>
+                  <th>Category</th>
                   <th>Size</th>
                   <th>Purchase Price</th>
                   <th>JC FOB</th>
@@ -1023,7 +1030,7 @@ export default function ExportProductlist() {
                       <React.Fragment key={section}>
                         <tr className="section-header">
                           <td
-                            colSpan={bulkMode ? 10 : 9}
+                            colSpan={bulkMode ? 11 : 10}
                             className="section-title"
                           >
                             <span className="section-icon">
@@ -1115,6 +1122,18 @@ export default function ExportProductlist() {
                                           </td>
                                         </>
                                       )}
+                                      {isFirstOfProd && (
+                                        <td rowSpan={variants.length}>
+                                          <span
+                                            className={`category-badge ${getCategoryBadgeClass(product.category)}`}
+                                          >
+                                            {getCategoryBadgeIcon(
+                                              product.category,
+                                            )}{" "}
+                                            {fmt(product.category)}
+                                          </span>
+                                        </td>
+                                      )}
                                       <td>{variant.size || "—"}</td>
                                       <td className="price-cell">
                                         {sf(variant.purchasing_price) > 0
@@ -1153,7 +1172,6 @@ export default function ExportProductlist() {
                                                 onClick={() => {
                                                   setShowCatalogueModal(true);
                                                   setCatalogueLoading(false);
-                                                  // Reload fresh from server to get latest variant prices
                                                   fetch(
                                                     `${API_URL}/api/exportproductlist`,
                                                   )
@@ -1263,6 +1281,7 @@ export default function ExportProductlist() {
                                   <td className="muted">—</td>
                                   <td className="muted">—</td>
                                   <td className="muted">—</td>
+                                  <td className="muted">—</td>
                                   <td className="actions-cell">
                                     <div className="actions-wrapper">
                                       <button
@@ -1304,7 +1323,7 @@ export default function ExportProductlist() {
                 ) && (
                   <tr>
                     <td
-                      colSpan={bulkMode ? 10 : 9}
+                      colSpan={bulkMode ? 11 : 10}
                       className="muted"
                       style={{ textAlign: "center", padding: "3rem" }}
                     >
@@ -1319,7 +1338,7 @@ export default function ExportProductlist() {
         </>
       )}
 
-      {/* ── Add from Catalogue Modal ── */}
+      {/* Add from Catalogue Modal */}
       {showCatalogueModal && (
         <div
           style={{
@@ -1572,6 +1591,31 @@ export default function ExportProductlist() {
                       fontSize: "13px",
                     }}
                   />
+                  <span
+                    style={{
+                      fontSize: "13px",
+                      color: "#475569",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Category:
+                  </span>
+                  <select
+                    value={selectedSeaCategory}
+                    onChange={(e) => setSelectedSeaCategory(e.target.value)}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: "6px",
+                      border: "1px solid #d1d5db",
+                      fontSize: "13px",
+                      background: "#fff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <option value="fresh">💧 Fresh</option>
+                    <option value="frozen">❄️ Frozen</option>
+                    <option value="live">🟢 Live</option>
+                  </select>
                   <button
                     onClick={() => setSelectedCatProduct(null)}
                     style={{
@@ -1588,6 +1632,7 @@ export default function ExportProductlist() {
                     ← Back to catalogue
                   </button>
                 </div>
+
                 <div
                   style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}
                 >
@@ -1926,6 +1971,7 @@ export default function ExportProductlist() {
                     </div>
                   ))}
                 </div>
+
                 <div
                   style={{
                     padding: "16px 24px",
@@ -1980,7 +2026,7 @@ export default function ExportProductlist() {
         </div>
       )}
 
-      {/* ── Bulk Modal ── */}
+      {/* Bulk Modal */}
       {showBulkModal && (
         <div
           style={{
